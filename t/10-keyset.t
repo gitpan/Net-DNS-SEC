@@ -1,6 +1,6 @@
 #!/usr/bin/perl  -sw 
 # Test script for keysetfunctionalty
-# $Id: 10-keyset.t,v 1.5 2002/12/20 10:20:21 olaf Exp $
+# $Id: 10-keyset.t,v 1.6 2003/08/27 14:09:25 olaf Exp $
 # 
 # Called in a fashion simmilar to:
 # /usr/bin/perl -Iblib/arch -Iblib/lib -I/usr/lib/perl5/5.6.1/i386-freebsd \
@@ -149,7 +149,7 @@ $keyset=Net::DNS::Keyset->new($keysetpath);
 
 
 ok ( ! $keyset &&
-     $Net::DNS::Keyset::keyset_err eq "RSA Verification failed"
+     $Net::DNS::Keyset::keyset_err eq "RSA Verification failed on key test.tld 42495"
      , "Corrupted keyset is not loaded" );                   # test 10
 
 

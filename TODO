@@ -1,18 +1,14 @@
 TODO for Net::DNS::SEC package.
 
 ----------------------------------------------------------------------
-Last modified for version 0.07
+Last modified for version 0.11
 ----------------------------------------------------------------------
 
-- The create methods for the SIG class take a path to a private key
-  file as one of their parameters. This means that for every signature
-  to be created file access is needed. We could speed this up by
-  allowing to pass a private key object. 
+- Update RFC references as soon as drafts are published as such.
 
-  To enable this we will need to implement e a private key class like
-  Net::DNS::RR::SIG::Private. Don't expect this to be done any time
-  soon but please let me know if you plan to implement a signer using
-  the Net::DNS::SEC extensions, this plan may get a little priority
-  then.
+- Code cleanup
+
+- Delete Net::DNS::RR::SIG::Private as it is replaced by
+  Net::DNS::SEC::Private
   
 

@@ -1,6 +1,6 @@
 package Net::DNS::RR::DS;
 
-# $Id: DS.pm,v 1.6 2002/12/20 10:20:21 olaf Exp $
+# $Id: DS.pm,v 1.7 2003/08/27 14:09:25 olaf Exp $
 
 
 use strict;
@@ -10,7 +10,7 @@ use Net::DNS;
 use Carp;
 use Digest::BubbleBabble qw( bubblebabble );
 
-$VERSION = do { my @r=(q$Revision: 1.6 $=~/\d+/g); sprintf "%d."."%03d"x$#r,@r };
+$VERSION = do { my @r=(q$Revision: 1.7 $=~/\d+/g); sprintf "%d."."%03d"x$#r,@r };
 my $debug=0;
 
 @ISA = qw(Net::DNS::RR);
@@ -232,6 +232,12 @@ Returns the digest as  binary material
 
 Returns the key tag of the key. (RFC2535 4.1.6)
 
+
+=head2 digtype
+
+   print "digest type" . " = " . $dsrr->digtype ."\n";
+
+Returns the digest type of the DS RR.
 
 =head2 babble
 

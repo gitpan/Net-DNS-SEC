@@ -1,4 +1,4 @@
-package Net::DNS::RR::SIG::Private;
+package Net::DNS::SEC::Private;
 
 use vars qw(@ISA $VERSION @EXPORT );
 
@@ -18,20 +18,16 @@ use Digest::SHA1 qw (sha1);
 
 require Exporter;
 
-$VERSION = do { my @r=(q$Revision: 1.2 $=~/\d+/g); sprintf "%d."."%03d"x$#r,@r };
+$VERSION = do { my @r=(q$Revision: 1.1 $=~/\d+/g); sprintf "%d."."%03d"x$#r,@r };
 
-
-my     $__DepricationWarning=0;
 sub new {
     my ($class,  $key_file) = @_;
     my $self={};
     my    ($Modulus,$PublicExponent,$PrivateExponent,$Prime1,
 	   $Prime2,$Exponent1,$Exponent2,$Coefficient,
 	   $prime_p,$subprime_q,$base_g,$private_val_x,$public_val_y);
+    
 
-
-    print "Note: Net::DNS::RR::SIG::Private is deprecated use Net::DNS::SEC::Private instaed! " if ! $__DepricationWarning;
-    $__DepricationWarning=1;
     bless ($self,$class);
     my $keyname=basename($key_file);
     print "\nKeyname:\t ". $keyname ."\n" if $ debug;
@@ -50,6 +46,8 @@ sub new {
 
 
     open (KEYFH, "<$key_file" ) || croak "Cannot open keyfile: $key_file";
+    
+    
     while (<KEYFH>) {
 	if (/Private-key-format: (v\d*\.\d*)/) {
 	    if ($1 ne "v1.2") {
@@ -176,16 +174,14 @@ sub bi2bin {
 
 =head1 NAME
 
-Net::DNS::RR::SIG::Private - DNS SIG Private key object
+Net::DNS::SEC::Private - DNS SIG Private key object
 
 =head1 SYNOPSIS
 
-C<use Net::DNS::RR::SIG::Private>;
-my $private=Net::DNS::RR::SIG::Private->new($keypath);
+C<use Net::DNS::SEC::Private>;
+my $private=Net::DNS::SEC::Private->new($keypath);
 
 =head1 DESCRIPTION
-
-     !!!DEPRECATED use Net::DNS::SEC::Private instead!!!
 
 Class containing a the private key as read from a dnssec-keygen
 generate zonefile. The class is written to be used only in the context

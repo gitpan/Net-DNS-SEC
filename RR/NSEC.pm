@@ -1,6 +1,6 @@
-package Net::DNS::RR::NXT;
+package Net::DNS::RR::NSEC;
 
-# $Id: NXT.pm,v 1.7 2003/08/27 14:09:25 olaf Exp $
+# $Id: NSEC.pm,v 1.1 2003/08/27 14:09:25 olaf Exp $
 
 use strict;
 use vars qw(@ISA $VERSION);
@@ -13,7 +13,7 @@ use Net::DNS::Packet;
 use Carp;
 
 @ISA = qw(Net::DNS::RR);
-$VERSION = do { my @r=(q$Revision: 1.7 $=~/\d+/g); sprintf "%d."."%03d"x$#r,@r };
+$VERSION = do { my @r=(q$Revision: 1.1 $=~/\d+/g); sprintf "%d."."%03d"x$#r,@r };
 
 sub new {
     my ($class, $self, $data, $offset) = @_;
@@ -59,13 +59,13 @@ sub new_from_string {
 
 #sub is_optin {
 #    my $self =shift;
-#    return 1 if $self->{"typelist"}!~/NXT/;
+#    return 1 if $self->{"typelist"}!~/NSEC/;
 #    0;
 #}
 
 #sub set_optin {
 #    my $self =shift;
-#    $self->{"typelist"}=~s/NXT//;
+#    $self->{"typelist"}=~s/NSEC//;
 #    1;
 #}
 
@@ -115,7 +115,7 @@ sub _typestr2typebm {
     # This needs to check for values > 127....
 
     # Sets a bit for every qtype in the input array.
-    # Minimum bitmaplenght 4 octets because NXT (30) is allways there
+    # Minimum bitmaplenght 6 octets because NSEC (47) is allways there
     # may be longer but trailing all zero octets should be dropped.
 
     my (@typelist, @typebitarray);
@@ -162,7 +162,7 @@ sub _typebm2typestr {
 
 =head1 NAME
 
-Net::DNS::RR::NXT - DNS NXT resource record
+Net::DNS::RR::NSEC - DNS NSEC resource record
 
 =head1 SYNOPSIS
 
@@ -170,10 +170,7 @@ C<use Net::DNS::RR>;
 
 =head1 DESCRIPTION
 
-Class for DNS Address (NXT) resource records.
-
-NOTE: THE NXT RR has been deprecated! Use NSEC instead.
-      (SEE RFC.... for details).
+Class for DNS Address (NSEC) resource records.
 
 =head1 METHODS
 

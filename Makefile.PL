@@ -1,16 +1,21 @@
 #
-# $Id: Makefile.PL,v 1.16 2003/01/09 06:53:46 olaf Exp $
+# $Id: Makefile.PL,v 1.18 2003/09/01 16:00:29 olaf Exp $
 #
 
-eval { require 5.00503  };
 
-die <<SHUCKS if $@;
-Net::DNS has been tested with perl 5.00503 and 5.6.1.
+
+
+warn <<AMEN if $] < 5.008;
+
+Net::DNS has been tested with perl  5.008
+
+The author is confident that this package will work with version
+versions 5.6 but not confident that any version below perl 5.6 will
+work.
 
 The latest version of perl can always be found at:
-    
                  http://www.cpan.org/src/latest.tar.gz
-SHUCKS
+AMEN
 
 use ExtUtils::MakeMaker;
 # See lib/ExtUtils/MakeMaker.pm for details of how to influence
@@ -20,10 +25,13 @@ WriteMakefile(
       'NAME'	=> 'Net::DNS::SEC',
       'VERSION_FROM'	=> 'SEC.pm',
       'PREREQ_PM'             => {
-	Net::DNS                  => 0.32,
+	Net::DNS                  => 0.40,
 	Test::More                => 0.47,
-	Crypt::OpenSSL::RSA       => 0.17,
-	Crypt::OpenSSL::DSA       => 0.10,
+	Crypt::OpenSSL::RSA       => 0.19,
+	Crypt::OpenSSL::Bignum    => 0.03,
+
+        Crypt::OpenSSL::DSA       => 0.10,
+	Digest::SHA1              => 2.04,
 	File::Basename            => 0.0,
 	MIME::Base64              => 0.0,
 	Math::BigInt              => 0.0,
@@ -36,10 +44,14 @@ WriteMakefile(
 	        'Keyset.pm' => '$(INST_LIBDIR)/Keyset.pm',
 		'SEC.pm'    => '$(INST_LIBDIR)/SEC.pm',
 		'RR/SIG/Private.pm'    => '$(INST_LIBDIR)/RR/SIG/Private.pm',
+		'SEC/Private.pm'    => '$(INST_LIBDIR)/SEC/Private.pm',
 		'RR/DS.pm'  => '$(INST_LIBDIR)/RR/DS.pm',
 		'RR/NXT.pm' => '$(INST_LIBDIR)/RR/NXT.pm',
 		'RR/KEY.pm' => '$(INST_LIBDIR)/RR/KEY.pm',
 		'RR/SIG.pm' =>  '$(INST_LIBDIR)/RR/SIG.pm',
+		'RR/RRSIG.pm' =>  '$(INST_LIBDIR)/RR/RRSIG.pm',
+		'RR/DNSKEY.pm' =>  '$(INST_LIBDIR)/RR/DNSKEY.pm',
+		'RR/NSEC.pm' =>  '$(INST_LIBDIR)/RR/NSEC.pm',
 	    },
 
        clean =>           {FILES => "*~ keyset-*"}

@@ -1,6 +1,6 @@
 #!/usr/bin/perl  -sw 
 # Test script for dnssec functionalty
-# $Id: 11-sigstress.t,v 1.3 2003/01/03 10:17:52 olaf Exp $
+# $Id: 11-sigstress.t,v 1.4 2003/08/27 14:09:25 olaf Exp $
 # 
 # Called in a fashion simmilar to:
 # /usr/bin/perl -Iblib/arch -Iblib/lib -I/usr/lib/perl5/5.6.1/i386-freebsd \
@@ -16,7 +16,7 @@ use Net::DNS;
 use Net::DNS::RR::SIG;
 
 ########
-####   Couple of SIG0 tests
+####   Couple of SIG0 and RRSIG tests
 
 
 diag("This may take a while, do not worry.");
@@ -39,7 +39,7 @@ Exponent2: hXq8fE4G9lLP0kw7+kByifqZGf+kA+xboyi4MBFS3Lxx/2L8rkEjPd8AJttExLDcD/35I
 Coefficient: gAeUUI6YOtdNAh3kS7pOzYfn0ZrUCV8bGpZoaXANk2RL2zUiaSSa4wudhpHwMJt+psNkkiQyf4v600uHbxro4Q==
 ENDRSA
 
-my $rsakeyrr=new Net::DNS::RR ("test.tld. IN KEY 256 3 1 
+my $rsakeyrr=new Net::DNS::RR ("test.tld. IN DNSKEY 256 3 1 
 AQOi+0LmBAfV+4CdCoy81y0Z9fejYXzbXrh87u2gaJZ12ItO5bGtegfB 
 ykgUs76ElH1fGvWBpaHqh3roImc7MGkhCMh7+G2lE7aeYsUXn5wHdBFE 
 wZBaards8JcMEcT8nHyKHNZlq9fAhQ36guqGdZuRPqxgYfwz71VJb2t9 
@@ -67,7 +67,7 @@ open (RSA,">$keypathrsa") or die "Could not open $keypathrsa";
 print RSA $privrsakey;
 close(RSA);
 
-my $dsakeyrr=new Net::DNS::RR ("test.tld. IN KEY 256 3 3 
+my $dsakeyrr=new Net::DNS::RR ("test.tld. IN DNSKEY 256 3 3 
 CI0YHeX8DlMFJjaXA+lM7P7TM8t17m5wm/8KMO1fLaBB2Wbq3s0/jMud 
 rauMDg1G3SrOWOgX2AITudhGzT0c0FTxztM81IbmVETd/l5XXUEG0/jo 
 Y2DNeyxD6I4Y94VcgUyf0l9ronUw+wXBhWCuueJPXSDIbbUDdcI7srls 
@@ -91,15 +91,11 @@ my $datarrset=[$dsakeyrr, $rsakeyrr];
 
 
 
-my $PrivateRSA=Net::DNS::RR::SIG::Private->new($keypathrsa);
-my $PrivateDSA=Net::DNS::RR::SIG::Private->new($keypathdsa);
+my $PrivateRSA=Net::DNS::SEC::Private->new($keypathrsa);
+my $PrivateDSA=Net::DNS::SEC::Private->new($keypathdsa);
 
 for (my $i=0;$i<LOOPS;$i++){
 	
-    
-    
-    
-    
     my $update_rsa = Net::DNS::Update->new("test.test");
     $update_rsa->push("update", Net::DNS::rr_add("test.test.test 3600 IN A 10.0.0.1"));
     $update_rsa->sign_sig0($PrivateRSA);
@@ -107,10 +103,6 @@ for (my $i=0;$i<LOOPS;$i++){
     my $update_dsa = Net::DNS::Update->new("test.test");
     $update_dsa->push("update", Net::DNS::rr_add("test.test.test 3600 IN A 10.0.0.1"));
     $update_dsa->sign_sig0($PrivateDSA);
-
-    
-
-
     $update_rsa->data;
     $update_dsa->data;
     my $sigrrsa=$update_rsa->pop("additional");
@@ -122,7 +114,7 @@ for (my $i=0;$i<LOOPS;$i++){
     is( $sigrrdsa->vrfyerrstr, "No Error", "vrfyerrstr eq No Error");
     
 
-    my $sigdsa= create Net::DNS::RR::SIG($datarrset,$keypathdsa, 
+    my $sigdsa= create Net::DNS::RR::RRSIG($datarrset,$keypathdsa, 
 				    (
 				     ttl => 360, 
 #				     sigval => 100,
@@ -131,7 +123,7 @@ for (my $i=0;$i<LOOPS;$i++){
     ok ($sigdsa->verify($datarrset,$dsakeyrr), 'DSA sig verifies');       
 
 
-    my $sigrsa= create Net::DNS::RR::SIG($datarrset,$keypathrsa, 
+    my $sigrsa= create Net::DNS::RR::RRSIG($datarrset,$keypathrsa, 
 				    (
 				     ttl => 360, 
 #				     sigval => 100,

@@ -2,10 +2,20 @@ Net::DNS::SEC - DNSSEC extensions to Net::DNS
 =============================================
 
 
+IMPORTANT UPGRADE NOTE.
+
+If you upgrade from version 0,9 or 0.10 to version 0.11 or later make
+sure you read the CHANGES file. Version 0.11 replaces
+Net::DNS::RR::SIG::Private by Net::DNS::SEC::Private. Besides this
+version implement draft-ietf-dnsext-dnssec-2535typecode-change-04,
+which deprecates SIG, KEY and NXT.
+
+	
 1. GENERAL INFO.
 
-  This module implements RFC 2535, RFC 2931 and 
-  draft-ietf-dnsext-delegation-signer-0.9txt.
+  This module implements DNS Resource Record types that are relevant
+  for DNSSEC operations. The implementation is based on: RFC 2535, RFC
+  2931 and  draft-ietf-dnsext-delegation-signer-0.15.txt.
 
   RFC 3235 support has been patched into Net::DNS.
 
@@ -25,11 +35,16 @@ Net::DNS::SEC - DNSSEC extensions to Net::DNS
   keep the code in sync with the development.
 
   Also see the 'pod' documentation in: 
-       Net::DNS::RR::SIG
-       Net::DNS::RR::KEY
+       Net::DNS::RR::DNSKEY
+       Net::DNS::RR::RRSIG
+       Net::DNS::SEC::Private
+       Net::DNS::RR::NSEC
        Net::DNS::RR::DS
-       Net::DNS::RR::NXT
-
+  and for the use of SIG0 see:
+       Net::DNS::Packet (sign_sig0
+       Net::DNS::RR::SIG
+       Net::DNS::SEC::Private
+       Net::DNS::RR::KEY
 
 
   On top of the RR classes defined above we also provide a class for
@@ -46,10 +61,10 @@ Net::DNS::SEC - DNSSEC extensions to Net::DNS
   Among other straightforward routines you will need to have
   Crypt::OpenSSL::DSA and Crypt::OpenSSL::RSA installed.
 
-  The package was developed on FreeBSD 4.5 with perl5.6.1, 
-  
-  'make test' is successful with perl5.00503.
-  
+  The package was initially developed on FreeBSD 4.5 with perl5.6.1, 
+  as of version 0.11 development and testing where done on 
+  MacOS 10.2.6 with perl, v5.8.0 built for darwin.
+
 
 
 3. Install
@@ -112,6 +127,9 @@ Net::DNS::SEC - DNSSEC extensions to Net::DNS
   Thanks to the numerous folk that took an interest during development.
   Thanks to Chris Reinardt for putting the hooks in Net::DNS and suggesting
   some improvements to the package.
+  Thanks Ian Robertson and T.J. Mather for their support with the
+  Crypt::OpenSSL::[RSA|DSA] modules
+
 
 8. Author information
 
@@ -124,7 +142,8 @@ Net::DNS::SEC - DNSSEC extensions to Net::DNS
 
 Copyright Notice and Disclaimer
 
-Copyright (c) 2001  RIPE NCC.  Author Olaf M. Kolkman <net-dns-sec@ripe.net>
+Copyright (c) 2001, 2002, 2003 RIPE NCC.  Author Olaf M. Kolkman
+<net-dns-sec@ripe.net>
 
 All Rights Reserved
 
@@ -151,4 +170,4 @@ Based on, and contains, code by Copyright (c) 1997-2001 Michael Fuhr.
 
 
 ------------------------------------------------------------------------------
-$Id: README,v 1.11 2003/01/03 10:17:48 olaf Exp $
+$Id: README,v 1.12 2003/08/27 14:09:25 olaf Exp $

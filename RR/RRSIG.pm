@@ -1,8 +1,8 @@
-# perldoc SIG.pm for documentation.
+# perldoc RRSIG.pm for documentation.
 # Specs: RFC 2535 section 4
-# $Id: SIG.pm,v 1.13 2003/09/01 15:59:01 olaf Exp $
+# $Id: RRSIG.pm,v 1.1 2003/08/27 14:09:25 olaf Exp $
 
-package Net::DNS::RR::SIG;
+package Net::DNS::RR::RRSIG;
 
 use vars qw(@ISA $VERSION @EXPORT );
 
@@ -33,7 +33,7 @@ use Digest::SHA1 qw (sha1);
 
 require Exporter;
 
-$VERSION = do { my @r=(q$Revision: 1.13 $=~/\d+/g); sprintf "%d."."%03d"x$#r,@r };
+$VERSION = do { my @r=(q$Revision: 1.1 $=~/\d+/g); sprintf "%d."."%03d"x$#r,@r };
 @ISA = qw (
 	   Exporter
 	 Net::DNS::RR
@@ -46,8 +46,7 @@ $VERSION = do { my @r=(q$Revision: 1.13 $=~/\d+/g); sprintf "%d."."%03d"x$#r,@r 
 use strict;
 my $debug=0;
 my $crypt_open_ssl=1;
-my $__DeprecationWarningVerifyShown=0;
-my $__DeprecationWarningCreateShown=0;
+
 
 
 
@@ -107,7 +106,7 @@ sub new_from_string {
 	    $siginceptation, $keytag,$signame,$sig) = 
 		$string =~ 
 		    /^\s*(\S+)\s+(\d+)\s+(\d+)\s+(\d+)\s+(\d+)\s+(\d+)\s+(\d+)\s+(\S+)\s+(.*)/;
-	croak (" Invallid SIG RR, check your fomat ") if !$keytag;
+	croak (" Invallid RRSIG RR, check your fomat ") if !$keytag;
 	$sig =~ s/\s*//g;
 	$self->{"typecovered"}= $typecovered;
 	$self->{"algorithm"}= $algoritm;
@@ -190,117 +189,19 @@ sub rr_rdata {
     my $rdata = "";
     if (exists $self->{"typecovered"}) {
 	$rdata=$self->rr_rdata_without_sigbin;
-
+	
 	if ($self->{"sig"} ne "NOTYETCALCULATED") {
-            $rdata .= $self->{"sigbin"};
+	    $rdata .= $self->{"sigbin"};
 	}else{
-            #do sigzero calculation based on current packet content...
-	    
-	    die "Signature not known for a not SIG0 type of signature" if ($self->{"typecovered"} ne "SIGZERO");
-	    die "Private key not known for SIG0" if (! exists $self->{"private_key"});
-	    
-
-	    my $rr=$packet->pop("additional");
-	    die "SIG0 should be the last RR in the packet" if ($rr->type ne "SIG");
-	    die "Unexpected error during creation of SIG0. " if ($rr ne $self);
-	    print "Processing SIG0 signature\n" if $debug;
-
-	    my $data;
-	    # Compress the data and make sure we will not go into deep
-	    # recursion 
-	    if ($self->{"rr_rdata_recursion"}==0){	    
-		$self->{"rr_rdata_recursion"}=1;	    
-
-		$data=$packet->data;
-
-		my $sigdata=$self->_CreateSigData($data);
-		my $signature;
-
-		if ($self->{"algorithm"} == 1 ||
-		    $self->{"algorithm"} == 5)
-		{  #RSA
-
-
-#		  my $rsa_priv=Crypt::OpenSSL::RSA->new_private_key($self->{"private_key"});
-		  my $rsa_priv=$self->{"private_key"};
-		    eval {
-			$rsa_priv->use_pkcs1_oaep_padding;
-			if ($self->{"algorithm"} == 1) {
-			    $rsa_priv->use_md5_hash;
-			} else {
-			    $rsa_priv->use_sha1_hash;
-			}
-
-		    };
-		    die "Error loading RSA private key " . $@ if $@;
-
-		    eval {
-			$signature = $rsa_priv->sign($sigdata);
-		    };
-		    die "RSA Signature generation failed ".$@ if $@;
-
-		    print "\n SIGNED" if $debug ;
-		    
-		}elsif ($self->{"algorithm"} == 3){  #DSA
-
-
-		    my $private_dsa = $self->{"private_key"};
-
-
-		    # If $sigzero then we want to sign data if given
-		    # in the argument. If the argument is empty we
-		    # sign when the packet put on the wire.
-
-		    if (my $sig_obj= $private_dsa->do_sign(sha1($sigdata)))
-		    {
-			
-			print "\n SIGNED" if $debug ;
-			# See RFC 2536 for the content of the DSA SIG rdata 
-			my $T_parameter= (length($private_dsa->get_g)-64)/8;
-			$signature=pack("C",$T_parameter);
-			my $sig_r_param=$sig_obj->get_r;
-			my $sig_s_param=$sig_obj->get_s;
-			# both the R and S paramater in the RDATA need to be
-			# 20 octets
-			while (length($sig_r_param)<20){	
-			    $sig_r_param=pack("x").$sig_r_param ;
-			}
-			while (length($sig_s_param)<20) {	
-			    $sig_s_param=pack("x").$sig_s_param ;
-			}
-
-
-			$signature.=$sig_r_param.$sig_s_param;
-
-
-			
-
-		    }else
-		    {  
-			confess "creation of DSA Signature failed " ;
-		    }
-		}
-		
-		
-		
-		
-		
-		
-		
-		$self->{"sigbin"}=$signature;
-		$self->{"sig"}= encode_base64($signature);
-		$rdata .= $self->{"sigbin"};
-	    }
-	    $packet->push("additional", $self);
+	    die "RRSIGs should not be used for SIG0 type signatures, use Net::DNS::RR::SIG";
 	}
     }
     return $rdata;
-    
 }
 
 sub create {
     my ($class,  $datarrset, $priv_key, %args) = @_;
-
+    
     # This method returns a sigrr with the signature over the
     # datatrrset (an array of RRs) made with the private key stored in
     # the $key_file.
@@ -319,47 +220,33 @@ sub create {
     die "Create did not manage obtain a Net::DNS::SEC::Private object "unless (UNIVERSAL::isa($Private,"Net::DNS::SEC::Private"));
 
     $self->{"algorithm"}=$Private->algorithm;
-     $self->{"keytag"}=$Private->keytag;
-     $self->{"signame"}=$Private->signame;
+    $self->{"keytag"}=$Private->keytag;
+    $self->{"signame"}=$Private->signame;
 
 
-    # if $datarrset is a plain datastrream then construct a sigzero sig.
-    # So any number will actually do.
+    die "Argument is not a reference to an array, are you trying to create a SIG0 using RRSIG?" if ! ref ($datarrset);
 
-    my $sigzero= ! ref ($datarrset);
+
     $self->{"rr_rdata_recursion"}=0;
 
     # Start with seting up the data in the packet we can get our hands on...
 
-    if ($sigzero){
-	$self->{"name"}="";
-    }else{
-	$self->{"name"}=$datarrset->[0]->name;
-    }
 
-    $self->{"type"}="SIG";
+    $self->{"name"}=$datarrset->[0]->name;
+
+    $self->{"type"}="RRSIG";
     $self->{"class"}="IN";
 
 
-    if ($sigzero){
-	# RFC 2931 sect 3
-	$self->{"ttl"}=0;
-	$self->{"class"}="any";
-    }elsif ($args{ttl}){
+    if ($args{ttl}){
 	print "\nSetting TTL to ".  $args{"ttl"} if $debug;
 	$self->{"ttl"}= $args{"ttl"};
     }else{
 	$self->{"ttl"}= 3600;
     }
 
-    if ($sigzero){
-	$self->{"typecovered"}="SIGZERO";
-    }else{
-	print "Note: the SIG RR has been deprecated for use other than SIG0; use the RRSIG instead\n"		  if !$__DeprecationWarningCreateShown ;
-		$__DeprecationWarningCreateShown=1;
+    $self->{"typecovered"}=$datarrset->[0]->type;  #Sanity checks elsewhere
 
-	$self->{"typecovered"}=$datarrset->[0]->type;  #Sanity checks elsewhere
-    }
 
 
     if ($args{response}){
@@ -388,13 +275,9 @@ sub create {
 	my @inct;
 
 
-	if ($sigzero){
-	    # treat sigval as minutes
-	    @inct=gmtime($siginc_time+$args{"sigval"}*60 );  
-	}else{
-	    # treat sigval as days
-	    @inct=gmtime($siginc_time+$args{"sigval"}*24*3600 );  
-	}
+	# treat sigval as days
+	@inct=gmtime($siginc_time+$args{"sigval"}*24*3600 );  
+
 	$self->{"sigexpiration"}= sprintf ("%d%02d%02d%02d%02d%02d",
 					   $inct[5]+1900 ,$inct[4]+1 , 
 					   $inct[3] ,$inct[2] , $inct[1]  ,
@@ -410,13 +293,10 @@ sub create {
 	$self->{"sigexpiration"}=$args{"sigex"} ;
     }else{ 
 	my @inct;
-	if ($sigzero){
-	    #default 5 minutes
-	    @inct=gmtime($siginc_time+5*60  );  
-	}else{
-	   # Take the 30 days default for sigexpiration 	
-	    @inct=gmtime($siginc_time+30*24*3600 );  
-	}
+
+	# Take the 30 days default for sigexpiration 	
+	@inct=gmtime($siginc_time+30*24*3600 );  
+
 	$self->{"sigexpiration"}= sprintf ("%d%02d%02d%02d%02d%02d",
 					   $inct[5]+1900 ,$inct[4]+1 , 
 					   $inct[3] ,$inct[2] , $inct[1]  ,
@@ -424,18 +304,14 @@ sub create {
     }
 
 
-    if (!$sigzero)    {   
-	my  $labels=$datarrset->[0]->name;
-	$labels =~ s/\.^//;  # remove trailing dot.
-	my @labels= split /\./ , $labels;
-	$self->{"labels"}= scalar(@labels);
+    my  $labels=$datarrset->[0]->name;
+    $labels =~ s/\.^//;  # remove trailing dot.
+    my @labels= split /\./ , $labels;
+    $self->{"labels"}= scalar(@labels);
 	
-    }else{
-	$self->{"labels"}= 0;
-    }
 
     # All the TTLs need to be the same in the data RRset.
-    if ( (!$sigzero) && @{$datarrset}>1){
+    if ( @{$datarrset}>1 ){
 	for (my $i=0; $i<@{$datarrset}; $i++){
 	    if ($datarrset->[0]->{"ttl"} != $datarrset->[$i]->{"ttl"}){
 		croak "\nNot all TTLs  in the data RRset are equal ";
@@ -443,12 +319,7 @@ sub create {
 	}
     }
   
-    if ($sigzero){
-	$self->{"orgttl"}=0;
-    }else{	
-	$self->{"orgttl"}=$datarrset->[0]->{"ttl"};  
-    }
-
+    $self->{"orgttl"}=0;
 
     $self->{"sig"}=  "NOTYETCALCULATED";  # This is what we'll do in a bit...
     $self->{"sigbin"}= decode_base64($self->{"sig"});
@@ -496,9 +367,7 @@ sub create {
     }elsif ($self->{"algorithm"} == 3){  #DSA
 	$self->{"private_key"}=$Private->privatekey;
 	my $private_dsa=$Private->privatekey;
-	# If $sigzero then we want to sign data if given in the
-	# argument. If the argument is empty we sign when the packet
-	# put on the wire.
+
 	
       	if ($datarrset ne "" ){
 	    if (my $sig_obj= $private_dsa->do_sign(sha1($sigdata)))
@@ -550,8 +419,6 @@ sub verify {
     # object in the array...  @{$dataref} is length of the array when
     # called in numerical context
 
-    # Alternatively %dataref may refer to a a Net::DNS::Packet.
-
     # if $dataref is not a reference it contains a string with data to be 
     # verified using SIG0
     
@@ -563,12 +430,9 @@ sub verify {
     $sigzero_verify=1 unless (ref($dataref));
     if (! $sigzero_verify ){
 	if (ref($dataref) eq "ARRAY"){
+
 	    if (ref($dataref->[0]) and $dataref->[0]->isa('Net::DNS::RR')){
 		$rrarray_verify=1;
-
-	print "Note: the SIG RR has been deprecated for use other than SIG0; use the RRSIG instead\n"		  
-		  if !$__DeprecationWarningVerifyShown ;
-		$__DeprecationWarningVerifyShown=1;
 	    }else{
 		die "Trying to verify an array of ".  ref( $dataref->[0]) ."\n";
 	    }
@@ -576,15 +440,16 @@ sub verify {
 	    $packet_verify=1 if ((ref($dataref)) and $dataref->isa("Net::DNS::Packet"));
 	    die "Trying to verify a packet while signature is not of SIG0 type"
 		if ($self->{"typecovered"} ne "SIGZERO");
+	    
 	}else{
 	    die "Do not know what kind of data this is" . ref( $dataref) . ")\n";
 	}
     }
 
     $self->{"vrfyerrstr"}="---- Unknown Error Condition ------";
-    print "\n ------------------------------- SIG DEBUG  -----------------\n"  if $debug;
+    print "\n ------------------------------- RRSIG DEBUG  -----------------\n"  if $debug;
     print "Reference: ".ref($dataref) if $debug;;
-    print "\n  SIG:\t", $self->string if $debug;
+    print "\n  RRSIG:\t", $self->string if $debug;
     if ( $rrarray_verify ){
 	for (my $i=0; $i<@{$dataref}; $i++){
 	    print "\n DATA:\t", $dataref->[$i]->string if $debug ;
@@ -605,11 +470,11 @@ sub verify {
     }
 
 
-    if ( $rrarray_verify &&  !$dataref->[0]->type eq "SIG" ) {
-	# if [0] has type SIG the whole RRset is type SIG. 
+    if ( $rrarray_verify &&  !$dataref->[0]->type eq "RRSIG" ) {
+	# if [0] has type RRSIG the whole RRset is type RRSIG. 
 	# There are no SIGs over SIG RRsets
 	$self->{"vrfyerrstr"} = 
-	    "SIGs over SIGs???\n" .
+	    "RRSIGs over RRSIGs???\n" .
  	   " What are you trying to do. This is not possible.\n";
 	return 0;
     }
@@ -1078,7 +943,7 @@ sub _checktimeformat {
 
 =head1 NAME
 
-Net::DNS::RR::SIG - DNS SIG resource record
+Net::DNS::RR::RRSIG - DNS RRSIG resource record
 
 =head1 SYNOPSIS
 
@@ -1087,20 +952,12 @@ C<use Net::DNS::RR>;
 =head1 DESCRIPTION
 
 
-IMPORTANT: For any other use than SIG0 signatures the SIG RR has been
-depricated. Use the DNSSIG instead.
-
-All functionality remains present although a warning will be printed
-at first usage of the verify and create methods.
-
-
-Class for DNS Address (SIG) resource records. In addition to the
+Class for DNS Address (RRSIG) resource records. In addition to the
 regular methods in the Net::DNS::RR the Class contains a method to
 sign RRsets using private keys (create). And a class for verifying
 signatures over RRsets (verify).
 
-The SIG RR is an implementation of RFC 2535 and RFC 2931.
-
+The RRSIG RR is an implementation of RFC 2535 and RFC 2931.
 
 
 
@@ -1113,18 +970,18 @@ Create a signature over a RR set or over a packet (SIG0).
 
     my $keypath= 
             "/home/olaf/keys/Kbla.foo.+001+60114.private";
-    my $sigrr= create Net::DNS::RR::SIG(\@datarrset,
+    my $sigrr= create Net::DNS::RR::RRSIG(\@datarrset,
 					$keypath);
-    my $sigrr= create Net::DNS::RR::SIG(\@datarrset,
+    my $sigrr= create Net::DNS::RR::RRSIG(\@datarrset,
 					$keypath,
 					\%arguments);
     $sigrr->print;
 
-create is an alternative constructor for a SIG RR object.  
+create is an alternative constructor for a RRSIG RR object.  
 
 The first argument is either reference to an array that contains the
 RRset that needs to be signed or a string containing the data over
-wich a SIG0 type of signature needs to be constructed.
+wich a RRSIG0 type of signature needs to be constructed.
 
 The second argument is a string containing the path to a file
 containing the the private key as generated with dnssec-keygen, a
@@ -1147,6 +1004,7 @@ sigval is the validity of the signature in minutes for SIG0s and days
 for other signatures (sigex=sigin+sigval).  If sigval is specified
 then sigex is ignored. The default for sigval is 5 minutes for SIG0s
 and 30 days other types of signatures.
+
 
 Note that for SIG0 signatures the default sigin is calculated at the
 moment the object is created, not at the moment that the packet is put
@@ -1267,7 +1125,7 @@ the proper handling of times...
 Andy Vaskys (Network Associates Laboratories) supplied the code for
 handling RSA with SHA1 (Algorithm 5).
 
-Chris Reinardt for maintianing Net::DNS.
+Chris Reinardt for maintianing Net::DNS.  
 
 T.J. Mather, <tjmather@tjmather.com>, the Crypt::OpenSSL::DSA
 maintainer, for his quick responses to bug report and feature

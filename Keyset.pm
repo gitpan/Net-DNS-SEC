@@ -1,5 +1,5 @@
 
-# $Id: Keyset.pm,v 1.3 2002/12/20 10:20:18 olaf Exp $
+# $Id: Keyset.pm,v 1.4 2003/08/27 14:09:25 olaf Exp $
 
 
 package Net::DNS::Keyset;
@@ -30,14 +30,14 @@ are subject to change.
 =cut
 
 
-
+use Data::Dumper;
 use strict;
 use Net::DNS;
 use Carp;
 
 use vars qw ( $VERSION @EXPORT $keyset_err );
 
-( $VERSION ) = '$Revision: 1.3 $ ' =~ /\$Revision:\s+([^\s]+)/;
+( $VERSION ) = '$Revision: 1.4 $ ' =~ /\$Revision:\s+([^\s]+)/;
 
 my $debug=0;
 
@@ -46,6 +46,7 @@ my $debug=0;
 sub new {
 	my $retval;
 	$keyset_err="No Error";
+
 	if (@_ == 2 && ! ref $_[1] ) {
 		$retval = new_from_file(@_);
 	}
@@ -57,8 +58,7 @@ sub new {
 	}else{
 	     $keyset_err="Could not parse argument";
 	     return(0);
-	 }
-
+	 }	
 	return $retval;
 }
 
@@ -336,7 +336,7 @@ sub new_from_keys {
 
     $keyset=Net::DNS::Keyset->new(@packet)
     
-    die "Corrupted selfsignatur " if ! $keyset->verify;
+    die "Corrupted selfsignature " if ! $keyset->verify;
 
 Creates a keyset object from a Net::DNS::Packet that contains the
 answer to a query for the apex key records.
@@ -365,7 +365,6 @@ sub new_from_packet {
     # All the information is in the answer section. 
     # We expect keys and signatures there.
     foreach my $rr  ($packet->answer){
-
 	if ($rr->type eq "SIG"){
 	    push @sigrr, $rr;
 	}
@@ -457,12 +456,13 @@ sub verify {
 		print "...\n" if $debug;
 		my @keys=$self->keys ;
 		if (! $sig->verify( \@keys , $key)){
-		    $keyset_err= $sig->vrfyerrstr;
+		    $keyset_err= $sig->vrfyerrstr. " on key ". $key->name.			" ".$key->keytag;
 		    print "Not verified:".  $sig->vrfyerrstr ."\n"if $debug;
 		    return 0;
 		}
 		$key_not_verified=0;
 		print "verified " .$key->keytag."\n" if $debug;
+
 	    }
 	}
 	if ($key_not_verified){
