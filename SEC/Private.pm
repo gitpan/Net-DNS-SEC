@@ -18,7 +18,7 @@ use Digest::SHA1 qw (sha1);
 
 require Exporter;
 
-$VERSION = do { my @r=(q$Revision: 1.1 $=~/\d+/g); sprintf "%d."."%03d"x$#r,@r };
+$VERSION = do { my @r=(q$Revision: 1.4 $=~/\d+/g); sprintf "%d."."%03d"x$#r,@r };
 
 sub new {
     my ($class,  $key_file) = @_;
@@ -36,7 +36,7 @@ sub new {
     # assuming proper file name.
     # We determine the algorithm from the filename.
     if ($keyname =~ /K(.*)\.\+(\d{3})\+(\d*)\.private/){
-	$self->{"signame"}=$1;  # withouth trailing .
+	$self->{"signame"}=$1.".";
 	$self->{"algorithm"}= 0 + $2; #  Force non-string 
 	$self->{"keytag"}=$3;
     }else{
@@ -91,13 +91,17 @@ sub new {
     close(KEYFH);
 
     if ($self->{"algorithm"} == 1 || $self->{"algorithm"} == 5) {  #RSA
-
-
       $self->{'privatekey'}=Crypt::OpenSSL::RSA-> 
-	new_key_from_parameters(
-				$Modulus,
-				$PublicExponent,
-				$PrivateExponent);
+	  new_key_from_parameters(
+	      $Modulus,
+	      $PublicExponent,
+	      $PrivateExponent,
+	      $Prime1,
+	      $Prime2,
+	      $Exponent1,
+	      $Exponent2,
+	      $Coefficient,
+	);
     }elsif ($self->{"algorithm"} == 3){  #DSA
 	my $private_dsa = Crypt::OpenSSL::DSA->new();
 	$private_dsa->set_p($prime_p);
@@ -140,35 +144,154 @@ sub signame {
 }
 
 
-
 # Little helper function to put a BigInt into a binary (unsigned,
 #network order )
 
-sub bi2bin {
-    my($p, $l) = @_;
-    $l ||= 0;
-    my $base = Math::BigInt->new("+256");
-    my $res = '';
-    {
-        my $r = $p % $base;
-        my $d = ($p-$r) / $base;
-        $res = chr($r) . $res;
-        if ($d >= $base) {
-            $p = $d;
-            redo;
-        }
-        elsif ($d != 0) {
-            $res = chr($d) . $res;
-        }
+#sub bi2bin {
+#    my($p, $l) = @_;
+#    $l ||= 0;
+#    my $base = Math::BigInt->new("+256");
+#    my $res = '';
+#    {
+#        my $r = $p % $base;
+#        my $d = ($p-$r) / $base;
+#        $res = chr($r) . $res;
+#        if ($d >= $base) {
+#            $p = $d;
+#            redo;
+#        }
+#        elsif ($d != 0) {
+#            $res = chr($d) . $res;
+#        }
+#    }
+#    $res = "\0" x ($l-length($res)) . $res
+#        if length($res) < $l;
+#    $res;
+#}
+
+
+
+sub new_rsa_priv {
+    my ($class,  $keyblob,$signame,$flags) = @_;
+    my $self={};
+    bless ($self,$class);
+    $self->{"signame"}=$signame;
+    $self->{"algorithm"}=5;
+    $self->{"flags"}=$flags;
+    $self->{'privatekey'}=Crypt::OpenSSL::RSA->  
+	new_private_key($keyblob);
+
+    $self->{"keytag"}=$self->dump_rsa_keytag();
+    return $self;
+}
+
+sub  dump_rsa_priv {
+    my $self=shift;
+
+    my ( $Modulus,$PublicExponent, $PrivateExponent, $Prime1, $Prime2, $Exponent1,
+	 $Exponent2,$Coefficient )=$self->{"privatekey"}->get_key_parameters;
+    my $string="Private-key-format: v1.2\n";
+    $string .= "Algorithm: 5 (RSASHA1)\n";
+    
+    if (defined $Modulus 
+	&& defined $PublicExponent 
+	&& defined $PrivateExponent 
+	&& defined $Prime1 
+	&& defined $Prime2 
+	&& defined $Exponent1 
+	&& defined $Exponent2 
+	&& $Coefficient ){
+	$string .= "Modulus: ". encode_base64($Modulus->to_bin,"")."\n" ;
+	$string .= "PublicExponent: ". encode_base64($PublicExponent->to_bin,"")."\n" ;
+	$string .= "PrivateExponent: ". encode_base64($PrivateExponent->to_bin,"")."\n"; 
+	$string .= "Prime1: ". encode_base64($Prime1->to_bin,"")."\n" ;
+	$string .= "Prime2: ". encode_base64($Prime2->to_bin,"")."\n" ;
+	$string .= "Exponent1: ". encode_base64($Exponent1->to_bin,"")."\n" ;
+	$string .= "Exponent2: ". encode_base64($Exponent2->to_bin,"")."\n" ;
+	$string .= "Coefficient: ". encode_base64($Coefficient->to_bin,"")."\n" ;
     }
-    $res = "\0" x ($l-length($res)) . $res
-        if length($res) < $l;
-    $res;
+    else  {
+	$string= "";
+    };
+    return $string;
+}
+
+
+sub  dump_rsa_pub {
+    my $self=shift;
+    my ( $Modulus,$PublicExponent, $PrivateExponent, $Prime1, $Prime2, $Exponent1,
+	 $Exponent2,$Coefficient )=$self->{"privatekey"}->get_key_parameters;
+    
+    return "" unless (defined  $Modulus && defined $PublicExponent);
+    my $explength;
+    my $pubexp=$PublicExponent->to_bin;
+    if (length($pubexp)>255){
+	$explength=pack("C",0).pack("n",length($pubexp));
+    }else{
+	$explength=pack("C",length($pubexp));
+    }
+
+    return encode_base64($explength.$pubexp.$Modulus->to_bin, "");
+}
+
+
+sub dump_rsa_keytag{
+    my $self=shift;
+    
+    my $flags;
+    if (defined $self->{"flags"}){
+	$flags=$self->{"flags"}
+    }else{
+	$flags=shift;
+    }
+    return()  unless defined $flags;
+    $self->{"flags"}=$flags; # So this will set flag if empty before
+    my $key=$self->dump_rsa_pub;
+    return ()  unless $key;
+    my $tmprr=Net::DNS::RR->new("tmp  IN DNSKEY $flags 3 5 $key");
+    return $tmprr->keytag;
+}
+
+sub dump_rsa_private_der {
+    my $self=shift;
+    return $self->{"privatekey"}->get_private_key_string;
+
+    }
+
+
+
+
+sub generate_rsa {
+    my ($class) =shift;
+    my $name=shift;
+    my $flags=shift;
+    my $size=shift;
+    $size=1024 if !defined ($size);
+    my $good_entropy=shift;
+    my $self={};
+    bless ($self,$class);
+
+    $self->{"signame"}=$name;  
+    $self->{"algorithm"}= 5; #  Force non-string 
+    if (defined($good_entropy)){
+	Crypt::OpenSSL::Random::random_seed($good_entropy);
+	  Crypt::OpenSSL::RSA->import_random_seed();
+      }
+    $rsa = Crypt::OpenSSL::RSA->generate_key($size);
+    $self->{"privatekey"}=$rsa;
+    $self->{"keytag"}=$self->dump_rsa_keytag($flags);
+    return $self;
 }
 
 
 
+
 1;
+
+
+
+
+
 
 
 
@@ -217,12 +340,113 @@ Net::DNS::RR::SIG class.
  $private->signame
 
 Returns components as determined from the filename and needed by
-Net::DNS::RR::SIG.
+Net::DNS::RR::RRSIG.
 
 
-=head1 TODO
+=head1 RSASHA1 specific helper functions
 
-Add a genereate method that will generate a key pair.
+These functions may be usefull to read and transfer BIND private keys to and
+from X509 format.
+
+=head2 new_rsa_private
+
+Constructor method.
+
+ my $private=Net::DNS::SEC::Private->new_rsa_private($keyblob,$domain,$flag);
+
+Creates a Net::DNS::SEC::Private object from the supplied string.  For
+the object to be useful you will have to provide the "domain" name for
+which this key is to be used as the second argument and the flag
+(either 256 or 257 for a non SEP and a SEP key respectivly).
+
+
+The string should include the -----BEGIN...----- and -----END...-----
+lines.  The padding is set to PKCS1_OAEP, but can be changed with the
+use_xxx_padding methods
+
+It is the same 
+
+=head2 dump_rsa_priv
+
+  my $bind_keyfilecontent=$private->dump_rsa_priv
+  
+Returns the content of a BIND private keyfile (Private-key-format: v1.2).
+
+An empty string will be returned if not all parameters are available (please
+supply the author with example code if this ever happens).
+
+=head2 dump_rsa_pub
+
+    my $bind_keyfilecontent=$private->dump_rsa_pub
+
+Returns the publick key part of the DNSKEY RR.
+
+Returns an empty string on failure.
+
+
+=head2 dump_rsa_keytag
+    
+    my $flags=257;   # SEP key.
+    my $keytag=$private->dump_rsa_keytag($flags);
+
+This function will calculate the keytag assuming that key is a used
+with the RSASHA1 signing algorithm and with the DNSKEY flags as input.
+
+
+The flags field may be needed in case it was not specified when the
+key was created. If the object allready knows it's flags vallue the
+input is ignored. 
+
+returns undefined on failure
+
+=head2 dump_rsa_private_der
+
+    my $keyblob=$private->dump_rsa_privat_der
+
+Return the DER-encoded PKCS1 representation of the private key. (Same format that
+can be read with the read_rsa_private method.)
+
+=head2 generate_rsa
+
+    my $keypair=Net::DNS::SEC::Private->generate_rsa("example.com",$flag,1024,$random);
+prin $newkey->dump_rsa_priv;
+print $newkey->dump_rsa_pub();
+
+
+Uses Crypt::OpenSSL::RSA generate_key to create a keypair.
+
+First argument is the name of the key, the second argument is the flag
+field (take a value of 257 for Keysigning keys and a value of 256 for
+zone signing keys). The 3rd argument is the keysize.
+
+If the 4th argument is defined it is passed to the
+Crypt::OpenSSL::Random::random_seed method (see Crypt::OpenSSL::RSA
+for details), not needed with a proper /dev/random.
+
+=head1 Example
+
+This is a code sniplet from the test script. First a new keypair is
+generated.  An Net::DNS::RR object is created by constructing
+the resource record string - using the dump_rsa_pub() method.
+
+Then a self signature over the public key is created and verified.
+
+    my $newkey=Net::DNS::SEC::Private->generate_rsa("example.com",257,1024);
+    my $tstpubkeyrr= Net::DNS::RR->new ($newkey->signame .
+                                    "  IN DNSKEY 257 3 5 ".
+				    $newkey->dump_rsa_pub());
+    # flags not needed as argument for dump_rsa_keytag
+    $ since they where set by generate_rsa
+
+    is($tstpubkeyrr->keytag,$newkey->dump_rsa_keytag(),
+                "Consistent keytag calculation");
+
+    my $sigrr= create Net::DNS::RR::RRSIG([$tstpubkeyrr],$newkey);
+    is ($sigrr->keytag,$tstpubkeyrr->keytag,
+            "Consisted keytag in the created signature");;
+
+    ok($sigrr->verify([$tstpubkeyrr],$tstpubkeyrr), 
+             "Self verification consistent.");
 
 
 

@@ -1,5 +1,5 @@
 
-# $Id: Keyset.pm,v 1.4 2003/08/27 14:09:25 olaf Exp $
+# $Id: Keyset.pm,v 1.6 2004/06/11 16:14:35 olaf Exp $
 
 
 package Net::DNS::Keyset;
@@ -37,7 +37,7 @@ use Carp;
 
 use vars qw ( $VERSION @EXPORT $keyset_err );
 
-( $VERSION ) = '$Revision: 1.4 $ ' =~ /\$Revision:\s+([^\s]+)/;
+( $VERSION ) = '$Revision: 1.6 $ ' =~ /\$Revision:\s+([^\s]+)/;
 
 my $debug=0;
 
@@ -46,12 +46,17 @@ my $debug=0;
 sub new {
 	my $retval;
 	$keyset_err="No Error";
-
 	if (@_ == 2 && ! ref $_[1] ) {
 		$retval = new_from_file(@_);
 	}
-	elsif (@_ >= 2 && (ref($_[1]) eq "ARRAY")  &&
-	       ref($_[1]->[0]) eq "Net::DNS::RR::KEY" ) {
+	elsif (@_ == 3 
+	       && (ref($_[2]) eq "ARRAY")  &&
+	       ref($_[2]->[0]) eq "Net::DNS::RR::RRSIG" &&
+	      (ref($_[1]) eq "ARRAY")  &&
+	       ref($_[1]->[0]) eq "Net::DNS::RR::DNSKEY" ) {
+	    $retval = new_from_keys_sigs(@_);
+	}elsif (@_ >= 2 && (ref($_[1]) eq "ARRAY")  &&
+	       ref($_[1]->[0]) eq "Net::DNS::RR::DNSKEY" ) {
 	    $retval = new_from_keys(@_);
 	}elsif ( @_ == 2 &&  ref($_[1]) eq "Net::DNS::Packet"  ){
 	    $retval = new_from_packet(@_);
@@ -106,7 +111,7 @@ sub new_from_file {
 
 
     # This is code I reused. There is a whole chunk of code for dncame
-    # completion for RR types other than KEY and SIG.  That may be
+    # completion for RR types other than DNSKEY and RRSIG.  That may be
     # usefull # if you want to reuse the code for writing a zone
     # parser
 
@@ -233,10 +238,10 @@ sub new_from_file {
 	# The sting in $_ now contains a one-line RRset. We now turn it into
 	# RR object.
 	my $rr=Net::DNS::RR->new($_);
-	if ($rr->type eq "KEY") {
+	if ($rr->type eq "DNSKEY") {
 	    $keys[$k++]=$rr;
 	    $names{$rr->name}=1;
-	}elsif ($rr->type eq "SIG") {
+	}elsif ($rr->type eq "RRSIG") {
 	    $sigs[$s++]=$rr;
 	    $names{$rr->name}=1;
 	}else{
@@ -284,6 +289,7 @@ Sets $Net::DNS::Keyset::keyset_err and returns 0 on failure.
 =cut
 
 
+
 sub new_from_keys {
     my $class=shift;
     my $keyrr_ref=shift;
@@ -311,7 +317,7 @@ sub new_from_keys {
 		"could not be found";
 	    return 0;
 	}
-	my $sig=Net::DNS::RR::SIG->create($keyrr_ref,$privkey);
+	my $sig=Net::DNS::RR::RRSIG->create($keyrr_ref,$privkey);
 	push @sigrr, $sig;
 	push @keyrr, $key;
 
@@ -327,14 +333,63 @@ sub new_from_keys {
     return $ks;
 }
 
+
+
+
+=head2 new (from keys and sig RRsets)
+
+    $keyset=Net::DNS::Keyset->new(\@keyrr,\@sigrr);
+
+Creates a keyset object from the keys provided through the reference
+to an array of Net::DNS::RR::DNSKEY and Net::DNS::RR::RRSIG objects.
+
+
+Sets $Net::DNS::Keyset::keyset_err and returns 0 on failure.
+
+=cut
+
+
+sub new_from_keys_sigs{
+    my $class=shift;
+    my $keyrr_ref=shift;
+    my $sigrr_ref=shift;
+
+    my @sigrr;
+    my @keyrr;
+
+    
+    foreach my  $key (@{$keyrr_ref}){
+	push @keyrr, $key;
+
+    }
+
+
+    foreach my $sig (@{$sigrr_ref}){
+	push @sigrr, $sig;
+
+    }
+
+
+    my $ks;
+    my $keyset= {
+	keys => [ @keyrr ],
+	sigs => [ @sigrr ],
+    };
+    bless $ks= $keyset, $class;
+    return 0 if (! $ks->verify);
+    return $ks;
+
+}
+
+
 =head2 new (from Packet)
 
     $res = Net::DNS::Resolver->new;
     $res->dnssec(1);
    
-    $packet = $res->query ("example.com", "KEY", "IN");
+    $packet = $res->query ("example.com", "DNSKEY", "IN");
 
-    $keyset=Net::DNS::Keyset->new(@packet)
+    $keyset=Net::DNS::Keyset->new($packet)
     
     die "Corrupted selfsignature " if ! $keyset->verify;
 
@@ -365,10 +420,10 @@ sub new_from_packet {
     # All the information is in the answer section. 
     # We expect keys and signatures there.
     foreach my $rr  ($packet->answer){
-	if ($rr->type eq "SIG"){
+	if ($rr->type eq "RRSIG"){
 	    push @sigrr, $rr;
 	}
-	elsif ($rr->type eq "KEY")
+	elsif ($rr->type eq "DNSKEY")
 	{
 	    push @keyrr, $rr ;
 	}else{
@@ -452,7 +507,7 @@ sub verify {
 		"---" .
 		    $sig->signame .":". $sig->keytag .  "\n" if $debug;
 	    if ($key->keytag == $sig->keytag &&
-		$key->name eq $sig->signame ){
+		$key->name."." eq $sig->signame ){
 		print "...\n" if $debug;
 		my @keys=$self->keys ;
 		if (! $sig->verify( \@keys , $key)){
@@ -466,7 +521,7 @@ sub verify {
 	    }
 	}
 	if ($key_not_verified){
-	    $keyset_err= "Bailed out: Key with keyid ". $key->keytag." was not selfsigned\n";
+	    $keyset_err= "Key with keyid ". $key->keytag." was not selfsigned\n";
 
 	    return 0;
 	}

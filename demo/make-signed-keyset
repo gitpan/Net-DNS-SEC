@@ -83,7 +83,7 @@ sub make_keyset {
   }
 
   if ($verbose) {
-    print("Creating KEY RR\n");
+    print("Creating DNSKEY RR\n");
   }
 	my $keyrr = Net::DNS::RR->new($keyrr_txt);
 

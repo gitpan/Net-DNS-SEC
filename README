@@ -14,15 +14,15 @@ which deprecates SIG, KEY and NXT.
 1. GENERAL INFO.
 
   This module implements DNS Resource Record types that are relevant
-  for DNSSEC operations. The implementation is based on: RFC 2535, RFC
-  2931 and  draft-ietf-dnsext-delegation-signer-0.15.txt.
+  for DNSSEC operations. The implementation is based on the DNSSEC-bis
+  document set.
 
   RFC 3235 support has been patched into Net::DNS.
 
   The extensions provide the following additional features on top of
   the Net::DNS package (http://www.net-dns.org/ version 0.21). 
 
-  - DS, SIG, KEY and NXT records. These are all implemented as RR
+  - DS, RRSIG, DNSKEY and NSEC records. These are all implemented as RR
     objects.  The cryptography has been implemented using
     Crypt::OpenSSL::DSA, Crypt::OpenSSL::RSA and related modules.
 
@@ -142,7 +142,7 @@ which deprecates SIG, KEY and NXT.
 
 Copyright Notice and Disclaimer
 
-Copyright (c) 2001, 2002, 2003 RIPE NCC.  Author Olaf M. Kolkman
+Copyright (c) 2001, 2002, 2003, 2004 RIPE NCC.  Author Olaf M. Kolkman
 <net-dns-sec@ripe.net>
 
 All Rights Reserved
@@ -170,4 +170,4 @@ Based on, and contains, code by Copyright (c) 1997-2001 Michael Fuhr.
 
 
 ------------------------------------------------------------------------------
-$Id: README,v 1.12 2003/08/27 14:09:25 olaf Exp $
+$Id: README,v 1.13 2004/06/04 16:06:48 olaf Exp $

@@ -1,6 +1,6 @@
 package Net::DNS::RR::DS;
 
-# $Id: DS.pm,v 1.11 2004/04/23 14:58:58 olaf Exp $
+# $Id: DS.pm,v 1.12 2004/06/04 16:06:48 olaf Exp $
 
 
 use strict;
@@ -23,7 +23,7 @@ BEGIN {
 
 
 
-$VERSION = do { my @r=(q$Revision: 1.11 $=~/\d+/g); sprintf "%d."."%03d"x$#r,@r };
+$VERSION = do { my @r=(q$Revision: 1.12 $=~/\d+/g); sprintf "%d."."%03d"x$#r,@r };
 my $debug=0;
 
 @ISA = qw(Net::DNS::RR);
@@ -216,7 +216,7 @@ $dsrr->print;
 
 The verify method will return 1 if the hash over the key provided in
 the argument matches the data in the $dsrr itself i.e. if the DS
-pointing to the KEY from the argument. It will return 0
+pointing to the DNSKEY from the argument. It will return 0
 otherwise.
 
 $dsrr->($keyrr);

@@ -1,6 +1,6 @@
 # perldoc SIG.pm for documentation.
 # Specs: RFC 2535 section 4
-# $Id: SIG.pm,v 1.15 2004/04/23 14:58:58 olaf Exp $
+# $Id: SIG.pm,v 1.16 2004/06/04 16:06:48 olaf Exp $
 
 package Net::DNS::RR::SIG;
 
@@ -33,7 +33,7 @@ use Digest::SHA1 qw (sha1);
 
 require Exporter;
 
-$VERSION = do { my @r=(q$Revision: 1.15 $=~/\d+/g); sprintf "%d."."%03d"x$#r,@r };
+$VERSION = do { my @r=(q$Revision: 1.16 $=~/\d+/g); sprintf "%d."."%03d"x$#r,@r };
 @ISA = qw (
 	   Exporter
 	 Net::DNS::RR
@@ -82,7 +82,7 @@ sub new {
 	$self->{"keytag"}=unpack("n",substr($$data,$offsettokeytag,2));
 	my($signame,$sigoffset) = Net::DNS::Packet::dn_expand
 	    ($data, $offsettosignm);
-	$self->{"signame"}=lc($signame);
+	$self->{"signame"}=lc($signame) ."."; #dn_expand forgets trailing dots.
 	my($sigmaterial)=substr($$data,$sigoffset,
 				($self->{"rdlength"}-$sigoffset+$offset));
 	$self->{"sigbin"}=$sigmaterial;

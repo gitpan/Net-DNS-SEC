@@ -1,6 +1,6 @@
 # perldoc RRSIG.pm for documentation.
 # Specs: RFC 2535 section 4
-# $Id: RRSIG.pm,v 1.4 2004/03/09 14:28:00 olaf Exp $
+# $Id: RRSIG.pm,v 1.6 2004/06/11 16:14:35 olaf Exp $
 
 package Net::DNS::RR::RRSIG;
 
@@ -32,7 +32,7 @@ use Digest::SHA1 qw (sha1);
 
 require Exporter;
 
-$VERSION = do { my @r=(q$Revision: 1.4 $=~/\d+/g); sprintf "%d."."%03d"x$#r,@r };
+$VERSION = do { my @r=(q$Revision: 1.6 $=~/\d+/g); sprintf "%d."."%03d"x$#r,@r };
 @ISA = qw (
 	   Exporter
   	 Net::DNS::RR
@@ -81,7 +81,7 @@ sub new {
 	$self->{"keytag"}=unpack("n",substr($$data,$offsettokeytag,2));
 	my($signame,$sigoffset) = Net::DNS::Packet::dn_expand
 	    ($data, $offsettosignm);
-	$self->{"signame"}=lc($signame);
+	$self->{"signame"}=lc($signame).".";  #Add a trailing dot..dn_expand does not do that.
 	my($sigmaterial)=substr($$data,$sigoffset,
 				($self->{"rdlength"}-$sigoffset+$offset));
 	$self->{"sigbin"}=$sigmaterial;
@@ -162,6 +162,7 @@ sub rr_rdata_without_sigbin {
 	$rdata .= pack("C",$self->algorithm);
 	$rdata .= pack("C",$self->{"labels"});
 	$rdata .= pack("N",$self->{"orgttl"});
+
 	$self->{"sigexpiration"} =~ /(\d{4})(\d{2})(\d{2})(\d{2})(\d{2})(\d{2})/;
 	$rdata .= pack("N",timegm ($6, $5, $4, $3, $2-1, $1-1900));
 
@@ -285,13 +286,15 @@ sub create {
 					   $inct[0]);	
     }elsif ($args{"sigex"}) { #sigexpiration set by the argument
 	_checktimeformat($args{"sigex"});
+
 	if ( $self->{"siginceptation"} > $args{"sigex"} ){
 	    croak "Signature can only expire after it has been incepted (".
 		$args{"sigex"} . "<" . $self->{"siginceptation"} .
 		    ")";
 	}
-	print "\nSetting sigexpiration to " . $args{"sigexp"} if $debug;
+	print "\nSetting sigexpiration to " . $args{"sigex"} if $debug;
 	$self->{"sigexpiration"}=$args{"sigex"} ;
+
     }else{ 
 	my @inct;
 
@@ -977,6 +980,18 @@ Create a signature over a RR set or over a packet (SIG0).
 					\%arguments);
     $sigrr->print;
 
+
+
+    #Alternatively use Net::DNS::SEC::Private 
+
+    my $private=Net::DNS::SEC::Private-new(
+	"/home/olaf/keys/Kbla.foo.+001+60114.private");
+    my $sigrr= create Net::DNS::RR::RRSIG(\@datarrset,
+					  $private);
+
+
+
+
 create is an alternative constructor for a RRSIG RR object.  
 
 The first argument is either reference to an array that contains the
@@ -1071,7 +1086,6 @@ Read "KeyID Bug in bind." below.
     print "signame =", $rr->signame, "\n"
 
 Returns the name of the public KEY RRs  this sig was made with.
-(Note: the name does not contain a trailing dot.)
 
 =head2 sig
 
@@ -1165,8 +1179,8 @@ This code uses Crypt::OpenSSL which uses the openssl library
 
 L<perl(1)>, L<Net::DNS>, L<Net::DNS::Resolver>, L<Net::DNS::Packet>,
 L<Net::DNS::Header>, L<Net::DNS::Question>,
-L<Net::DNS::RR>,L<Crypt::OpenSSL::RSA>,L<Crypt::OpenSSL::DSA> RFC 2435 Section
-4, RFC 2931.
+L<Net::DNS::RR>,L<Crypt::OpenSSL::RSA>,
+L<Crypt::OpenSSL::DSA>, L<Net::DNS::SEC::Private>.
 
 =cut
 

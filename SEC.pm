@@ -1,14 +1,25 @@
 #
-# $Id: SEC.pm,v 1.13 2004/04/23 14:35:16 olaf Exp $
+# $Id: SEC.pm,v 1.16 2004/06/04 16:06:48 olaf Exp $
 #
+
+use strict;
+
+
 
 package Net::DNS::SEC;
 use Net::DNS;
 
 use Carp;
 use strict;
-use vars qw($VERSION);
-$VERSION = '0.11_4';
+use Exporter;
+use vars qw($VERSION @EXPORT_OK @ISA);
+@ISA=qw(Exporter);
+$VERSION = '0.12';
+
+@EXPORT_OK= qw (
+              key_difference
+              verify_selfsig
+               );
 
 
 =head1 NAME
@@ -24,7 +35,7 @@ classes.
 
 =head1 DESCRIPTION
 
-The Net::DSN::SEC package provides the resource records that are
+The Net::DSN::SEC suit provides the resource records that are
 needed for Secure DNS (RFC2535). DNSSEC is a protocol that is still
 under development.
 
@@ -43,10 +54,61 @@ available through the Net::DNS::SEC package.
 
 See Net::DNS for general help.
 
+The Net::DNS::SEC module implements a few class methods used by the other
+modules in this suite and a few functions that can be exported.
 
-=head1 Functions
 
-These functions are inherited by relevant Net::DNS::RR classes.
+=head1 Utility functions
+
+Use the following construct if you want to use these functions in your code.
+
+   use Net::DNS::SEC qw( key_difference );
+
+
+
+=head2 key_difference
+
+    $result=key_differnece(\@a,\@b,\@result);
+
+
+Fills @result with all keys in the array "@a" that are not in the
+array "@b".
+
+Returns 0 on success or an error message on failure.
+
+
+=cut
+
+
+sub key_difference {
+    my $a=shift;
+    my $b=shift;
+    my $r=shift;
+
+    my %b_index;
+    foreach my $b_key (@$b){
+	return "Second array contains something different than a ".
+	    "Net::DNS::RR::DNSKEY objects (".ref($b_key).")" if
+	    ref($b_key) ne "Net::DNS::RR::DNSKEY";
+	    
+	$b_index{$b_key->name."+".$b_key->algorithm."+".$b_key->keytag}++;
+    }
+    foreach my $a_key (@$a){
+	return "First array contains something different than a ".
+	    "Net::DNS::RR::DNSKEY objects (".ref($a_key).")" if
+	    ref($a_key) ne "Net::DNS::RR::DNSKEY";
+
+	push @$r,$a_key  unless 
+	    defined ($b_index{$a_key->name."+".$a_key->algorithm."+".$a_key->keytag});
+    }
+    return (0);
+}
+
+
+=head1 Class methods
+
+These functions are inherited by relevant Net::DNS::RR classes. They
+are not exported.
 
 =head2 algorithm
 
@@ -74,7 +136,7 @@ Can also be called as a class method to do Mnemonic to Value conversion.
 
 L<perl(1)>, L<Net::DNS>, L<Net::DNS::RR::KEY>, L<Net::DNS::RR::SIG>,
 L<Net::DNS::RR::NXT>, L<Net::DNS::RR::DNSKEY>, L<Net::DNS::RR::RRSIG>,
-L<Net::DNS::RR::NSEC>, L<Net::DNS::RR::DS>.
+L<Net::DNS::RR::NSEC>, L<Net::DNS::RR::DS>, L<Net::DNS::SEC::Private>.
 
 =cut
 

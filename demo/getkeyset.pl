@@ -17,9 +17,9 @@ $res = Net::DNS::Resolver->new;
 
 $res->dnssec(1);
 $res->nameservers($nameserver) if defined $nameserver;
-$packet = $res->query($domain, 'KEY', 'IN');
+$packet = $res->query($domain, 'DNSKEY', 'IN');
 
-die "No results for query $domain KEY" if ! defined $packet;
+die "No results for query $domain DNSKEY" if ! defined $packet;
 
 $keyset=Net::DNS::Keyset->new($packet) ;
 

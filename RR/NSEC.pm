@@ -1,6 +1,6 @@
 package Net::DNS::RR::NSEC;
 
-# $Id: NSEC.pm,v 1.3 2003/12/10 08:50:15 olaf Exp $
+# $Id: NSEC.pm,v 1.4 2004/05/13 14:00:17 olaf Exp $
 
 use strict;
 use vars qw(@ISA $VERSION);
@@ -13,7 +13,7 @@ use Data::Dumper;
 use Carp;
 
 @ISA = qw(Net::DNS::RR);
-$VERSION = do { my @r=(q$Revision: 1.3 $=~/\d+/g); sprintf "%d."."%03d"x$#r,@r };
+$VERSION = do { my @r=(q$Revision: 1.4 $=~/\d+/g); sprintf "%d."."%03d"x$#r,@r };
 
 sub new {
     my ($class, $self, $data, $offset) = @_;
@@ -46,7 +46,7 @@ sub new_from_string {
 	    $string =~ /^\s*(\S+)\s+(.*)/;
 	my @nxttypes = split /\s+/ , $nxtstr;  # everything after last match...
 	
-	$self->{"nxtdname"}= lc($nxtdname) ;
+	$self->{"nxtdname"}= lc($nxtdname);
 	$self->{"typelist"}= join " " , sort @nxttypes ;
 	$self->{"typebm"}=_typestr2typebm(@nxttypes);
 	
