@@ -1,6 +1,6 @@
 #!/usr/bin/perl  -sw 
 # Test script for dnssec functionalty
-# $Id: 09-dnssec.t,v 1.2 2002/06/17 14:37:02 olaf Exp $
+# $Id: 09-dnssec.t,v 1.3 2002/08/14 13:44:53 olaf Exp $
 # 
 # Called in a fashion simmilar to:
 # /usr/bin/perl -Iblib/arch -Iblib/lib -I/usr/lib/perl5/5.6.1/i386-freebsd \
@@ -9,7 +9,7 @@
 
 
 
-use Test::More tests=>33;
+use Test::More tests=>40;
 use strict;
 
 BEGIN {use_ok('Net::DNS'); }                                 # test 1
@@ -68,6 +68,7 @@ wZBaards8JcMEcT8nHyKHNZlq9fAhQ36guqGdZuRPqxgYfwz71VJb2t9
 
 
 ok( $rsakeyrr, 'RSA public key created');     # test 5
+
 
 
 
@@ -182,11 +183,23 @@ ok( $dsrr,'DS created from KEY RR');                                # test 15
 
 ok( $dsrr->verify($keyrr),'DS matches KEY');                        # test 16
 
+
+
+my $dsrr2=Net::DNS::RR->new("test.tld.	0	IN	DS	42495  1  1  0ffbeba0831b10b8b83440dab81a2148576da9f6");
+
+
+ok( $dsrr,'DS(2) created from string');                              # test 17
+
+
+ok( $dsrr->verify($keyrr),'DS(2) matches KEY');                      # test 18
+
+
+
 my ($nlkey1, $nlsig1, $nlNS1, $nlNS2, $nlNS3, $nldatarrset);
 
     $nlNS1=new Net::DNS::RR(" host100.ws.disi.  600   IN A    10.1.1.100");
-    $nlNS2=new Net::DNS::RR(" host100.ws.disi.  600   IN A    10.1.2.100");
-    $nlNS3=new Net::DNS::RR(" host100.ws.disi.  600   IN A    10.1.3.100");
+    $nlNS2=new Net::DNS::RR("host100.ws.disi.  600   IN A    10.1.2.100");
+    $nlNS3=new Net::DNS::RR("host100.ws.disi.  600   IN A    10.1.3.100");
     $nldatarrset=[$nlNS1,$nlNS3, $nlNS2];
 
 my $dsasigrr=Net::DNS::RR::SIG->create($nldatarrset,
@@ -195,13 +208,13 @@ my $dsasigrr=Net::DNS::RR::SIG->create($nldatarrset,
 
 
 
-ok( $dsasigrr, 'DSA signature with bind generated key');             # test 17
+ok( $dsasigrr, 'DSA signature with bind generated key');             # test 19
 
 
 my $rsasigrr=Net::DNS::RR::SIG->create($nldatarrset,
 				    "t/Ktest.+001+40320.private"
 				    );
-ok( $rsasigrr, 'RSA signature with bind generated key');            # test 18
+ok( $rsasigrr, 'RSA signature with bind generated key');            # test 20
 
 
 
@@ -224,9 +237,9 @@ my $rsakeyrr2=Net::DNS::RR->new("test. IN KEY 256 3 1
  H52ARQ==");
 
 
-ok( $dsasigrr->verify($nldatarrset,$dsakeyrr2),'DSA sig (test 2) verifies');       # test 19
+ok( $dsasigrr->verify($nldatarrset,$dsakeyrr2),'DSA sig (test 2) verifies');       # test 21
 
-ok( $rsasigrr->verify($nldatarrset,$rsakeyrr2),'RSA sig (test 2) verifies');       # test 20
+ok( $rsasigrr->verify($nldatarrset,$rsakeyrr2),'RSA sig (test 2) verifies');       # test 22
 
 
 
@@ -242,7 +255,7 @@ ok( $rsasigrr->verify($nldatarrset,$rsakeyrr2),'RSA sig (test 2) verifies');    
 
 
 my $update1 = Net::DNS::Update->new("test.test");
-ok ( $update1, 'Creating Update packet 1' );                      #test 21
+ok ( $update1, 'Creating Update packet 1' );                      #test 23
 
 $update1->push("update", Net::DNS::rr_add("test.test.test 3600 IN A 10.0.0.1"));
 $update1->sign_sig0("t/Ksigzero.+001+39700.private");
@@ -252,10 +265,10 @@ my $keyrr1=Net::DNS::RR->new("sigzero. IN KEY 512 3 1
  nMMJoCKhPDAqQ/tSkWrAYOMg1yKqbPcdD7Iiaax+IepVe2PWqHkiSiYg
  N5sUdw==");
 
-ok ($keyrr1,'RSA Public key for SIG0');                            #test 22
+ok ($keyrr1,'RSA Public key for SIG0');                            #test 24
 
 my $update2 = Net::DNS::Update->new("test.test");
-ok ( $update2, 'Creating Update packet 2' );                       #test 23
+ok ( $update2, 'Creating Update packet 2' );                       #test 25
 
 $update2->sign_sig0("t/Ksigzero.+003+08890.private");
 
@@ -271,25 +284,28 @@ my $keyrr2=Net::DNS::RR->new("sigzero. IN KEY 512 3 3 (
  OdSeRHcdIibueh/wGLvAV7AXVgJJrgZNDHXZhlWjjRvMlqZu9UuYKL4R
  jOmEwwie7JQxN7Ag3n9U2uBmR+LKcGyREby2");
 
-ok ($keyrr2,'DSA Public key for SIG0');                             #test 24
+ok ($keyrr2,'DSA Public key for SIG0');                             #test 26
 
 
 $update1->data;
 $update2->data;
 my $sigrr1=$update1->pop("additional");
-ok ($sigrr1,"Obtained RSA sig from packet");                        # test 25
+ok ($sigrr1,"Obtained RSA sig from packet");                        # test 27
 
 my $sigrr2=$update2->pop("additional");
-ok ($sigrr2,"Obtained DSA sig from packet");                        # test 26
+ok ($sigrr2,"Obtained DSA sig from packet");                        # test 28
 ok ($sigrr1->verify($update1, $keyrr1),'RSA SIG0 verification of packet data');
-                                                                    # test 27
+
+
+                                                                    # test 29
 ok ($sigrr2->verify($update2, $keyrr2),'DSA SIG0 verification of packet data');
-                                                                    # test 28
+
+                                                           # test 30
 
 ok (!$sigrr1->verify($update2, $keyrr1),'RSA SIG0 fails with invalid data');
-                                                                    # test 29
+                                                                    # test 31
 ok (!$sigrr2->verify($update1, $keyrr2),'RSA SIG0 fails with invalid data');
-                                                                    # test 30
+                                                                    # test 32
 
 
 #
@@ -307,14 +323,14 @@ $sigrsa= create Net::DNS::RR::SIG($datarrset,$keypathrsa,
 				     ));
 
 
-ok ( $sigrsa, 'RSA signature over SOA with escaped dot  created');                # test 31
+ok ( $sigrsa, 'RSA signature over SOA with escaped dot  created');                # test 33
 $rsakeyrr=new Net::DNS::RR ("test.tld. IN KEY 256 3 1 
 AQOi+0LmBAfV+4CdCoy81y0Z9fejYXzbXrh87u2gaJZ12ItO5bGtegfB 
 ykgUs76ElH1fGvWBpaHqh3roImc7MGkhCMh7+G2lE7aeYsUXn5wHdBFE 
 wZBaards8JcMEcT8nHyKHNZlq9fAhQ36guqGdZuRPqxgYfwz71VJb2t9 
 6KX/5w==");
 
-ok ($sigrsa->verify($datarrset,$rsakeyrr),'RSA sig over SOA  with escaped dot verifies');        # test 32
+ok ($sigrsa->verify($datarrset,$rsakeyrr),'RSA sig over SOA  with escaped dot verifies');        # test 34
 
 
 
@@ -343,7 +359,23 @@ my $bindsig=Net::DNS::RR->new("test.foo        3600        IN  SIG     (
 my    $binddataset=[$bindkey];
 
 ok( $bindsig->verify($binddataset,$bindkey),
-    'RSA sig generated with bind verifies');        #test 33
+    'RSA sig generated with bind verifies');        #test 35
+
+
+
+
+my $nxtrr=Net::DNS::RR->new("sub.tld.		100	IN	NXT	b1.sub.tld. NS SOA SIG KEY NXT");
+
+ok ( $nxtrr, 'NXT RR created from string');		# test36
+
+my $nxtsig=Net::DNS::RR->new("sub.tld.		100	IN	SIG	NXT 1 2 100 20300627095441 20020814112311 23495 sub.tld. dGES80B4hlMUq7rS5etQ03emiq+y9gchIc/VO650PE3ssSJMcELzl9T2 /RiKOs5plEGl+iyHpo0XTSW0oEi8D4SX/4vXHpE5PHK2ME/40JW8ULT7 DEI+zmqmcZnvMKCktysKMLcSa6nLo8AOtEa/FtiIYes7r9Ff6tCydryC 4Qg=");
+
+my $nxtkey=Net::DNS::RR->new("sub.tld.		100	IN	KEY	256 3 1 AQPw02b9MnR8aJplOyI1CB0u1zBGi9xFAPiZ1NkdDlqne3lSXpGHzQNT hf16EIdk+diCroSOFdz3jA/0fnHbG80wQ35k2YvVVqooHHel9nAeMHJF SgAzgV2Ht7hOnagaK0V4zbcvDnHm6kyiPuLExvknehLg6G9b+yNtZJ0g g1vHGQ==");
+
+
+my @nxtdata=($nxtrr);
+
+ok( $nxtsig->verify(\@nxtdata,$nxtkey), "SIG over NXT verifies");   #test37
 
 0;
 
@@ -352,3 +384,55 @@ ok( $bindsig->verify($binddataset,$bindkey),
 
 
 
+
+
+
+
+
+#
+# RSA keypair 
+#
+my $keypathrsasha1="Ktest.tld.+005+42495.private";
+my $privrsakeysha1= << 'ENDRSA' ;
+Private-key-format: v1.2
+Algorithm: 5 (RSA-SHA1)
+Modulus: ovtC5gQH1fuAnQqMvNctGfX3o2F82164fO7toGiWddiLTuWxrXoHwcpIFLO+hJR9Xxr1gaWh6od66CJnOzBpIQjIe/htpRO2nmLFF5+cB3QRRMGQWmq3bPCXDBHE/Jx8ihzWZavXwIUN+oLqhnWbkT6sYGH8M+9VSW9rfeil/+c=
+PublicExponent: Aw==
+PrivateExponent: bKeB7q1ajqerE1xd0zoeEU6lF5ZTPOnQU0nzwEW5o+WyNJkhHlFagTGFYyJ/Aw2o6hH5ARkWnFpR8BbvfMrwv6AeCrahtJgilCpCYxwusOOikbkGR/sXP5ObscRmEuhfzVYBV62yMc34MyspHzXHNZAL+SgRswopy6MgWdAII2s=
+Prime1: 0GNRLAYLvgaIZ+8o/fVST6WEhQd4bDIEHnBtIxHj9NIrHL/nIerA80sth+Pwfed2zp109U+zvcizUSfJDbHRsQ==
+Prime2: yDgaunUKcXw3u3JZ92Crzvflpv92BeKJdL0USBn8Sxqq/xR7BWG03M6AOkjnJwlKF/z1sJHzok3kqZMuIuf5Fw==
+Exponent1: iuzgyAQH1ARa7/TF/qOMNRkDA1pQSCFYFErzbLaX+IwcvdVEwUcrTNzJBUKgU++kib5N+N/NKTB3i2/bXnaLyw==
+Exponent2: hXq8fE4G9lLP0kw7+kByifqZGf+kA+xboyi4MBFS3Lxx/2L8rkEjPd8AJttExLDcD/35IGFNFt6YcQzJbJqmDw==
+Coefficient: gAeUUI6YOtdNAh3kS7pOzYfn0ZrUCV8bGpZoaXANk2RL2zUiaSSa4wudhpHwMJt+psNkkiQyf4v600uHbxro4Q==
+ENDRSA
+
+my $rsasha1keyrr=new Net::DNS::RR ("test.tld. IN KEY 256 3 5 
+AQOi+0LmBAfV+4CdCoy81y0Z9fejYXzbXrh87u2gaJZ12ItO5bGtegfB 
+ykgUs76ElH1fGvWBpaHqh3roImc7MGkhCMh7+G2lE7aeYsUXn5wHdBFE 
+wZBaards8JcMEcT8nHyKHNZlq9fAhQ36guqGdZuRPqxgYfwz71VJb2t9 
+6KX/5w==");
+
+
+ok( $rsasha1keyrr, 'RSA-SHA1 public key created');     # test 38
+
+
+open (RSA,">$keypathrsasha1") or die "Could not open $keypathrsasha1";
+print RSA $privrsakeysha1;
+close(RSA);
+
+
+
+my $sigrsasha1= create Net::DNS::RR::SIG($datarrset,$keypathrsasha1, 
+				    (
+				     ttl => 360, 
+#				     sigval => 100,
+				     ));
+
+
+
+ok ( $sigrsasha1, 'RSA SHA1 signature created');                               # test 39
+
+
+ok ($sigrsasha1->verify($datarrset,$rsasha1keyrr),'RSA SHA1 sig verifies');        # test 40
+
+unlink($keypathrsasha1);

@@ -1,6 +1,6 @@
 package Net::DNS::RR::DS;
 
-# $Id: DS.pm,v 1.4 2002/06/17 14:36:57 olaf Exp $
+# $Id: DS.pm,v 1.5 2002/08/14 13:44:53 olaf Exp $
 
 
 use strict;
@@ -9,7 +9,7 @@ use vars qw(@ISA $VERSION);
 use Net::DNS;
 use Carp;
 
-$VERSION = do { my @r=(q$Revision: 1.4 $=~/\d+/g); sprintf "%d."."%03d"x$#r,@r };
+$VERSION = do { my @r=(q$Revision: 1.5 $=~/\d+/g); sprintf "%d."."%03d"x$#r,@r };
 my $debug=0;
 
 @ISA = qw(Net::DNS::RR);
@@ -44,12 +44,8 @@ sub new_from_string {
 	if ($string) {
 		$string =~ tr/()//d;
 		$string =~ s/;.*$//mg;
-
-
-		my ($keytag,  $algorithm, $digtype) = 
-		    $string =~ /^\s*(\S+)\s+(\S+)\s+(\S+)/;
-
-		my $digest=$';       # everything after last match...
+		my ($keytag,  $algorithm, $digtype, $digest) = 
+		    $string =~ /^\s*(\S+)\s+(\S+)\s+(\S+)\s+(\S+)/;
 		$self->{"keytag"}=$keytag;
 		$self->{"algorithm"}=$algorithm;
 		$self->{"digtype"}=$digtype;

@@ -1,4 +1,5 @@
 Changes
+Keyset.pm
 MANIFEST
 Makefile.PL
 README
@@ -6,7 +7,9 @@ RR/DS.pm
 RR/KEY.pm
 RR/NXT.pm
 RR/SIG.pm
+demo/getkeyset.pl
 t/09-dnssec.t
+t/10-keyset.t
 t/Ksigzero.+001+39700.key
 t/Ksigzero.+001+39700.private
 t/Ksigzero.+003+08890.key

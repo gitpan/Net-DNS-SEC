@@ -1,6 +1,6 @@
 package Net::DNS::RR::NXT;
 
-# $Id: NXT.pm,v 1.3 2002/06/17 14:36:57 olaf Exp $
+# $Id: NXT.pm,v 1.4 2002/08/14 13:44:53 olaf Exp $
 
 use strict;
 use vars qw(@ISA $VERSION);
@@ -13,7 +13,7 @@ use Net::DNS::Packet;
 use Carp;
 
 @ISA = qw(Net::DNS::RR);
-$VERSION = do { my @r=(q$Revision: 1.3 $=~/\d+/g); sprintf "%d."."%03d"x$#r,@r };
+$VERSION = do { my @r=(q$Revision: 1.4 $=~/\d+/g); sprintf "%d."."%03d"x$#r,@r };
 
 sub new {
     my ($class, $self, $data, $offset) = @_;
@@ -41,9 +41,10 @@ sub new_from_string {
     if ($string) {
 	$string =~ tr/()//d;
 	$string =~ s/;.*$//mg;
-	my ($nxtdname) = 
-	    $string =~ /^\s*(\S+)\s+/;
-	my @nxttypes = split /\s+/ , $';       # everything after last match...
+	$string =~ s/\n//mg;
+	my ($nxtdname,$nxtstr) = 
+	    $string =~ /^\s*(\S+)\s+(.*)/;
+	my @nxttypes = split /\s+/ , $nxtstr;       # everything after last match...
 	
 	$self->{"nxtdname"}= lc($nxtdname) ;
 	$self->{"typelist"}= join " " ,@nxttypes ;

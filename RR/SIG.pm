@@ -1,6 +1,6 @@
 # perldoc SIG.pm for documentation.
 # Specs: RFC 2535 section 4
-# $Id: SIG.pm,v 1.4 2002/06/17 14:36:57 olaf Exp $
+# $Id: SIG.pm,v 1.6 2002/08/14 13:44:53 olaf Exp $
 
 package Net::DNS::RR::SIG;
 
@@ -15,7 +15,7 @@ use MIME::Base64;
 use Math::Pari;      #DSA relies on this.
 
 
- $VERSION = do { my @r=(q$Revision: 1.4 $=~/\d+/g); sprintf "%d."."%03d"x$#r,@r };
+ $VERSION = do { my @r=(q$Revision: 1.6 $=~/\d+/g); sprintf "%d."."%03d"x$#r,@r };
 
 
 
@@ -166,13 +166,13 @@ sub new_from_string {
     if ($string) {
 	$string =~ tr/()//d;
 	$string =~ s/;.*$//mg;
+	$string =~ s/\n//mg;
 	my ($typecovered, $algoritm,
 	    $labels, $orgttl, $sigexpiration,
-	    $siginceptation, $keytag,$signame) = 
+	    $siginceptation, $keytag,$signame,$sig) = 
 		$string =~ 
-		    /^\s*(\S+)\s+(\d+)\s+(\d+)\s+(\d+)\s+(\d+)\s+(\d+)\s+(\d+)\s+(\S+)/;
+		    /^\s*(\S+)\s+(\d+)\s+(\d+)\s+(\d+)\s+(\d+)\s+(\d+)\s+(\d+)\s+(\S+)\s+(.*)/;
 	croak (" Invallid SIG RR, check your fomat ") if !$keytag;
-	my $sig=$';       # everything after last match...
 	$sig =~ s/\s*//g;
 	$self->{"typecovered"}= $typecovered;
 	$self->{"algorithm"}= $algoritm;
@@ -282,11 +282,17 @@ sub rr_rdata {
 		my $sigdata=$self->_CreateSigData($data);
 		my $signature;
 
-		if ($self->{"algorithm"} == 1){  #RSA
+		if ($self->{"algorithm"} == 1 ||
+		    $self->{"algorithm"} == 5)
+		{  #RSA
 		    my $rsa_priv = Crypt::OpenSSL::RSA->new();
 		    eval {
 			$rsa_priv->use_pkcs1_oaep_padding;
-			$rsa_priv->use_md5_hash;
+			if ($self->{"algorithm"} == 1) {
+			    $rsa_priv->use_md5_hash;
+			} else {
+			    $rsa_priv->use_sha1_hash;
+			}
 			$rsa_priv->load_private_key($self->{"private_key"});
 		    };
 		    die "Error loading RSA private key " . $@ if $@;
@@ -459,11 +465,13 @@ sub create {
     #Format something like: /Kbla.foo.+001+60114.private'
     # assuming proper file name.
     # We determine the algorithm from the filename.
-    $keyname =~ /K(.*)\+(\d{3})\+(\d*)\.private/;    
-    $self->{"signame"}=$1;
-    $self->{"algorithm"}= 0 + $2; #  Force non-string 
-    $self->{"keytag"}=$3;
-
+    if ($keyname =~ /K(.*)\.\+(\d{3})\+(\d*)\.private/){
+	$self->{"signame"}=$1;  # withouth trailing .
+	$self->{"algorithm"}= 0 + $2; #  Force non-string 
+	$self->{"keytag"}=$3;
+    }else{
+	croak "$keyname does not seem to be a valid private key\n";
+    }
 
     if (!$sigzero)    {   
 	my  $labels=$datarrset->[0]->name;
@@ -525,7 +533,7 @@ sub create {
 		croak "Private Key Format not regognized";
 	    }
 	}elsif	    (/^Algorithm:\s*(\d*)/) {
-	    if ($1 != 1 && $1 != 3) {
+	    if ($1 != 1 && $1 != 3 && $1 != 5) {
 		croak "Key $key_file algorithm is not RSA or DSA (those are the only implemented algorithms) ";
 	    }
 	    
@@ -561,7 +569,7 @@ sub create {
     
     #
     # Enjoy the crypto
-    if ($self->{"algorithm"} == 1){  #RSA
+    if ($self->{"algorithm"} == 1 || $self->{"algorithm"} == 5) {  #RSA
 	use Crypt::OpenSSL::RSA;
 	
 
@@ -586,7 +594,11 @@ sub create {
 	$self->{"private_key"}=$RSAPrivateKey;
 	eval {
 	    $rsa_priv->use_pkcs1_oaep_padding;
-	    $rsa_priv->use_md5_hash;
+	    if ($self->{"algorithm"} == 1) {
+		$rsa_priv->use_md5_hash;
+	    } else {
+		$rsa_priv->use_sha1_hash;
+	    }
 	    $rsa_priv->load_private_key($RSAPrivateKey);
 	};
 	die "RSA private key loading failed:".$@ if $@;
@@ -612,8 +624,11 @@ sub create {
 
 	$self->{"private_key"}=$prikey;
 	$self->{"private_key"}->{"base_g"}=$base_g;
-	# If $sigzero then we want to sign data if given in the argument. If the argument
-	#  is empty we sign when the packet put on the wire.
+
+	# If $sigzero then we want to sign data if given in the
+	# argument. If the argument is empty we sign when the packet
+	# put on the wire.
+
 	if ($datarrset ne "" ){
 	    if (my $sig= $dsa->sign(
 				    Message    => $sigdata,
@@ -748,11 +763,15 @@ sub verify {
     my $signature=$self->sigbin; 
     my $verified=0;
     if ( $self->algorithm == 1 ){    #Verifying for RSA
-	$verified=$self->_verifyRSA($sigdata,$signature,$keyrr) || return 0;
+	$verified=$self->_verifyRSA($sigdata,$signature,$keyrr,0) || return 0;
     }     
     elsif ( $self->algorithm == 3 )  # Verifying for DSA
     {
 	 $verified=$self->_verifyDSA($sigdata,$signature,$keyrr) || return 0;
+    }
+    elsif ( $self->algorithm == 5 )  # Verifying for RSASHA1
+    {
+	$verified=$self->_verifyRSA($sigdata,$signature,$keyrr,1) || return 0;
     }
     else                                  # Verifying other algorithms
     { 
@@ -937,7 +956,7 @@ sub _verifyDSA {
 sub _verifyRSA {
     # Implementation using crypt::openssl
 
-    my ($self, $sigdata, $signature, $keyrr) = @_; 
+    my ($self, $sigdata, $signature, $keyrr, $isSHA) = @_; 
 
     print "\nRSA verification called with key:\n". $keyrr->string . 
 	
@@ -952,7 +971,11 @@ sub _verifyRSA {
 
     my $rsa_pub = Crypt::OpenSSL::RSA->new();
     $rsa_pub->use_pkcs1_oaep_padding;
-    $rsa_pub->use_md5_hash;
+    if ($isSHA) {
+	$rsa_pub->use_sha1_hash;
+    } else {
+	$rsa_pub->use_md5_hash;
+    }
     
     my $explength;
     my $exponent;
@@ -1357,6 +1380,7 @@ Read "KeyID Bug in bind." below.
     print "signame =", $rr->signame, "\n"
 
 Returns the name of the public KEY RRs  this sig was made with.
+(Note: the name does not contain a trailing dot.)
 
 =head2 sig
 
@@ -1399,13 +1423,16 @@ suitable to be used for signing large zones.
 
 - Clean up the code.
 
-- Add RSA with SHA hashes (currently in draft)
-
 - If this code is still around by 2030 you have a few years to check
 the proper handling of times...
 
 - Add wildcard handling
 
+
+=head1 ACKNOWLEDGMENTS
+
+Andy Vaskys (Network Associates Laboratories) supplied the code for
+handling RSA with SHA1 (Algorithm 5).
 
 =head1 COPYRIGHT
 

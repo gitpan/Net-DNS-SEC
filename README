@@ -31,9 +31,15 @@ Net::DNS::SEC - DNSSEC extensions to Net::DNS
        Net::DNS::RR::NXT
 
 
+
+  On top of the RR classes defined above we also provide a class for
+  handling keysets. Keysets are administrative files used by the BIND
+  tools for keymaintenance tasks.  Net::DNS::Keyset provides an abstract
+  interface for doing fun things with them.
+
 2. Dependencies
 
-  This package relies on Net-DNS version 0.21 or higher.
+  This package relies on Net-DNS version 0.27 or higher (also see CHANGES).
   since that contains a number of place holders for 
   Net::DNS::SEC functionality.
 
@@ -80,8 +86,13 @@ Net::DNS::SEC - DNSSEC extensions to Net::DNS
   http://www.net-dns.org/
 
 
+5. Demos
+  demo/getkeyset.pl - is a small demonstration program that will get
+                      fetch the keyset for a specified domain, stores
+                      them and prints out the DS RRs to STD out.
 
-5. History
+
+6. History
 
   The modules in this package have somewhat of a history as a set of 
   patches to the original Net::DNS package. 
@@ -90,20 +101,20 @@ Net::DNS::SEC - DNSSEC extensions to Net::DNS
   for CPAN.  See the Changes file for more information.
 
 
-6. Acknowledgements
+7. Acknowledgements
 
   Thanks to the numerous folk that took an interest during development.
   Thanks to Chris Reinardt for putting the hooks in Net::DNS and suggesting
   some improvements to the package.
 
-7. Author information
+8. Author information
 
   Olaf M. Kolkman, RIPE NCC.
   http://www.ripe.net/disi
   support: net-dns-sec@ripe.net
 
 
-8. COPYRIGHT
+9. COPYRIGHT
 
 Copyright Notice and Disclaimer
 
@@ -134,4 +145,4 @@ Based on, and contains, code by Copyright (c) 1997-2001 Michael Fuhr.
 
 
 ------------------------------------------------------------------------------
-$Id: README,v 1.5 2002/06/17 11:37:34 olaf Exp $
+$Id: README,v 1.7 2002/08/16 09:07:26 olaf Exp $

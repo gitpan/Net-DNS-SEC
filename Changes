@@ -1,5 +1,21 @@
 Revision history for Perl extension Net::DNS::SEC.
 
+0.06
+
+   NOTE: In one of ther versions prior to Net::DNS 0.26 a bug
+         got introduced that made Net::DNS::SEC break. The bug was fixed in
+	 version 0.27.
+
+   BUG:  - Check on the existence of the private file improved in SIG.pm
+
+         - signame got trailing dot with the create methods and not with
+	   others.
+
+   FEAT: - Added privatekeyname method to KEY.pm
+         - Started work on Net::DNS::Keyset.
+         - Added RSA/SHA1 (algorithm ID 5) to SIG.pm. Patch supplied by
+	   Andy Vaskys,  Network Associates Laboratories.
+	 - Rewrote regexp's to not use $' (Postmatch).
 
 0.05 and 0.04 June 17, 2002
 
@@ -79,7 +95,7 @@ Net::DNS. The history of those is documented below.
 
 0.19-DNSSEC-0.3: 
   Solved patch problems that where due to the 
-  $Id: Changes,v 1.4 2002/06/17 14:36:55 olaf Exp $ in headers not 
+  $Id: Changes,v 1.7 2002/08/16 09:07:26 olaf Exp $ in headers not 
   being from the original distribution.
 
   Added DSA signature creation
@@ -111,4 +127,4 @@ Net::DNS. The history of those is documented below.
 
 
 ---------------------------------------------------------------------------
-$Id: Changes,v 1.4 2002/06/17 14:36:55 olaf Exp $
+$Id: Changes,v 1.7 2002/08/16 09:07:26 olaf Exp $
