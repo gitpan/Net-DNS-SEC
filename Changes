@@ -1,0 +1,95 @@
+Revision history for Perl extension Net::DNS::SEC.
+
+0.02 June 4, 2002
+    First CPAN Release.
+    Some modifications to the packaging.
+
+
+0.01 May 25, 2002  
+    Version 0.01 of the package is an alpha for CPAN release.
+
+
+The extensions used to be published as a modified version of
+Net::DNS. The history of those is documented below.
+
+0.20-DNSSEC-0.2:
+  
+  Branched off Net::DNS version 0.20 release (CPAN May 15, 2002)
+
+
+0.20-DNSSEC-0.1:
+
+  This version had limited distribution
+  
+  First patch against a version 0.20 snapshot (2002-03-27).
+  http://www.dyndns.org/~ctriv/net-dns-snaps/2002/03/
+
+
+  Modified t/09-dnssec.t; uses Test::More now and includes a number of
+  self consistency checks.
+ 
+
+  DOC   Cleaned up the documentation and removed some refferences to functions
+	and libraries that where not used anyway.
+
+  FIX   'esthetic' patch supplied by Simon Josefsson reordering the NXT
+        RR map for the  print  method.
+ 
+  FEAT  Added checks on keytype and updated to latest specs for DS 
+        Added SIG0 support. See Net::DNS::Packet for details. The verify and
+	create methods of SIG.pm where modified somewhat to cope with the 
+	difference.
+        Changed RSA backend from Crypt::RSA to Crypt::OpenSSL::RSA because
+	Crypt::RSA failed during a 'loss of Math::Pari precicion in 
+	Crypt::Primes'.
+  
+
+0.19-DNSSEC-0.5: 
+
+  BUG   DS create method: Hash calculation was done over concattination of name
+        and key material while the hash should be taken over concatenation of
+        canonical name and key rdata. (Fix by Mike Schiraldi)
+
+
+0.19-DNSSEC-0.4: 
+  Added CERT support: Courtesy of Mike Schiraldi <raldi@research.netsol.com> 
+        for VeriSign
+ 
+  BUG Fixed MANIFEST file. make dist will result in proper module tar ball
+ 
+
+0.19-DNSSEC-0.3: 
+  Solved patch problems that where due to the 
+  $Id: Changes,v 1.2 2002/06/04 13:09:22 olaf Exp $ in headers not 
+  being from the original distribution.
+
+  Added DSA signature creation
+
+  Added DS support 
+        You have to uncomment line 77 in Net/DNS.pm to fully enable DS
+	This will assign QTYPE 93 to the DS RR.
+	That value is not assigned by IANA. 
+
+
+  Added this README.DNSSEC file
+
+  Added t/09-dnssec.t to the test script with a number of consistency checks.
+        after patching the original distribution direction
+        perl Makefile.PL
+        make test 
+        will call this function among other things.
+
+  BUG   KeyID set to 0 for null keys.
+
+  BUG   Sorting of canonical RDATA; 
+	Data over which SIG was created was not sorted properly (RFC2535 
+        sect 8.3) causing signature verification errors for RDATA within 
+	a RRset having different length (e.g. some NS RRsets would not 
+	verify.)
+
+0.19-DNSSEC-0.2: 
+  First somewhat public release.
+
+
+
+$Id: Changes,v 1.2 2002/06/04 13:09:22 olaf Exp $

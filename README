@@ -1,0 +1,130 @@
+Net::DNS::SEC - DNSSEC extensions to Net::DNS
+=============================================
+
+
+1. GENERAL INFO.
+
+  DNSSEC is defined in RFC 2535 and related RFCs.
+
+  The extensions provide the following additional features on top of
+  the Net::DNS package (http://www.net-dns.org/ version 0.21).
+
+  - DS, SIG, KEY and NXT records. These are all implemented as RR
+    objects.  The cryptography has been implemented using Crypt::DSA,
+    Crypt::OpenSSL::RSA and related modules.
+
+  The reason for not making these RRs a part of the regular Net::DNS
+  distribution is that they rely on crypto modules that do not easily
+  port.
+
+  The DNSSEC protocol is a moving target. Follow the IETF DNSEXT working
+  group if you are interested in the protocol developments. We try to 
+  keep the code in sync with the development.
+
+  Also see the 'pod' documentation in: 
+       Net::DNS::RR::SIG
+       Net::DNS::RR::KEY
+       Net::DNS::RR::DS
+       Net::DNS::RR::NXT
+
+2. Dependencies
+
+  This package relies on Net-DNS version 0.21 or higher.
+  since that contains a number of place holders for 
+  Net::DNS::SEC functionality.
+
+  Among other straightforward routines you will need to have
+  Crypt::DSA, Crypt::OpenSSL::RSA and Math::Pari installed.
+
+  The package was developed on FreeBSD 4.5 with perl5.6.1, I used
+  the ports to install Math::Pari and the Crypto libraries.
+  
+  'make test' is successful with perl5.00503.
+  
+
+
+3. Install
+
+  Use CPAN.
+
+  perl -MCPAN -e shell;
+  cpan> install Net::DNS::SEC
+  
+
+  Alternatively install this package manually:
+    tar -xvzf Net-DNS-SEC-??.tar.gz
+    cd  Net-DNS-SEC-??.tar.gz
+    perl Makefile.PL
+    make 
+    make test
+    make install
+
+  'perl Makefile.PL' will test if all dependencies are in place. 
+  'make test' will do some tests that should all succeed once all
+  dependencies are satisfied. Please report failures during the test 
+  phase.
+
+
+4. Maintenance
+
+  If you find bugs in the extensions or have DNSSEC feature request
+  please mail to net-dns-sec@ripe.net.
+
+  Net::DNS is maintained by a team lead by Chris Reinhardt. They have
+  been so kind to include a number of hooks for Net::DNS::SEC in the
+  Net::DNS package. If you have problems with Net::DNS in general see:
+  http://www.net-dns.org/
+
+
+
+5. History
+
+  The modules in this package have somewhat of a history as a set of 
+  patches to the original Net::DNS package. 
+
+  Version 0.02 is the first distribution of the DNSSEC security
+  for CPAN.  See the Changes file for more information.
+
+
+6. Acknowledgements
+
+  Thanks to the numerous folk that took an interest during development.
+  Thanks to Chris Reinardt for putting the hooks in Net::DNS and suggesting
+  some improvements to the package.
+
+7. Author information
+
+  Olaf M. Kolkman, RIPE NCC.
+  http://www.ripe.net/disi
+  support: net-dns-sec@ripe.net
+
+
+8. COPYRIGHT
+
+Copyright Notice and Disclaimer
+
+Copyright (c) 2001  RIPE NCC.  Author Olaf M. Kolkman <net-dns-sec@ripe.net>
+
+All Rights Reserved
+
+Permission to use, copy, modify, and distribute this software and its
+documentation for any purpose and without fee is hereby granted,
+provided that the above copyright notice appear in all copies and that
+both that copyright notice and this permission notice appear in
+supporting documentation, and that the name of the author not be
+used in advertising or publicity pertaining to distribution of the
+software without specific, written prior permission.
+
+
+THE AUTHOR DISCLAIMS ALL WARRANTIES WITH REGARD TO THIS SOFTWARE, INCLUDING
+ALL IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS; IN NO EVENT SHALL
+AUTHOR BE LIABLE FOR ANY SPECIAL, INDIRECT OR CONSEQUENTIAL DAMAGES OR ANY
+DAMAGES WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN
+AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
+OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
+
+
+Based on, and contains, code by Copyright (c) 1997-2001 Michael Fuhr.
+
+------------------------------------------------------------------------------
+$Id: README,v 1.4 2002/06/04 13:09:22 olaf Exp $
