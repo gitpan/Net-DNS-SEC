@@ -1,6 +1,6 @@
 package Net::DNS::RR::KEY;
 
-# $Id: KEY.pm,v 1.2 2002/06/04 12:14:18 olaf Exp $
+# $Id: KEY.pm,v 1.3 2002/06/17 11:37:36 olaf Exp $
 
 use strict;
 use vars qw(@ISA $VERSION);
@@ -10,7 +10,7 @@ use MIME::Base64;
 use Carp;
 
 @ISA = qw(Net::DNS::RR);
-$VERSION = do { my @r=(q$Revision: 1.2 $=~/\d+/g); sprintf "%d."."%03d"x$#r,@r };
+$VERSION = do { my @r=(q$Revision: 1.3 $=~/\d+/g); sprintf "%d."."%03d"x$#r,@r };
 sub new {
     my ($class, $self, $data, $offset) = @_;
     if ($self->{"rdlength"} > 0) {
@@ -181,8 +181,12 @@ Returns the RR's algorithm field in decimal representation
 
     1 = MD5 RSA
     2 = DH
-    3 = DSA
+    3 = DSA                
     4 = Elliptic curve
+    5 = SHA1 RSA
+
+Note that only algorithm 1 and 3 are supported by the methods provided
+through Net::DNS::RR::SIG.pm.
 
 =head2 key
 

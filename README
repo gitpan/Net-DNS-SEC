@@ -4,10 +4,13 @@ Net::DNS::SEC - DNSSEC extensions to Net::DNS
 
 1. GENERAL INFO.
 
-  DNSSEC is defined in RFC 2535 and related RFCs.
+  This module implements RFC 2535, RFC 2931 and 
+  draft-ietf-dnsext-delegation-signer-0.7txt.
+
+  RFC 3235 has been patched into Net::DNS.
 
   The extensions provide the following additional features on top of
-  the Net::DNS package (http://www.net-dns.org/ version 0.21).
+  the Net::DNS package (http://www.net-dns.org/ version 0.21). 
 
   - DS, SIG, KEY and NXT records. These are all implemented as RR
     objects.  The cryptography has been implemented using Crypt::DSA,
@@ -26,6 +29,7 @@ Net::DNS::SEC - DNSSEC extensions to Net::DNS
        Net::DNS::RR::KEY
        Net::DNS::RR::DS
        Net::DNS::RR::NXT
+
 
 2. Dependencies
 
@@ -126,5 +130,8 @@ OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 
 Based on, and contains, code by Copyright (c) 1997-2001 Michael Fuhr.
 
+
+
+
 ------------------------------------------------------------------------------
-$Id: README,v 1.4 2002/06/04 13:09:22 olaf Exp $
+$Id: README,v 1.5 2002/06/17 11:37:34 olaf Exp $

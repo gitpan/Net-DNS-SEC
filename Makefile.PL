@@ -1,5 +1,5 @@
 #
-# $Id: Makefile.PL,v 1.5 2002/06/14 07:46:11 olaf Exp $
+# $Id: Makefile.PL,v 1.6 2002/06/17 11:37:34 olaf Exp $
 #
 
 eval { require 5.00503  };
@@ -17,7 +17,7 @@ use ExtUtils::MakeMaker;
 # the contents of the Makefile that is written.
 WriteMakefile(
       'NAME'	=> 'Net::DNS::SEC',
-      'VERSION_FROM' => 'SEC.pm',
+      'VERSION' => 0.04,
       'PREREQ_PM'             => {
 	Net::DNS                  => 0.21,
 	Crypt::OpenSSL::RSA       => 0.13,
@@ -31,7 +31,6 @@ WriteMakefile(
 		'RR/NXT.pm' => '$(INST_LIBDIR)/RR/NXT.pm',
 		'RR/KEY.pm' => '$(INST_LIBDIR)/RR/KEY.pm',
 		'RR/SIG.pm' =>  '$(INST_LIBDIR)/RR/SIG.pm',
-		'SEC.pm'    => '$(INST_LIBDIR)/SEC.pm',
 	    },
 
        clean =>           {FILES => "*~ "}

@@ -1,6 +1,6 @@
 # perldoc SIG.pm for documentation.
 # Specs: RFC 2535 section 4
-# $Id: SIG.pm,v 1.2 2002/06/04 12:14:18 olaf Exp $
+# $Id: SIG.pm,v 1.3 2002/06/17 11:37:36 olaf Exp $
 
 package Net::DNS::RR::SIG;
 
@@ -15,7 +15,7 @@ use MIME::Base64;
 use Math::Pari;      #DSA relies on this.
 
 
- $VERSION = do { my @r=(q$Revision: 1.2 $=~/\d+/g); sprintf "%d."."%03d"x$#r,@r };
+ $VERSION = do { my @r=(q$Revision: 1.3 $=~/\d+/g); sprintf "%d."."%03d"x$#r,@r };
 
 
 
@@ -1237,17 +1237,23 @@ C<use Net::DNS::RR>;
 
 =head1 DESCRIPTION
 
+
 Class for DNS Address (SIG) resource records. In addition to the
 regular methods in the Net::DNS::RR the Class contains a method to
 sign RRsets using private keys (create). And a class for verifying
 signatures over RRsets (verify).
 
-Further information about the SIG RR can be found in RFC 2535.
+The SIG RR is an implementation of RFC 2535 and RFC 2931.
+
+
+
 
 =head1 METHODS
 
 =head2 create
     
+Create a signature over a RR set or over a packet (SIG0).
+
     my $keypath= 
             "/home/olaf/keys/Kbla.foo.+001+60114.private";
     my $sigrr= create Net::DNS::RR::SIG(\@datarrset,
@@ -1264,7 +1270,8 @@ RRset that needs to be signed or a string containing the data over
 wich a SIG0 type of signature needs to be constructed.
 
 The second argument is a string containing the path to a file
-containing the the private key as generated with dnssec-keygen.
+containing the the private key as generated with dnssec-keygen, a
+program that commes with the bind distribution.
 
 The third argument is an anonymous hash containing the following
 possible arguments:  
@@ -1432,7 +1439,7 @@ Based on, and contains, code by Copyright (c) 1997 Michael Fuhr.
 L<perl(1)>, L<Net::DNS>, L<Net::DNS::Resolver>, L<Net::DNS::Packet>,
 L<Net::DNS::Header>, L<Net::DNS::Question>,
 L<Net::DNS::RR>,L<Crypt::OpenSSL::RSA>,L<Crypt::DSA> RFC 2435 Section
-4
+4, RFC 2931.
 
 =cut
 

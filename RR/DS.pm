@@ -1,6 +1,6 @@
 package Net::DNS::RR::DS;
 
-# $Id: DS.pm,v 1.2 2002/06/04 12:14:18 olaf Exp $
+# $Id: DS.pm,v 1.3 2002/06/17 11:37:36 olaf Exp $
 
 
 use strict;
@@ -9,7 +9,7 @@ use vars qw(@ISA $VERSION);
 use Net::DNS::SEC;
 use Carp;
 
-$VERSION = do { my @r=(q$Revision: 1.2 $=~/\d+/g); sprintf "%d."."%03d"x$#r,@r };
+$VERSION = do { my @r=(q$Revision: 1.3 $=~/\d+/g); sprintf "%d."."%03d"x$#r,@r };
 my $debug=0;
 
 @ISA = qw(Net::DNS::RR);
@@ -224,6 +224,17 @@ Returns the digest as  binary material
     print "keytag" = ", $dsrr->keytag, "\n";
 
 Returns the key tag of the key. (RFC2535 4.1.6)
+
+
+=head1 TODO 
+
+This is an implementation of
+draft-ietf-dnsext-delegation-signer-0.7.txt.  In Net::DNS.pm the QTYPE
+assigned to this RR is 42. Note that IANA has not assigned a QTYPE
+yet.
+
+When using this code with other implementations of DS you may want to
+verify this the QTYPE value.
 
 
 =head1 COPYRIGHT
