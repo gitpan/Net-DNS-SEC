@@ -1,5 +1,5 @@
 #
-# $Id: Makefile.PL,v 1.18 2003/09/01 16:00:29 olaf Exp $
+# $Id: Makefile.PL,v 1.19 2003/12/17 12:16:10 olaf Exp $
 #
 
 
@@ -25,7 +25,7 @@ WriteMakefile(
       'NAME'	=> 'Net::DNS::SEC',
       'VERSION_FROM'	=> 'SEC.pm',
       'PREREQ_PM'             => {
-	Net::DNS                  => 0.40,
+	Net::DNS                  => 0.44,
 	Test::More                => 0.47,
 	Crypt::OpenSSL::RSA       => 0.19,
 	Crypt::OpenSSL::Bignum    => 0.03,

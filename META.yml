@@ -1,7 +1,7 @@
 # http://module-build.sourceforge.net/META-spec.html
 #XXXXXXX This is a prototype!!!  It will change in the future!!! XXXXX#
 name:         Net-DNS-SEC
-version:      0.11
+version:      0.11_2
 version_from: SEC.pm
 installdirs:  site
 requires:
@@ -13,9 +13,9 @@ requires:
     File::Basename:                0
     Math::BigInt:                  0
     MIME::Base64:                  0
-    Net::DNS:                      0.4
+    Net::DNS:                      0.44
     Test::More:                    0.47
     Time::Local:                   0
 
 distribution_type: module
-generated_by: ExtUtils::MakeMaker version 6.16
+generated_by: ExtUtils::MakeMaker version 6.21

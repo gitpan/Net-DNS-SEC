@@ -1,6 +1,6 @@
 package Net::DNS::RR::DS;
 
-# $Id: DS.pm,v 1.7 2003/08/27 14:09:25 olaf Exp $
+# $Id: DS.pm,v 1.8 2003/12/17 12:16:10 olaf Exp $
 
 
 use strict;
@@ -10,7 +10,7 @@ use Net::DNS;
 use Carp;
 use Digest::BubbleBabble qw( bubblebabble );
 
-$VERSION = do { my @r=(q$Revision: 1.7 $=~/\d+/g); sprintf "%d."."%03d"x$#r,@r };
+$VERSION = do { my @r=(q$Revision: 1.8 $=~/\d+/g); sprintf "%d."."%03d"x$#r,@r };
 my $debug=0;
 
 @ISA = qw(Net::DNS::RR);
@@ -45,8 +45,11 @@ sub new_from_string {
 	if ($string) {
 		$string =~ tr/()//d;
 		$string =~ s/;.*$//mg;
+		$string =~ s/\n//g;
 		my ($keytag,  $algorithm, $digtype, $digest) = 
-		    $string =~ /^\s*(\S+)\s+(\S+)\s+(\S+)\s+(\S+)/;
+		    $string =~ /^\s*(\S+)\s+(\S+)\s+(\S+)\s+((\S+\s*)+)/;
+		# We allow spaces in the digest.
+		$digest=~s/\s//g;
 		$self->{"keytag"}=$keytag;
 		$self->{"algorithm"}=$algorithm;
 		$self->{"digtype"}=$digtype;

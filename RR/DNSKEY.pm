@@ -1,19 +1,24 @@
 package Net::DNS::RR::DNSKEY;
 
-# $Id: DNSKEY.pm,v 1.1 2003/08/27 14:09:25 olaf Exp $
+# $Id: DNSKEY.pm,v 1.3 2003/09/24 14:18:11 olaf Exp $
 
 use strict;
 use vars qw(@ISA $VERSION);
 
-use Net::DNS;
+
+use Net::DNS::SEC;
 use MIME::Base64;
 use Carp;
 
-@ISA = qw(Net::DNS::RR);
-$VERSION = do { my @r=(q$Revision: 1.1 $=~/\d+/g); sprintf "%d."."%03d"x$#r,@r };
+@ISA = qw(Net::DNS::RR Net::DNS::SEC);
+
+
+$VERSION = do { my @r=(q$Revision: 1.3 $=~/\d+/g); sprintf "%d."."%03d"x$#r,@r };
 
 sub new {
     my ($class, $self, $data, $offset) = @_;
+
+    bless $self, $class;
     if ($self->{"rdlength"} > 0) {
 	
 	my $offsettoprot=$offset+2;
@@ -27,9 +32,10 @@ sub new {
 	$self->{"keybin"}=($keymaterial);
 	$self->{"key"}= encode_base64($keymaterial);
 	
-	setkeytag($self);	
+	$self->setkeytag
     }
-    return bless $self, $class;
+
+    return $self;
 }
 
 
@@ -38,8 +44,7 @@ sub new {
 
 sub new_from_string {
 	my ($class, $self, $string) = @_;
-
-
+	bless $self, $class;
 	if ($string) {
 		$string =~ tr/()//d;
 		$string =~ s/;.*$//mg;
@@ -48,15 +53,17 @@ sub new_from_string {
 		    $string =~ /^\s*(\S+)\s+(\S+)\s+(\S+)\s+(.*)/;
 		$key =~ s/\s*//g;
 		$self->{"flags"}=$flags;
-		$self->{"algorithm"}=$algorithm;
+		$self->{"algorithm"}=Net::DNS::SEC->algorithm($algorithm);
 		$self->{"protocol"}=$protocol;
 		my $keymaterial=decode_base64($key);
 		$self->{"keybin"}=($keymaterial);
 		$self->{"key"}=$key;
-		
-		setkeytag($self);
+		$self->setkeytag;
 	    }
-	return bless $self, $class;
+	
+	return $self;
+
+
 }
 
 
@@ -67,7 +74,7 @@ sub rdatastr {
 	if (exists $self->{"flags"}) {
 	    $rdatastr  = $self->{flags};
 	    $rdatastr .= "  "  . "$self->{protocol}";
-	    $rdatastr .= "  "  . "$self->{algorithm}";
+	    $rdatastr .= "  "  . $self->algorithm;
 	    $rdatastr .= " ( \n" ;
 	    # do some nice formatting
 	    my $keystring=$self->{key};
@@ -91,11 +98,12 @@ sub rr_rdata {
 	$rdata= pack("n",$self->{"flags"}) ;
 	$rdata.=
 	    pack("C2",$self->{"protocol"} 
-		     , $self->{"algorithm"}) ;
+		     , $self->algorithm) ;
 	$rdata.= $self->{"keybin"}
     }
     return $rdata;
 }
+
 
 sub setkeytag
 {
@@ -103,7 +111,7 @@ sub setkeytag
     if (($self->{"flags"} & hex("0xc000") ) == hex("0xc000") ){
 	# NULL KEY
 	$self->{"keytag"} = 0;
-    }elsif ($self->{"algorithm"} == '1'){
+    }elsif ($self->algorithm == '1'){
 	# RFC 2535 4.1.6  most significant 16 bits of the least
 	#                 significant 24 bits
 	
@@ -117,14 +125,13 @@ sub setkeytag
 	# RFC 2535  Appendix C
 	my ($ac, $i);
 	
-
 	# $self->{"rr_data"} cannot be 
 	# used if the object has not been constructed ?!?
 
 	my $rdata= pack("n",$self->{"flags"}) ;   
 	$rdata.=
 	    pack("C2",$self->{"protocol"} 
-		 , $self->{"algorithm"}) ;
+		 , $self->algorithm) ;
 	$rdata.= $self->{"keybin"};
 	my @keyrr=split //, $rdata;
 
@@ -141,13 +148,35 @@ sub setkeytag
 }
 
 
+sub set_sep {
+    my $self=shift;
+     return $self->is_sep if $self->is_sep;
+    $self->{"flags"}+=1;
+    $self->setkeytag;
+    return if $self->is_sep;
+}
+
+sub unset_sep {
+    my $self=shift;
+     return $self->is_sep if ! $self->is_sep;
+    $self->{"flags"}-=1;
+    $self->setkeytag;
+    return $self->is_sep;
+}
+
+
+
+sub is_sep {
+    my $self=shift;
+    return $self->{"flags"} % 2;  # Hey it;s odd.
+}
 
 
 sub privatekeyname {
     my $self=shift;
     return sprintf("K%s.+%03d+%05d.private",
 		   $self->name,
-		   $self->{"algorithm"},
+		   $self->algorithm,
 		   $self->keytag);
     
 }

@@ -1,6 +1,6 @@
 package Net::DNS::RR::NSEC;
 
-# $Id: NSEC.pm,v 1.1 2003/08/27 14:09:25 olaf Exp $
+# $Id: NSEC.pm,v 1.3 2003/12/10 08:50:15 olaf Exp $
 
 use strict;
 use vars qw(@ISA $VERSION);
@@ -8,12 +8,12 @@ use Carp;
 
 use Net::DNS;
 use Net::DNS::Packet;
-
+use Data::Dumper;
 
 use Carp;
 
 @ISA = qw(Net::DNS::RR);
-$VERSION = do { my @r=(q$Revision: 1.1 $=~/\d+/g); sprintf "%d."."%03d"x$#r,@r };
+$VERSION = do { my @r=(q$Revision: 1.3 $=~/\d+/g); sprintf "%d."."%03d"x$#r,@r };
 
 sub new {
     my ($class, $self, $data, $offset) = @_;
@@ -44,7 +44,7 @@ sub new_from_string {
 	$string =~ s/\n//mg;
 	my ($nxtdname,$nxtstr) = 
 	    $string =~ /^\s*(\S+)\s+(.*)/;
-	my @nxttypes = split /\s+/ , $nxtstr;       # everything after last match...
+	my @nxttypes = split /\s+/ , $nxtstr;  # everything after last match...
 	
 	$self->{"nxtdname"}= lc($nxtdname) ;
 	$self->{"typelist"}= join " " , sort @nxttypes ;
@@ -111,46 +111,75 @@ sub _canonicalRdata {
 
 
 sub _typestr2typebm {
-    # RFC2535 5.1 needs the typebm
-    # This needs to check for values > 127....
 
-    # Sets a bit for every qtype in the input array.
-    # Minimum bitmaplenght 6 octets because NSEC (47) is allways there
-    # may be longer but trailing all zero octets should be dropped.
+    # This implements draft-ietfdnsext-nsec-rdata-01.
+    # typebm= (WindowBlockNumber |BitmapLength|Bitmap)+
 
-    my (@typelist, @typebitarray);
-    @typelist= @_;
-    for(my $i=0;$i < @typelist; $i++){
-	$typebitarray[$Net::DNS::typesbyname{uc($typelist[$i])}]=1;
-    }
+    my @typelist= @_;
+
+    my $typebm="";
+    my $CurrentWindowNumber=0;
+
+    # $bm is an array of arrays.
     
-    my $finalsize=0;
-    {
+    # The first index maps onto the CurrentWindowNumber and the array
+    # contained has its index mapped to types. The vallues will be set
+    # if there is data for a paricular type otherwise undef.
+    
+    my $bm;
+  TYPE:   for(my $i=0;$i < @typelist; $i++){
 	use integer;
-	$finalsize = 8 * ((@typebitarray / 8)  + 1);
-    }
+	my $typenumber=Net::DNS::typesbyname(uc($typelist[$i]));
+	next TYPE if exists ($Net::DSN::qtypesbyname{uc($typelist[$i])});
+	next TYPE if  exists ($Net::DSN::metatypesbyname{uc($typelist[$i])});
+	# Do net set the bitmap for meta types or qtypes.
+	    $CurrentWindowNumber= ($typenumber / 256); # use integer must be in scope..	
+	$bm->[$CurrentWindowNumber]->[$typenumber-$CurrentWindowNumber*256] = 1;
+	}
+    
+    # Turn the array of arrays referenced through $bm into the bitmap
+    # as used in the RDATA
 
-    for (my $i=0;$i< $finalsize; $i++){
-	$typebitarray[$i]=0 if ! defined $typebitarray[$i];
+
+    for (my $i=0; $i < @{$bm}; $i++){
+	if (defined ($bm->[$i])){
+	    use integer;
+	    my $BitmapLength=0;
+	    $BitmapLength =  8 * ((@{$bm->[$i]} / 8) );
+	    # Make sure the remaining bits fit...
+	    $BitmapLength += 8 if (@{$bm->[$i]} % 8);
+	    for (my $j=0;$j< $BitmapLength; $j++){
+		$bm->[$i]->[$j]=0 if ! defined $bm->[$i]->[$j];
+	    }
+
+	    $typebm.= pack("CCB$BitmapLength",$i,$BitmapLength/8,
+			   join ("", @{$bm->[$i]} ));
+	}
     }
-    my $typebm= pack("B$finalsize",join "", @typebitarray );
     return $typebm
 
 }
 
 sub _typebm2typestr {
-    # RFC2535 5.1 needs the typebm
-    # This needs to check for values > 127....
-    my @typebm=split //, unpack("B*", shift);  # bit representation in array
-    my @typelist;
-    carp "Cannot deal with qtype > 127" 
-	if ($#typebm > 127);
-    
-    my($foo);
-    foreach $foo (sort { $a <=> $b } keys(%Net::DNS::typesbyval)  ){
-	next if $foo > $#typebm;           # Skip larger aray vallues.
-	@typelist=(@typelist,$Net::DNS::typesbyval{$foo}) if 
-	    ($typebm[$foo] eq "1");
+
+
+    # This implements draft-ietfdnsext-nsec-rdata-01.
+    # typebm= (WindowBlockNumber |BitmapLength|Bitmap)+
+
+    my $typebm=shift;  # bit representation.
+    my@typelist;
+    while ($typebm){
+	my ($WindowBlockNumber,$BitmapLength)=unpack("CC",$typebm);
+	substr($typebm,0,2,"");
+	my $Bitmap=substr($typebm,0,$BitmapLength,"");
+	# Turn the Bitmap in an array...
+	my @bm=split //, unpack("B*", $Bitmap);  # bit representation in arra
+
+	for (my $i=0;$i < @bm; $i++){
+	    @typelist=(@typelist,
+		       Net::DNS::typesbyval($WindowBlockNumber*256+$i))	   
+	      if $bm[$i];
+	}
     }
 
     return sort @typelist;

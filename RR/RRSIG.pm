@@ -1,6 +1,6 @@
 # perldoc RRSIG.pm for documentation.
 # Specs: RFC 2535 section 4
-# $Id: RRSIG.pm,v 1.1 2003/08/27 14:09:25 olaf Exp $
+# $Id: RRSIG.pm,v 1.3 2004/01/27 10:45:49 olaf Exp $
 
 package Net::DNS::RR::RRSIG;
 
@@ -24,7 +24,6 @@ use Digest::SHA1 qw (sha1);
 
 
 
-
 #
 # Most of the cryptovariables should be interpred as unsigne
 #
@@ -33,10 +32,11 @@ use Digest::SHA1 qw (sha1);
 
 require Exporter;
 
-$VERSION = do { my @r=(q$Revision: 1.1 $=~/\d+/g); sprintf "%d."."%03d"x$#r,@r };
+$VERSION = do { my @r=(q$Revision: 1.3 $=~/\d+/g); sprintf "%d."."%03d"x$#r,@r };
 @ISA = qw (
 	   Exporter
-	 Net::DNS::RR
+  	 Net::DNS::RR
+  	 Net::DNS::SEC
 	   );
 
 @EXPORT = qw (
@@ -109,7 +109,7 @@ sub new_from_string {
 	croak (" Invallid RRSIG RR, check your fomat ") if !$keytag;
 	$sig =~ s/\s*//g;
 	$self->{"typecovered"}= $typecovered;
-	$self->{"algorithm"}= $algoritm;
+	$self->{"algorithm"}= Net::DNS::SEC->algorithm($algoritm);
 	$self->{"labels"}= lc($labels);
 	$self->{"orgttl"}= $orgttl;
 	_checktimeformat($sigexpiration);
@@ -131,7 +131,7 @@ sub rdatastr {
 	my $rdatastr;
 	if (exists $self->{"typecovered"}) {
 	    $rdatastr  = $self->{typecovered};
-	    $rdatastr .= "  "  . "$self->{algorithm}";
+	    $rdatastr .= "  "  . $self->algorithm;
 	    $rdatastr .= "  "  . "$self->{labels}";
 	    $rdatastr .= "  "  . "$self->{orgttl}";
 	    $rdatastr .= "  "  . "$self->{sigexpiration}";
@@ -159,7 +159,7 @@ sub rr_rdata_without_sigbin {
 
     if (exists $self->{"typecovered"}) {
 	$rdata  = pack("n",_string2type($self->{typecovered}));
-	$rdata .= pack("C",$self->{algorithm});
+	$rdata .= pack("C",$self->algorithm);
 	$rdata .= pack("C",$self->{"labels"});
 	$rdata .= pack("N",$self->{"orgttl"});
 	$self->{"sigexpiration"} =~ /(\d{4})(\d{2})(\d{2})(\d{2})(\d{2})(\d{2})/;
@@ -201,7 +201,8 @@ sub rr_rdata {
 
 sub create {
     my ($class,  $datarrset, $priv_key, %args) = @_;
-    
+
+
     # This method returns a sigrr with the signature over the
     # datatrrset (an array of RRs) made with the private key stored in
     # the $key_file.
@@ -219,7 +220,7 @@ sub create {
 
     die "Create did not manage obtain a Net::DNS::SEC::Private object "unless (UNIVERSAL::isa($Private,"Net::DNS::SEC::Private"));
 
-    $self->{"algorithm"}=$Private->algorithm;
+    $self->{"algorithm"}=Net::DNS::SEC->algorithm($Private->algorithm);
     $self->{"keytag"}=$Private->keytag;
     $self->{"signame"}=$Private->signame;
 
@@ -238,7 +239,7 @@ sub create {
     $self->{"class"}="IN";
 
 
-    if ($args{ttl}){
+    if (defined ($args{ttl})){
 	print "\nSetting TTL to ".  $args{"ttl"} if $debug;
 	$self->{"ttl"}= $args{"ttl"};
     }else{
@@ -249,11 +250,11 @@ sub create {
 
 
 
-    if ($args{response}){
+    if (defined ($args{response})){
 	$self->{"response"}=$args{"response"};
     }
 
-    if ($args{"sigin"}){
+    if (defined($args{"sigin"})){
 	_checktimeformat($args{"sigin"});
 	print "\nSetting siginceptation to " . $args{"sigin"} if $debug;
 	$self->{"siginceptation"} =$args{"sigin"};
@@ -271,7 +272,7 @@ sub create {
 	/(\d{4})(\d{2})(\d{2})(\d{2})(\d{2})(\d{2})/ ;
     my $siginc_time=timegm ($6, $5, $4, $3, $2-1, $1-1900);
 
-    if ($args{"sigval"}){ #sigexpiration set by siginception + sigval
+    if (defined($args{"sigval"})){ #sigexpiration set by siginception + sigval
 	my @inct;
 
 
@@ -318,8 +319,7 @@ sub create {
 	    }
 	}
     }
-  
-    $self->{"orgttl"}=0;
+    $self->{"orgttl"}=$datarrset->[0]->{"ttl"};
 
     $self->{"sig"}=  "NOTYETCALCULATED";  # This is what we'll do in a bit...
     $self->{"sigbin"}= decode_base64($self->{"sig"});
@@ -329,7 +329,7 @@ sub create {
     # more ways to do things)
 
     bless $self, $class;
-    
+
     my $sigdata=$self->_CreateSigData($datarrset);
 
 
@@ -339,8 +339,8 @@ sub create {
     
     #
     # Enjoy the crypto
-    if ($self->{"algorithm"} == 1 || $self->{"algorithm"} == 5) {  #RSA
-	if (! ($Private->algorithm == 1 || $self->algorithm == 5 )) {
+    if ($self->algorithm == 1 || $self->algorithm == 5) {  #RSA
+	if (! ($Private->algorithm == 1 || $Private->algorithm == 5 )) {
 	    die "Private key mismatch, not RSAMD5 or RSASHA.";
 	    
 	}
@@ -349,7 +349,7 @@ sub create {
 	$self->{"private_key"}=$Private->privatekey;
 	eval {
 	    $rsa_priv->use_pkcs1_oaep_padding;
-	    if ($self->{"algorithm"} == 1) {
+	    if ($self->algorithm == 1) {
 		$rsa_priv->use_md5_hash;
 	    } else {
 		$rsa_priv->use_sha1_hash;
@@ -364,7 +364,7 @@ sub create {
 
 	print "\n SIGNED" if $debug ;
 	
-    }elsif ($self->{"algorithm"} == 3){  #DSA
+    }elsif ($self->algorithm == 3){  #DSA
 	$self->{"private_key"}=$Private->privatekey;
 	my $private_dsa=$Private->privatekey;
 
@@ -797,7 +797,7 @@ sub _CreateSigData {
     $sigdata= $rdatawithoutsig;
 
 
-    if ( ! $sigzero ){  
+    if ( ! $sigzero ){
 	# Not a SIG0
 	if (@{$rawdata}>1) {
 	    my @canonicaldataarray;

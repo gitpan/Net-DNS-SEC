@@ -1,6 +1,6 @@
 #!/usr/bin/perl  -sw 
 # Test script for dnssec functionalty
-# $Id: 10-typeroll.t,v 1.1 2003/08/27 14:09:25 olaf Exp $
+# $Id: 10-typeroll.t,v 1.2 2004/01/27 10:45:49 olaf Exp $
 # 
 # Called in a fashion simmilar to:
 # /usr/bin/perl -Iblib/arch -Iblib/lib -I/usr/lib/perl5/5.6.1/i386-freebsd \
@@ -245,17 +245,24 @@ ok ($sigrsa->verify($datarrset,$rsakeyrr),'RSA sig over SOA  with escaped dot ve
 # Cross check with a  signature generated with bind tools.
 #test fails after October 2030 :
 
-my $bindkey=Net::DNS::RR->new("test.foo       3600         IN DNSKEY  256 3 1  (
-                              AQPDgM2XU2rluutXFw6IJjDRSGHehcc1ZtMoG5RR/
-                              jXJD1bZNFgqsKlJkVfj9wzrzAnBg7ZQSHwxYIGDm
-                              ocdBtW3 )");
+my $bindkey=Net::DNS::RR->new("    netdns.work.                   900     DNSKEY  257 3 5 (
+                                        AQOwktT7a2gfGNXWK+QWKP/Lln5Z/fSz0q2f
+                                        R1fA4QBQsWsrnKz/yqXRmOHhf8X975ZVwpdo
+                                        456wYjbfrP03sSjI3Wj9y5Mnr09HUUaBdwF/
+                                        7VVgpP8Mgwe3FJ4f2uPwBFm2/+7+wxMyjIbL
+                                        mu0Ec6xtZtEARe99RLnRCnF1gXb6Uw==
+                                        ) ; key id = 17895");
 
 
-my $bindsig=Net::DNS::RR->new("test.foo        3600        IN  RRSIG     (
-                               DNSKEY 1 2 3600 20300101000000  
-                               20020523123523 1749 test.foo. 
-                               YUf+2kUnz3bMCfRJyraFTxcmiTCMiGkfvwaeLa8oXzJX  
-                              PUfCpYzJUb9lH7/J4H8hk+Yg2RU81s423IFs155Yag== )");
+
+my $bindsig=Net::DNS::RR->new("netdns.work.  900     RRSIG   DNSKEY 5 2 900 20350101000000 (
+                                        20040121160223 17895 netdns.work.
+                                        SUENn9MMZd9PPdtt//rbMbCgI7XGAmvb4QWO
+                                        6Zuwis3ErhZR5PdiQNqhY53pN44Dnq5Qv4CO
+                                        nIpoFLMZKpT1W/8jNFHZI8wX63hn8kYDUW9C
+                                        lJt2YlovakAo3tMR3L/QvbkentB3ljJVEMYF
+                                        PwJCmzS64bXNr960ZlOfnKY4Yl8= )");
+
 
 
 my    $binddataset=[$bindkey];
@@ -264,13 +271,27 @@ my    $binddataset=[$bindkey];
 
 
 
-my $nxtrr=Net::DNS::RR->new("sub.tld.		100	IN	NXT	b1.sub.tld. NS SOA RRSIG DNSKEY NXT");
+my $nxtrr=Net::DNS::RR->new("example.com  7200    NSEC    bert.example.com. NS SOA MX TXT LOC RRSIG NSEC DNSKEY");
+
+
 
 ok ( $nxtrr, 'NXT RR created from string');		#test 27
 
-my $nxtsig=Net::DNS::RR->new("sub.tld.		100	IN	RRSIG	NXT 1 2 100 20300627095441 20020814112311 23495 sub.tld. dGES80B4hlMUq7rS5etQ03emiq+y9gchIc/VO650PE3ssSJMcELzl9T2 /RiKOs5plEGl+iyHpo0XTSW0oEi8D4SX/4vXHpE5PHK2ME/40JW8ULT7 DEI+zmqmcZnvMKCktysKMLcSa6nLo8AOtEa/FtiIYes7r9Ff6tCydryC 4Qg=");
+my $nxtsig=Net::DNS::RR->new("example.com  7200    RRSIG   NSEC 5 2 7200 20310101000000 (
+                                        20040126131948 37790 example.com.
+                                        IFK3Y4xZwkyHP0TwMnsC7g2IvHRZmsk8rFH7
+                                        l1dM7Jyb7+p2Mh1nm13vv56sBOItHNDGvQtN
+                                        yVDNuG2brf0zpHLHSzB/KsW1NNLTrTCscK1W
+                                        0JNu2WwiZo62dZLQqIY4RQqTsWxf17c0f3aA
+                                        w8ogGRXVnHwv0uGKRfMnWpX2AgA= )");
 
-my $nxtkey=Net::DNS::RR->new("sub.tld.		100	IN	DNSKEY	256 3 1 AQPw02b9MnR8aJplOyI1CB0u1zBGi9xFAPiZ1NkdDlqne3lSXpGHzQNT hf16EIdk+diCroSOFdz3jA/0fnHbG80wQ35k2YvVVqooHHel9nAeMHJF SgAzgV2Ht7hOnagaK0V4zbcvDnHm6kyiPuLExvknehLg6G9b+yNtZJ0g g1vHGQ==");
+my $nxtkey=Net::DNS::RR->new("example.com                        900     DNSKEY  256 3 5 (
+                                        AQOzkktb0iNYIj9GuasRjJixkK/YZ5eAe/Hs
+                                        anvfZ7023ZPmEdNvRfygmCRDOFs0ud7J8u8n
+                                        YnWn9EBxxS4AKSj8To+Dtx+vuW/g72SQjbNZ
+                                        T3EGlwU3F2455qUAkAd4CADVMcbbLO0MbXRk
+                                        /fd+Mq8A1zdX8q602fdaxaZ325nE0Q==
+                                        )");
 
 
 my @nxtdata=($nxtrr);
@@ -278,7 +299,7 @@ my @nxtdata=($nxtrr);
 
 
 SKIP: {
-    skip "Test material not available yet, will be fixed in later release", 2 if 1;
+    skip "Test material not available yet, will be fixed in later release", 2 if 0;
     ok( $bindsig->verify($binddataset,$bindkey),
 	'RSA sig generated with bind verifies');        #test 29
     ok( $nxtsig->verify(\@nxtdata,$nxtkey), "RRSIG over NXT verifies");   #test 29

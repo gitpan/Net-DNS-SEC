@@ -1,14 +1,14 @@
-
 #
-# $Id: SEC.pm,v 1.8 2003/08/27 14:09:25 olaf Exp $
+# $Id: SEC.pm,v 1.11 2003/12/09 15:55:16 olaf Exp $
 #
 
 package Net::DNS::SEC;
 use Net::DNS;
 
+use Carp;
 use strict;
 use vars qw($VERSION);
-$VERSION = '0.11';
+$VERSION = '0.11_2';
 
 
 =head1 NAME
@@ -19,7 +19,8 @@ Net::DNS::SEC - DNSSEC extensions to Net::DNS
 
 C<use Net::DNS>;
 
-Net::DNS::SEC does not contain any code.
+Net::DNS::SEC contains some code inherited by DNSSEC related RR
+classes.
 
 =head1 DESCRIPTION
 
@@ -43,14 +44,102 @@ available through the Net::DNS::SEC package.
 See Net::DNS for general help.
 
 
+=head1 Functions
+
+These functions are inherited by relevant Net::DNS::RR classes.
+
+=head2 algorithm
+
+    $value=Net::DNS::SEC->algorithm("RSA/SHA1");
+    $value=$self->algorithm("RSA/SHA1");
+    $value=$self->algorithm(5);
+
+    $algorithm=$self->algorithm();
+    $memonic=$self->algorithm("mnemonic");
+
+
+
+The algorithm method is used to set or read the value of the algorithm
+field in Net::DNS::RR::DNSKEY and Net::DNS::RR::RRSIG.
+
+If supplied with an argument it will set the algorithm accordingly, except
+when the argument equals the string "mnemonic" the method will return the
+mnemonic of the algorithm.
+
+Can also be called as a class method to do Mnemonic to Value conversion.
+ 
+
+
 =head1 SEE ALSO
 
 L<perl(1)>, L<Net::DNS>, L<Net::DNS::RR::KEY>, L<Net::DNS::RR::SIG>,
 L<Net::DNS::RR::NXT>, L<Net::DNS::RR::DNSKEY>, L<Net::DNS::RR::RRSIG>,
 L<Net::DNS::RR::NSEC>, L<Net::DNS::RR::DS>.
 
-
 =cut
+
+
+
+
+sub algorithm {
+    my $self=shift;
+    my $argument=shift;
+    # classmethod is true if called as class method.
+    my $classmethod=0;
+    $classmethod=1 unless  ref ($self);
+
+    my %algbyname = (
+		  "RSA/MD5"		=> 1,		
+#		  "DH"                  => 2,           # Not implemented
+		  "DSA"                 => 3,
+#		  "ECC"                 => 4,           # Not implemented
+		  "RSA/SHA1"            => 5,
+		  );
+    my %algbyval = reverse %algbyname;
+
+    # If the argument is undefined...
+    
+    if (!defined $argument){
+	return if $classmethod;
+	return $self->{"algorithm"};
+    }
+
+    # Argument has some value...
+    $argument =~ s/\s//g; # Remove strings to be kind
+
+    if ($argument =~ /^\d+$/ ){    #Numeric argument.
+	carp "$argument does not map to a valid algorithm" unless 
+	    exists $algbyval{$argument};
+	if ($classmethod){
+	    return $argument ;
+	}else{
+	    return $self->{"algorithm"}=$argument ;
+	}
+    }else{  # argument is not numeric
+	if ($classmethod){
+	    carp "$argument does not map to a valid algorithm" unless
+		exists $algbyname{uc($argument)};
+	    return $algbyname{uc($argument)};
+	    
+	}else{ # Not a class method..
+	    if (lc($argument) eq "mnemonic"){
+		return $algbyval{$self->{"algorithm"}};
+	    }else{
+		carp "$argument does not map to a valid algorithm" unless
+		    exists $algbyname{uc($argument)};
+		return $self->{"algorithm"}=$algbyname{uc($argument)};
+	    }	    
+	}
+
+	
+    }	
+    die "algorithm method should never end here";
+
+	
+}
+
+
+
 
 
 

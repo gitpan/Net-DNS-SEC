@@ -1,5 +1,19 @@
 Revision history for Perl extension Net::DNS::SEC.
 
+0.11_2  Jan 27 2003 Development snapshot.
+
+   FEAT: - Prelimanary support for draf-ietf-dnssec-nsec-rdata-02. This
+	   depends on support for unknown RR types (Net::DNS version
+           0.44)
+   
+
+0.11_1  Sep 23 2003 Development snapshot.
+
+   FEAT: - To be able to deal with argument supplied as either mnemonics or
+           by value the Net::DNS::SEC::argument method was created. It can
+           be used as a class method but it is also inherited by
+	   Net::DNS::RR::RRSIG and Net::DNS::RR::DNSKEY.
+
 
 0.11 August 28 2003
 
@@ -185,7 +199,7 @@ Net::DNS. The history of those is documented below.
 
 0.19-DNSSEC-0.3: 
   Solved patch problems that where due to the 
-  $Id: Changes,v 1.17 2003/08/28 11:32:06 olaf Exp $ in headers not 
+  $Id: Changes,v 1.21 2004/01/27 10:45:49 olaf Exp $ in headers not 
   being from the original distribution.
 
   Added DSA signature creation
@@ -217,4 +231,4 @@ Net::DNS. The history of those is documented below.
 
 
 ---------------------------------------------------------------------------
-$Id: Changes,v 1.17 2003/08/28 11:32:06 olaf Exp $
+$Id: Changes,v 1.21 2004/01/27 10:45:49 olaf Exp $
