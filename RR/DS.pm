@@ -1,18 +1,29 @@
 package Net::DNS::RR::DS;
 
-# $Id: DS.pm,v 1.9 2004/03/09 14:28:00 olaf Exp $
+# $Id: DS.pm,v 1.11 2004/04/23 14:58:58 olaf Exp $
 
 
 use strict;
-use vars qw(@ISA $VERSION);
+use vars qw(@ISA $VERSION $_Babble);
 
 use Net::DNS;
 use Carp;
-use Digest::BubbleBabble qw( bubblebabble );
+
 use Digest::SHA1  qw(sha1 sha1_hex );
 
 
-$VERSION = do { my @r=(q$Revision: 1.9 $=~/\d+/g); sprintf "%d."."%03d"x$#r,@r };
+BEGIN {
+
+    $_Babble=0;    
+    $_Babble=1 unless (eval "require Digest::BubbleBabble; import Digest::BubbleBabble qw(bubblebabble)") ;
+
+}
+
+
+
+
+
+$VERSION = do { my @r=(q$Revision: 1.11 $=~/\d+/g); sprintf "%d."."%03d"x$#r,@r };
 my $debug=0;
 
 @ISA = qw(Net::DNS::RR);
@@ -71,7 +82,7 @@ sub rdatastr {
 	    $rdatastr .= "  "  . "$self->{algorithm}";
 	    $rdatastr .= "  "  . "$self->{digtype}";
 	    $rdatastr .= "  "  . "$self->{digest}";
-	    $rdatastr .= " ; ".$self->babble;   
+	    $rdatastr .= " ; ".$self->babble if $_Babble;   
 	    }
 	else {
 	    $rdatastr = "; no data";
@@ -108,7 +119,11 @@ sub verify {
 
 sub babble {
     my $self=shift;
-    return bubblebabble(Digest=>$self->digestbin);
+    if ($_Babble){
+	return bubblebabble(Digest=>$self->digestbin);
+    }else{
+	return("");
+    }
 }
 
 

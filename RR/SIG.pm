@@ -1,6 +1,6 @@
 # perldoc SIG.pm for documentation.
 # Specs: RFC 2535 section 4
-# $Id: SIG.pm,v 1.14 2004/03/09 14:28:00 olaf Exp $
+# $Id: SIG.pm,v 1.15 2004/04/23 14:58:58 olaf Exp $
 
 package Net::DNS::RR::SIG;
 
@@ -33,7 +33,7 @@ use Digest::SHA1 qw (sha1);
 
 require Exporter;
 
-$VERSION = do { my @r=(q$Revision: 1.14 $=~/\d+/g); sprintf "%d."."%03d"x$#r,@r };
+$VERSION = do { my @r=(q$Revision: 1.15 $=~/\d+/g); sprintf "%d."."%03d"x$#r,@r };
 @ISA = qw (
 	   Exporter
 	 Net::DNS::RR
@@ -109,7 +109,7 @@ sub new_from_string {
 		    /^\s*(\S+)\s+(\d+)\s+(\d+)\s+(\d+)\s+(\d+)\s+(\d+)\s+(\d+)\s+(\S+)\s+(.*)/;
 	croak (" Invallid SIG RR, check your fomat ") if !$keytag;
 	$sig =~ s/\s*//g;
-	$self->{"typecovered"}= $typecovered;
+	$self->{"typecovered"}=uc($typecovered);
 	$self->{"algorithm"}= $algoritm;
 	$self->{"labels"}= lc($labels);
 	$self->{"orgttl"}= $orgttl;

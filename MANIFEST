@@ -4,7 +4,8 @@ demo/key2ds
 demo/make-signed-keyset
 Keyset.pm
 Makefile.PL
-MANIFEST
+MANIFEST			This list of files
+META.yml
 README
 RR/DNSKEY.pm
 RR/DS.pm
@@ -17,11 +18,13 @@ RR/SIG/Private.pm
 SEC.pm
 SEC/Private.pm
 t/00-pod.t
+t/07-sec.t
 t/09-dnssec.t
 t/10-keyset.t
 t/10-typeroll.t
+t/11-sep.t
 t/11-sigstress.t
+t/12-nsec++.t
 t/getpacket.pl
 t/keyset-test.tld.
 TODO
-META.yml                                Module meta-data (added by MakeMaker)

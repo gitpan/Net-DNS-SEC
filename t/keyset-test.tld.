@@ -23,13 +23,13 @@ test.tld.	0	IN	KEY	256  3  3 (
 			8VNN/RPQNkZOg6fRLtKF7DPIXFFJ0b+npMnA
 			 
 			) ; Key ID = 9734
-test.tld.	360	IN	SIG	KEY  1  2  0  20040408142042 (
-			20040309142042 42495  test.tld
-			La+uSej/fb7xJlab2pHnh5IkWjWRt/9/YgqZlR3j7BDa1
-			vMN+zUzFcIFdx5vmo9W4WJQxCRrtPo7Ly9K02tKx0Nqho
-			pkY6CLMO7BkNImsl5x4N5HJnYy9hZw+VJCfJsvvOjQjZO
-			LJMnpgu2dayRhtKxmAuHuIpNuKpZIxo9swC4= )
-test.tld.	360	IN	SIG	KEY  3  2  0  20040408142042 (
-			20040309142042 09734  test.tld
-			CAx6uP4rnB5c9nIBE3ukI6J5CBcHFYKNu59Fh9SpHFxJA
-			+kShnHGygU= )
+test.tld.	360	IN	SIG	KEY  1  2  0  20040523145803 (
+			20040423145803 42495  test.tld
+			frUF0VipXe+SgeA6L1JxPlDTIF+QUVf6XhT46w3ddUgJy
+			9wAie1ex78ALed4B0OtLpuKBTSguMynRgdPrKQS112wwR
+			dgX1Pvli7PobJjmHj2d7wcBOfb9JRIEDSl5TPELqXnM9J
+			m3m/V1udUTItiemfC/R1Qg7h0LcTXfpQplsU= )
+test.tld.	360	IN	SIG	KEY  3  2  0  20040523145803 (
+			20040423145803 09734  test.tld
+			CFzkc/lGj4h5qSz3cX14eA0XBLRgc2s7Bx87C5LWs51Xq
+			4w2gryinYU= )

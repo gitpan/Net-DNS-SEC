@@ -1,6 +1,6 @@
 #!/usr/bin/perl  -sw 
 # Test script for keysetfunctionalty
-# $Id: 10-keyset.t,v 1.6 2003/08/27 14:09:25 olaf Exp $
+# $Id: 10-keyset.t,v 1.8 2004/04/23 14:58:58 olaf Exp $
 # 
 # Called in a fashion simmilar to:
 # /usr/bin/perl -Iblib/arch -Iblib/lib -I/usr/lib/perl5/5.6.1/i386-freebsd \
@@ -10,7 +10,7 @@
 
 
 #use Test::More  qw(no_plan);
-use Test::More tests => 12;
+use Test::More tests => 13;
 use strict;
 
 
@@ -121,14 +121,27 @@ is (ref($keyset), "Net::DNS::Keyset", "Keyeset object created");
 
 my @ds=$keyset->extract_ds;
 
-is ($ds[0]->string, "test.tld.	0	IN	DS	42495  1  1  ".
-    "0ffbeba0831b10b8b83440dab81a2148576da9f6 ; xefoz-rupop-babuc-rugor-mavef-gybot-puvoc-pumig-mahek-tepaz-kixox",
-    "DS 1 generated from keyset");                             # test 8
+if ($Net::DNS::RR::DS::_Babble){
+    is ($ds[0]->string, "test.tld.	0	IN	DS	42495  1  1  ".
+	"0ffbeba0831b10b8b83440dab81a2148576da9f6 ; xefoz-rupop-babuc-rugor-mavef-gybot-puvoc-pumig-mahek-tepaz-kixox",
+	"DS 1 generated from keyset");                             # test 8-with babble
 
 
-is ($ds[1]->string, "test.tld.	0	IN	DS	9734  3  1  ".
-    "0e045bfe67dec6e54d0f1338877a53841902ab4a ; xefib-gakiz-vynat-vacov-hyfeb-zugif-mecil-pegam-gykib-dapyg-pexox",
-    "DS 1 generated from keyset");                             # test 9
+    is ($ds[1]->string, "test.tld.	0	IN	DS	9734  3  1  ".
+	"0e045bfe67dec6e54d0f1338877a53841902ab4a ; xefib-gakiz-vynat-vacov-hyfeb-zugif-mecil-pegam-gykib-dapyg-pexox",
+	"DS 1 generated from keyset");                             # test 9-with babble
+}else{
+
+    is ($ds[0]->string, "test.tld.	0	IN	DS	42495  1  1  ".
+	"0ffbeba0831b10b8b83440dab81a2148576da9f6",
+	"DS 1 generated from keyset");                             # test 8-without babble
+
+
+    is ($ds[1]->string, "test.tld.	0	IN	DS	9734  3  1  ".
+	"0e045bfe67dec6e54d0f1338877a53841902ab4a",
+	"DS 1 generated from keyset");                             # test 9-without babble
+}
+
     
 ##
 #  Corupted keyset
@@ -139,7 +152,10 @@ open (KEYSET,">$keysetpath") or die "Could not open $keysetpath";
 print KEYSET $rsakeyrr->string ."\n";
 print KEYSET $dsakeyrr->string ."\n";
 my $sigstr=$sigrsa->string;
-$sigstr =~  s/a/0/g ;
+
+$sigstr =~  tr/A-Z/a-z/ ;  #Corrupt the signature's base64
+$sigstr=~s/in	sig	key/IN SIG KEY/;  # fix what should not have been transponded
+
 print KEYSET $sigstr ."\n";
 print KEYSET $sigdsa->string . "\n";
 close(KEYSET);
@@ -148,9 +164,10 @@ $keyset=Net::DNS::Keyset->new($keysetpath);
 
 
 
-ok ( ! $keyset &&
-     $Net::DNS::Keyset::keyset_err eq "RSA Verification failed on key test.tld 42495"
-     , "Corrupted keyset is not loaded" );                   # test 10
+ok ( ! $keyset , "Corrupted keyset not loaded");   # test 10
+
+is( $Net::DNS::Keyset::keyset_err , "RSA Verification failed on key test.tld 42495"
+     , "Correct Error message" );                   # test 11
 
 
 
@@ -204,14 +221,14 @@ my $packet = Net::DNS::Packet->new(\$packetdata);
 
 
 $keyset=Net::DNS::Keyset->new($packet);
-is (ref($keyset), "Net::DNS::Keyset", "Keyeset object from packet");  # test 11
+is (ref($keyset), "Net::DNS::Keyset", "Keyeset object from packet");  # test 12
 
 
 
 my $keyset2= Net::DNS::Keyset->new($datarrset,"./");
 is (ref($keyset2), "Net::DNS::Keyset", "Keyeset object from KEY RR and signature");  
 
-# test 11
+# test 13
 #print $Net::DNS::Keyset::keyset_err;
 #$keyset->print;
 

@@ -1,5 +1,5 @@
 #
-# $Id: SEC.pm,v 1.12 2004/03/09 14:28:00 olaf Exp $
+# $Id: SEC.pm,v 1.13 2004/04/23 14:35:16 olaf Exp $
 #
 
 package Net::DNS::SEC;
@@ -8,7 +8,7 @@ use Net::DNS;
 use Carp;
 use strict;
 use vars qw($VERSION);
-$VERSION = '0.11_3';
+$VERSION = '0.11_4';
 
 
 =head1 NAME
