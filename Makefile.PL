@@ -1,5 +1,5 @@
 #
-# $Id: Makefile.PL,v 1.4 2002/06/04 13:09:22 olaf Exp $
+# $Id: Makefile.PL,v 1.5 2002/06/14 07:46:11 olaf Exp $
 #
 
 eval { require 5.00503  };
@@ -30,9 +30,8 @@ WriteMakefile(
 		'RR/DS.pm' => '$(INST_LIBDIR)/RR/DS.pm',
 		'RR/NXT.pm' => '$(INST_LIBDIR)/RR/NXT.pm',
 		'RR/KEY.pm' => '$(INST_LIBDIR)/RR/KEY.pm',
-		'RR/SIG.pm' => '$(INST_LIBDIR)/RR/SIG.pm',
-		'SEC.pm' => '$(INST_LIBDIR)/SEC.pm',
-
+		'RR/SIG.pm' =>  '$(INST_LIBDIR)/RR/SIG.pm',
+		'SEC.pm'    => '$(INST_LIBDIR)/SEC.pm',
 	    },
 
        clean =>           {FILES => "*~ "}

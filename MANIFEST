@@ -6,7 +6,6 @@ RR/DS.pm
 RR/KEY.pm
 RR/NXT.pm
 RR/SIG.pm
-SEC.pm
 t/09-dnssec.t
 t/Ksigzero.+001+39700.key
 t/Ksigzero.+001+39700.private
