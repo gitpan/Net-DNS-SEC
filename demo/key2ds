@@ -1,9 +1,13 @@
 #!/usr/bin/perl
+#$Id: key2ds,v 1.2 2004/03/09 14:28:00 olaf Exp $
+
 
  use strict;
  use Net::DNS;
 
- # A little util to convert Key records to DS records
+
+
+ # A little util to convert DNSKEY records to DS records
  # From stdin to stdout
  # 
  # Author: Miek Gieben, NLnetLabs
@@ -35,5 +39,7 @@ DS record on STDOUT.
  it under the same terms as Perl itself. 
 
 =cut
+
+
 
 0;

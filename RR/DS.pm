@@ -1,6 +1,6 @@
 package Net::DNS::RR::DS;
 
-# $Id: DS.pm,v 1.8 2003/12/17 12:16:10 olaf Exp $
+# $Id: DS.pm,v 1.9 2004/03/09 14:28:00 olaf Exp $
 
 
 use strict;
@@ -9,8 +9,10 @@ use vars qw(@ISA $VERSION);
 use Net::DNS;
 use Carp;
 use Digest::BubbleBabble qw( bubblebabble );
+use Digest::SHA1  qw(sha1 sha1_hex );
 
-$VERSION = do { my @r=(q$Revision: 1.8 $=~/\d+/g); sprintf "%d."."%03d"x$#r,@r };
+
+$VERSION = do { my @r=(q$Revision: 1.9 $=~/\d+/g); sprintf "%d."."%03d"x$#r,@r };
 my $debug=0;
 
 @ISA = qw(Net::DNS::RR);
@@ -112,7 +114,7 @@ sub babble {
 
 sub create {
     my ($class, $keyrr ,%args) = @_;
-    use Digest::SHA1  qw(sha1 sha1_hex );
+
     my $self;
     $self->{"digtype"}=1;
 

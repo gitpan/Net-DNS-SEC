@@ -1,6 +1,6 @@
 # perldoc RRSIG.pm for documentation.
 # Specs: RFC 2535 section 4
-# $Id: RRSIG.pm,v 1.3 2004/01/27 10:45:49 olaf Exp $
+# $Id: RRSIG.pm,v 1.4 2004/03/09 14:28:00 olaf Exp $
 
 package Net::DNS::RR::RRSIG;
 
@@ -32,7 +32,7 @@ use Digest::SHA1 qw (sha1);
 
 require Exporter;
 
-$VERSION = do { my @r=(q$Revision: 1.3 $=~/\d+/g); sprintf "%d."."%03d"x$#r,@r };
+$VERSION = do { my @r=(q$Revision: 1.4 $=~/\d+/g); sprintf "%d."."%03d"x$#r,@r };
 @ISA = qw (
 	   Exporter
   	 Net::DNS::RR
@@ -561,8 +561,8 @@ sub verify {
 #
 sub _type2string {
     my $index=shift;
-    if( exists $Net::DNS::typesbyval{$index}){
-	return $Net::DNS::typesbyval{$index} ;
+    if( Net::DNS::typesbyval($index)){
+	return Net::DNS::typesbyval($index) ;
     }else{
 	return "UNKNOWN TYPE";
     }
@@ -570,10 +570,10 @@ sub _type2string {
 
 sub _string2type {
     my $index=shift;
-        if( exists $Net::DNS::typesbyname{uc($index)}){
-	return $Net::DNS::typesbyname{uc($index)} ;
+        if( Net::DNS::typesbyname(uc($index))){
+	return Net::DNS::typesbyname(uc($index)) ;
     }else{
-	carp "UNKNOWN QTYPE, cannot continue ";
+	carp "UNKNOWN TYPE, cannot continue ";
     }
 }
 

@@ -1,6 +1,6 @@
 # perldoc SIG.pm for documentation.
 # Specs: RFC 2535 section 4
-# $Id: SIG.pm,v 1.13 2003/09/01 15:59:01 olaf Exp $
+# $Id: SIG.pm,v 1.14 2004/03/09 14:28:00 olaf Exp $
 
 package Net::DNS::RR::SIG;
 
@@ -33,7 +33,7 @@ use Digest::SHA1 qw (sha1);
 
 require Exporter;
 
-$VERSION = do { my @r=(q$Revision: 1.13 $=~/\d+/g); sprintf "%d."."%03d"x$#r,@r };
+$VERSION = do { my @r=(q$Revision: 1.14 $=~/\d+/g); sprintf "%d."."%03d"x$#r,@r };
 @ISA = qw (
 	   Exporter
 	 Net::DNS::RR
@@ -196,7 +196,7 @@ sub rr_rdata {
 	}else{
             #do sigzero calculation based on current packet content...
 	    
-	    die "Signature not known for a not SIG0 type of signature" if ($self->{"typecovered"} ne "SIGZERO");
+	    die "Signature not known for a not SIG0 type of signature" if ($self->{"typecovered"} ne "TYPE000");
 	    die "Private key not known for SIG0" if (! exists $self->{"private_key"});
 	    
 
@@ -353,7 +353,7 @@ sub create {
     }
 
     if ($sigzero){
-	$self->{"typecovered"}="SIGZERO";
+	$self->{"typecovered"}="TYPE000";
     }else{
 	print "Note: the SIG RR has been deprecated for use other than SIG0; use the RRSIG instead\n"		  if !$__DeprecationWarningCreateShown ;
 		$__DeprecationWarningCreateShown=1;
@@ -575,7 +575,7 @@ sub verify {
 	}elsif( (ref($dataref)) and $dataref->isa("Net::DNS::Packet")){
 	    $packet_verify=1 if ((ref($dataref)) and $dataref->isa("Net::DNS::Packet"));
 	    die "Trying to verify a packet while signature is not of SIG0 type"
-		if ($self->{"typecovered"} ne "SIGZERO");
+		if ($self->{"typecovered"} ne "TYPE000");
 	}else{
 	    die "Do not know what kind of data this is" . ref( $dataref) . ")\n";
 	}
@@ -696,8 +696,8 @@ sub verify {
 #
 sub _type2string {
     my $index=shift;
-    if( exists $Net::DNS::typesbyval{$index}){
-	return $Net::DNS::typesbyval{$index} ;
+    if( Net::DNS::typesbyval($index)){
+	return Net::DNS::typesbyval($index) ;
     }else{
 	return "UNKNOWN TYPE";
     }
@@ -705,8 +705,8 @@ sub _type2string {
 
 sub _string2type {
     my $index=shift;
-        if( exists $Net::DNS::typesbyname{uc($index)}){
-	return $Net::DNS::typesbyname{uc($index)} ;
+        if( Net::DNS::typesbyname(uc($index))){
+	return Net::DNS::typesbyname(uc($index)) ;
     }else{
 	carp "UNKNOWN QTYPE, cannot continue ";
     }

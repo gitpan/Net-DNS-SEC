@@ -1,5 +1,5 @@
 #
-# $Id: Makefile.PL,v 1.19 2003/12/17 12:16:10 olaf Exp $
+# $Id: Makefile.PL,v 1.20 2004/03/09 14:28:00 olaf Exp $
 #
 
 
@@ -37,6 +37,7 @@ WriteMakefile(
 	Math::BigInt              => 0.0,
 	Time::Local               => 0.0,
 	Digest::BubbleBabble      => 0.01,
+	Digest::SHA1              => 0.0,
       },
       'ABSTRACT'                  => 'DNSSEC extensions to Net::DNS',
       'AUTHOR'                    => 'Olaf M. Kolkman <net-dns-sec@ripe.net>',
