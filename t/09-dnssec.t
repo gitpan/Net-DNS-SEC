@@ -1,6 +1,6 @@
 #!/usr/bin/perl  -sw 
 # Test script for dnssec functionalty
-# $Id: 09-dnssec.t,v 1.1 2002/05/24 09:42:08 olaf Exp $
+# $Id: 09-dnssec.t,v 1.2 2002/06/17 14:37:02 olaf Exp $
 # 
 # Called in a fashion simmilar to:
 # /usr/bin/perl -Iblib/arch -Iblib/lib -I/usr/lib/perl5/5.6.1/i386-freebsd \
@@ -13,6 +13,7 @@ use Test::More tests=>33;
 use strict;
 
 BEGIN {use_ok('Net::DNS'); }                                 # test 1
+
 
 
 my $datarrset;

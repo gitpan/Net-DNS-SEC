@@ -1,19 +1,19 @@
 package Net::DNS::RR::NXT;
 
-# $Id: NXT.pm,v 1.2 2002/06/04 12:14:18 olaf Exp $
+# $Id: NXT.pm,v 1.3 2002/06/17 14:36:57 olaf Exp $
 
 use strict;
 use vars qw(@ISA $VERSION);
 use Carp;
 
-use Net::DNS::SEC;
+use Net::DNS;
 use Net::DNS::Packet;
 
 
 use Carp;
 
 @ISA = qw(Net::DNS::RR);
-$VERSION = do { my @r=(q$Revision: 1.2 $=~/\d+/g); sprintf "%d."."%03d"x$#r,@r };
+$VERSION = do { my @r=(q$Revision: 1.3 $=~/\d+/g); sprintf "%d."."%03d"x$#r,@r };
 
 sub new {
     my ($class, $self, $data, $offset) = @_;

@@ -1,15 +1,15 @@
 package Net::DNS::RR::DS;
 
-# $Id: DS.pm,v 1.3 2002/06/17 11:37:36 olaf Exp $
+# $Id: DS.pm,v 1.4 2002/06/17 14:36:57 olaf Exp $
 
 
 use strict;
 use vars qw(@ISA $VERSION);
 
-use Net::DNS::SEC;
+use Net::DNS;
 use Carp;
 
-$VERSION = do { my @r=(q$Revision: 1.3 $=~/\d+/g); sprintf "%d."."%03d"x$#r,@r };
+$VERSION = do { my @r=(q$Revision: 1.4 $=~/\d+/g); sprintf "%d."."%03d"x$#r,@r };
 my $debug=0;
 
 @ISA = qw(Net::DNS::RR);

@@ -1,5 +1,5 @@
 #
-# $Id: Makefile.PL,v 1.6 2002/06/17 11:37:34 olaf Exp $
+# $Id: Makefile.PL,v 1.7 2002/06/17 14:36:55 olaf Exp $
 #
 
 eval { require 5.00503  };
@@ -17,12 +17,14 @@ use ExtUtils::MakeMaker;
 # the contents of the Makefile that is written.
 WriteMakefile(
       'NAME'	=> 'Net::DNS::SEC',
-      'VERSION' => 0.04,
+      'VERSION' => 0.05,
       'PREREQ_PM'             => {
 	Net::DNS                  => 0.21,
 	Crypt::OpenSSL::RSA       => 0.13,
 	Crypt::DSA                => 0.12,
 	Math::Pari                => 2.001804,
+	File::Basename            => 0.0,
+	MIME::Base64              => 0.0,
       },
       'ABSTRACT'                  => 'DNSSEC extensions to Net::DNS',
       'AUTHOR'                    => 'Olaf M. Kolkman <net-dns-sec@ripe.net>',
