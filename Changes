@@ -1,5 +1,38 @@
 Revision history for Perl extension Net::DNS::SEC.
 
+0.09 January 6 2002
+
+   FEAT: - Added Net::DNS::RR::SIG::Private. The class provides 
+           an abstraction to the private key material. The SIG create
+	   method now either takes a filename, like previously, or a 
+	   Private key object as an argument. If you have to create
+	   many signatures the latter is preferred because you only have
+	   to read the file with the private key material once.
+	   
+	   Note that by adding this feature a modification to
+	   Net::DNS::Resolver was needed to properly do SIG0.  Use
+	   Net::DNS version 0.32 or later in combination with this
+	   version
+
+   FEAT: - Wes Griffen added a parameter change to keyset:
+
+  	   'Attached is a diff for Net::DNS::SEC v0.8 that adds a
+	   parameter changes keyset->writekeyset($path) to
+	   keyset->writekeyset($prefix,$path) where prefix is an
+	   optional string that is prepended to the filename of the
+	   keyset. That way I can keep my unsigned keyset in
+	   keyset-<domain>. and have the signed keyset in
+	   signed-keyset-<domain>.'
+
+
+   FEAT: - Babblebubble, handy for telephone confirmation of hashes.
+           Added babblebubble string as comment to DS RR.
+           DS->babble returns the babble bubble string
+  
+
+   FEAT: - Miek Gieben contributed demo/key2ds
+
+
 0.08 November 4 2002
 
    BUG:  - DSA signature verification failed at random about 1 per 10
@@ -122,7 +155,7 @@ Net::DNS. The history of those is documented below.
 
 0.19-DNSSEC-0.3: 
   Solved patch problems that where due to the 
-  $Id: Changes,v 1.11 2002/11/06 10:58:08 olaf Exp $ in headers not 
+  $Id: Changes,v 1.14 2003/01/06 09:03:13 olaf Exp $ in headers not 
   being from the original distribution.
 
   Added DSA signature creation
@@ -154,4 +187,4 @@ Net::DNS. The history of those is documented below.
 
 
 ---------------------------------------------------------------------------
-$Id: Changes,v 1.11 2002/11/06 10:58:08 olaf Exp $
+$Id: Changes,v 1.14 2003/01/06 09:03:13 olaf Exp $

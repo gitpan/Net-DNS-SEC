@@ -7,9 +7,11 @@ RR/DS.pm
 RR/KEY.pm
 RR/NXT.pm
 RR/SIG.pm
+RR/SIG/Private.pm
 SEC.pm
 TODO
 demo/getkeyset.pl
+demo/key2ds
 demo/make-signed-keyset
 t/09-dnssec.t
 t/10-keyset.t

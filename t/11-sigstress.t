@@ -1,6 +1,6 @@
 #!/usr/bin/perl  -sw 
 # Test script for dnssec functionalty
-# $Id: 11-sigstress.t,v 1.1 2002/11/06 10:43:13 olaf Exp $
+# $Id: 11-sigstress.t,v 1.3 2003/01/03 10:17:52 olaf Exp $
 # 
 # Called in a fashion simmilar to:
 # /usr/bin/perl -Iblib/arch -Iblib/lib -I/usr/lib/perl5/5.6.1/i386-freebsd \
@@ -8,7 +8,7 @@
 # $verbose=0; runtests @ARGV;' t/09-dnssec.t 
 
 
-use constant LOOPS=>500;
+use constant LOOPS=>50;
 use Test::More tests=> (LOOPS * 6 + 2 ); # 2 tests befor the loop, 6 inside.
 use strict;
 
@@ -90,6 +90,10 @@ close(DSA);
 my $datarrset=[$dsakeyrr, $rsakeyrr];
 
 
+
+my $PrivateRSA=Net::DNS::RR::SIG::Private->new($keypathrsa);
+my $PrivateDSA=Net::DNS::RR::SIG::Private->new($keypathdsa);
+
 for (my $i=0;$i<LOOPS;$i++){
 	
     
@@ -98,11 +102,11 @@ for (my $i=0;$i<LOOPS;$i++){
     
     my $update_rsa = Net::DNS::Update->new("test.test");
     $update_rsa->push("update", Net::DNS::rr_add("test.test.test 3600 IN A 10.0.0.1"));
-    $update_rsa->sign_sig0($keypathrsa);
+    $update_rsa->sign_sig0($PrivateRSA);
 
     my $update_dsa = Net::DNS::Update->new("test.test");
     $update_dsa->push("update", Net::DNS::rr_add("test.test.test 3600 IN A 10.0.0.1"));
-    $update_dsa->sign_sig0($keypathdsa);
+    $update_dsa->sign_sig0($PrivateDSA);
 
     
 

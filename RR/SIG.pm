@@ -1,6 +1,6 @@
 # perldoc SIG.pm for documentation.
 # Specs: RFC 2535 section 4
-# $Id: SIG.pm,v 1.9 2002/11/06 10:37:06 olaf Exp $
+# $Id: SIG.pm,v 1.10 2002/12/20 10:20:21 olaf Exp $
 
 package Net::DNS::RR::SIG;
 
@@ -11,6 +11,8 @@ use Carp;
 
 use Crypt::OpenSSL::DSA;
 use Crypt::OpenSSL::RSA;
+
+use Net::DNS::RR::SIG::Private;
 
 use File::Basename;
 use MIME::Base64;
@@ -31,7 +33,7 @@ use Digest::SHA1 qw (sha1);
 
 require Exporter;
 
-$VERSION = do { my @r=(q$Revision: 1.9 $=~/\d+/g); sprintf "%d."."%03d"x$#r,@r };
+$VERSION = do { my @r=(q$Revision: 1.10 $=~/\d+/g); sprintf "%d."."%03d"x$#r,@r };
 @ISA = qw (
 	   Exporter
 	 Net::DNS::RR
@@ -45,131 +47,6 @@ use strict;
 my $debug=0;
 my $crypt_open_ssl=1;
 
-# Little helper function to put a BigInt into a binary (unsigned,
-#network order )
-
-sub bi2bin {
-    my($p, $l) = @_;
-    $l ||= 0;
-    my $base = Math::BigInt->new("+256");
-    my $res = '';
-    {
-        my $r = $p % $base;
-        my $d = ($p-$r) / $base;
-        $res = chr($r) . $res;
-        if ($d >= $base) {
-            $p = $d;
-            redo;
-        }
-        elsif ($d != 0) {
-            $res = chr($d) . $res;
-        }
-    }
-    $res = "\0" x ($l-length($res)) . $res
-        if length($res) < $l;
-    $res;
-}
-
-
-
-
-#   Ans1 is needed for conversion to X509 style representation of the
-#   key material.  see
-#   http://www.darmstadt.gmd.de/secude/Doc/htm/pkcs/layman.htm for the
-#   # relevant pieces of ANS.1
-
-
-#  As soon as there is a creator method that directly takes the
-#  pivate/public key paramaters for Crypt::OpenSSL::RSA thes uggly
-#  litte functions can go.
-
-sub ANS1_integer{
-    my $integer=shift;
-
-    # Note: $integer is a binary representation of an unsigned
-    # arebritrary length integer....
-
-    #   An integer in ANS.1. is represented by 
-    #   0x02 type
-    #       Length octets
-    #       Data octets
-
-    
-    $integer = pack("C",0) . $integer  if (unpack("C",$integer) & 0x80);
-    my $integerlength=length $integer;
-    if ($integerlength>127){
-	my $a = Math::BigInt->new( "+".$integerlength);
-	my $binlength = Net::DNS::RR::SIG::bi2bin($a);
-
-	$integer= pack("C",0x02).pack("C",length($binlength) | 0x80 ).$binlength .$integer;
-
-	
-        }else{
-	$integer= pack("C",0x02).pack("C",$integerlength).$integer;  
-    }
-    return $integer;
-
-}
-
-
-
-sub ANS1_INTEGER_to_BITSTRING{
-
-    #  Does not really take bitstrings as input..  we expect multibles
-    # of 8 bits...uggly uggly.
-
-    my $sequence=shift;
-    $sequence=pack("C",0x00).$sequence;
-
-    my $sequencelength=length $sequence;
-    # secuence: 0x16 with bit 6 set  so type 0x30 followed by length.
-    if ($sequencelength>127){
-	my $a = Math::BigInt->new( "+".$sequencelength);
-	my $binlength = Net::DNS::RR::SIG::bi2bin($a);
-	
-	$sequence= pack("C",0x03).pack("C",length($binlength) | 0x80 ).$binlength .$sequence;
-    }else{
-	$sequence= pack("C",0x03).pack("C",$sequencelength).$sequence;  
-    }
-    return $sequence;
-    
-    
-    
-}
-
-sub ANS1_dsaEncryption_OBJECT{
-    # See http://www.alvestrand.no/objectid/
-    # rfc3279.html  section 2.3.2
-    # and <openssl src>/crypto/objects/objects.h
-
-    my $identifyer=pack("C*", 0x2A,0x86,0x48,0xCE,0x38,0x04,0x01);
-    my $idlength=length($identifyer);
-    $identifyer= pack("C",0x06).pack("C",$idlength).$identifyer;
-  
-
-}
-
-sub ANS1_sequence{
-    # Helper function to convert a sequence of bits to an ANS1 sequence.
-    my $sequence=shift;
-    my $sequencelength=length $sequence;
-    # secuence: 0x16 with bit 6 set  so type 0x30 followed by length.
-    if ($sequencelength>127){
-	my $a = Math::BigInt->new( "+".$sequencelength);
-	my $binlength = Net::DNS::RR::SIG::bi2bin($a);
-	
-	$sequence= pack("C",0x30).pack("C",length($binlength) | 0x80 ).$binlength .$sequence;
-    }else{
-	$sequence= pack("C",0x30).pack("C",$sequencelength).$sequence;  
-    }
-    return $sequence;
-}
-
-
-sub ANS1_null{
-    my $null=pack("C",0x05).pack("C",0x00);
-    return $null;
-}
 
 
 
@@ -418,7 +295,7 @@ sub rr_rdata {
 }
 
 sub create {
-    my ($class,  $datarrset, $key_file, %args) = @_;
+    my ($class,  $datarrset, $priv_key, %args) = @_;
 
     # This method returns a sigrr with the signature over the
     # datatrrset (an array of RRs) made with the private key stored in
@@ -426,6 +303,20 @@ sub create {
 
     my $self;
     $self->{"sigerrstr"}="---- Unknown Error Condition ------";
+    my $Private;
+
+
+    if (UNIVERSAL::isa($priv_key,"Net::DNS::RR::SIG::Private")){
+	$Private=$priv_key;
+    }else{
+	$Private=Net::DNS::RR::SIG::Private->new($priv_key);
+    }
+
+    die "Create did not manage obtain a Net::DNS::RR::SIG::Private object "unless (UNIVERSAL::isa($Private,"Net::DNS::RR::SIG::Private"));
+
+    $self->{"algorithm"}=$Private->algorithm;
+     $self->{"keytag"}=$Private->keytag;
+     $self->{"signame"}=$Private->signame;
 
 
     # if $datarrset is a plain datastrream then construct a sigzero sig.
@@ -524,19 +415,7 @@ sub create {
 					   $inct[3] ,$inct[2] , $inct[1]  ,
 					   $inct[0]);	
     }
-    my $keyname=basename($key_file);
-    print "\nKeyname:\t ". $keyname ."\n" if $ debug;
 
-    #Format something like: /Kbla.foo.+001+60114.private'
-    # assuming proper file name.
-    # We determine the algorithm from the filename.
-    if ($keyname =~ /K(.*)\.\+(\d{3})\+(\d*)\.private/){
-	$self->{"signame"}=$1;  # withouth trailing .
-	$self->{"algorithm"}= 0 + $2; #  Force non-string 
-	$self->{"keytag"}=$3;
-    }else{
-	croak "$keyname does not seem to be a valid private key\n";
-    }
 
     if (!$sigzero)    {   
 	my  $labels=$datarrset->[0]->name;
@@ -582,79 +461,17 @@ sub create {
     # and public keys.
 
 
-    my    ($Modulus,$PublicExponent,$PrivateExponent,$Prime1,
-	   $Prime2,$Exponent1,$Exponent2,$Coefficient,
-	   $prime_p,$subprime_q,$base_g,$private_val_x,$public_val_y);
-    
     my $signature;
     
-    
-    open (KEYFH, "<$key_file" ) || croak "Cannot open keyfile: $key_file";
-    
-    
-    while (<KEYFH>) {
-	if (/Private-key-format: (v\d*\.\d*)/) {
-	    if ($1 ne "v1.2") {
-		croak "Private Key Format not regognized";
-	    }
-	}elsif	    (/^Algorithm:\s*(\d*)/) {
-	    if ($1 != 1 && $1 != 3 && $1 != 5) {
-		croak "Key $key_file algorithm is not RSA or DSA (those are the only implemented algorithms) ";
-	    }
-	    
-	} elsif (/^Modulus:\s*(\S+)/) {				#RSA 
-	    $Modulus=ANS1_integer(decode_base64($1));
-	} elsif (/^PublicExponent:\s*(\S+)/) {
-	    $PublicExponent=ANS1_integer(decode_base64($1));
-	} elsif (/^PrivateExponent:\s*(\S+)/) {
-	    $PrivateExponent=ANS1_integer(decode_base64($1));
-	} elsif (/^Prime1:\s*(\S+)/) {
-	    $Prime1=ANS1_integer(decode_base64($1));
-	} elsif (/^Prime2:\s*(\S+)/) {
-	    $Prime2=ANS1_integer(decode_base64($1));
-	} elsif (/^Exponent1:\s*(\S+)/) {
-	    $Exponent1=ANS1_integer(decode_base64($1));
-	} elsif (/^Exponent2:\s*(\S+)/) {
-	    $Exponent2=ANS1_integer(decode_base64($1));
-	} elsif (/^Coefficient:\s*(\S+)/) {
-	    $Coefficient=ANS1_integer(decode_base64($1));
-	} elsif (/^Prime\(p\):\s*(\S+)/) {				#RSA
-	    $prime_p=decode_base64($1);
-	} elsif (/^Subprime\(q\):\s*(\S+)/) {
-	    $subprime_q=decode_base64($1);
-	} elsif (/^Base\(g\):\s*(\S+)/) {
-	    $base_g=decode_base64($1);
-	} elsif (/^Private_value\(x\):\s*(\S+)/) {
-	    $private_val_x=decode_base64($1);
-	} elsif (/^Public_value\(y\):\s*(\S+)/) { 
-	    $public_val_y=decode_base64($1);
-	}
-    }
-    close(KEYFH);
-    
-
     #
     # Enjoy the crypto
     if ($self->{"algorithm"} == 1 || $self->{"algorithm"} == 5) {  #RSA
-	my $Version=ANS1_integer(pack("C",0));
-	my $RSAPrivateKey="-----BEGIN RSA PRIVATE KEY-----\n".
-	    encode_base64(
-			  ANS1_sequence(
-					$Version .
-					$Modulus.
-					$PublicExponent.
-					$PrivateExponent.
-					$Prime1.
-					$Prime2.
-					$Exponent1.
-					$Exponent2.
-					$Coefficient
-					)
-			  )
-		."-----END RSA PRIVATE KEY-----";
-	
+	if (! ($Private->algorithm == 1 || $self->algorithm == 5 )) {
+	    die "Private key mismatch, not RSAMD5 or RSASHA.";
+	    
+	}
 	my $rsa_priv = Crypt::OpenSSL::RSA->new();
-	$self->{"private_key"}=$RSAPrivateKey;
+	$self->{"private_key"}=$Private->privatekey;
 	eval {
 	    $rsa_priv->use_pkcs1_oaep_padding;
 	    if ($self->{"algorithm"} == 1) {
@@ -662,7 +479,7 @@ sub create {
 	    } else {
 		$rsa_priv->use_sha1_hash;
 	    }
-	    $rsa_priv->load_private_key($RSAPrivateKey);
+	    $rsa_priv->load_private_key($Private->privatekey);
 	};
 	die "RSA private key loading failed:".$@ if $@;
 	eval {
@@ -673,14 +490,8 @@ sub create {
 	print "\n SIGNED" if $debug ;
 	
     }elsif ($self->{"algorithm"} == 3){  #DSA
-	my $private_dsa = Crypt::OpenSSL::DSA->new();
-	$private_dsa->set_p($prime_p);
-	$private_dsa->set_q($subprime_q);
-	$private_dsa->set_g($base_g);
-	$private_dsa->set_priv_key($private_val_x);
-	$private_dsa->set_pub_key($public_val_y);
-	$self->{"private_key"}=$private_dsa;
-	
+	$self->{"private_key"}=$Private->privatekey;
+	my $private_dsa=$Private->privatekey;
 	# If $sigzero then we want to sign data if given in the
 	# argument. If the argument is empty we sign when the packet
 	# put on the wire.
@@ -714,6 +525,7 @@ sub create {
 	}
 	
     }
+
     if ($datarrset ne "" ){
 	# Replace the "sig" by the real signature and return the object.
 	$self->{"sigbin"}=$signature;
@@ -1070,12 +882,12 @@ sub _verifyRSA {
     # If the first bit of $modulus is 1 we have to append a 0 octed.
 
 
-    $modulus=ANS1_integer($modulus);
-    $exponent=ANS1_integer($exponent);
+    $modulus=Net::DNS::RR::SIG::Private::ANS1_integer($modulus);
+    $exponent=Net::DNS::RR::SIG::Private::ANS1_integer($exponent);
     
     # Same for the exponent.
     
-    my $sequence=ANS1_sequence($modulus . $exponent);
+    my $sequence=Net::DNS::RR::SIG::Private::ANS1_sequence($modulus . $exponent);
 
     
     $RSAPublicKey="-----BEGIN RSA PUBLIC KEY-----\n".
@@ -1478,7 +1290,8 @@ requests.
 
 =head1 COPYRIGHT
 
-Copyright (c) 2001  RIPE NCC.  Author Olaf M. Kolkman <net-dns-sec@ripe.net>
+Copyright (c) 2001, 2002  RIPE NCC.  Author Olaf M. Kolkman 
+<net-dns-sec@ripe.net>
 
 All Rights Reserved
 
@@ -1508,7 +1321,7 @@ This code uses Crypt::OpenSSL which uses the openssl library
 
 L<perl(1)>, L<Net::DNS>, L<Net::DNS::Resolver>, L<Net::DNS::Packet>,
 L<Net::DNS::Header>, L<Net::DNS::Question>,
-L<Net::DNS::RR>,L<Crypt::OpenSSL::RSA>,L<Crypt::DSA> RFC 2435 Section
+L<Net::DNS::RR>,L<Crypt::OpenSSL::RSA>,L<Crypt::OpenSSL::DSA> RFC 2435 Section
 4, RFC 2931.
 
 =cut

@@ -1,6 +1,6 @@
 #!/usr/bin/perl  -sw 
 # Test script for dnssec functionalty
-# $Id: 09-dnssec.t,v 1.5 2002/11/06 10:37:06 olaf Exp $
+# $Id: 09-dnssec.t,v 1.6 2002/12/20 10:20:21 olaf Exp $
 # 
 # Called in a fashion simmilar to:
 # /usr/bin/perl -Iblib/arch -Iblib/lib -I/usr/lib/perl5/5.6.1/i386-freebsd \
@@ -9,7 +9,7 @@
 
 use Net::DNS::RR::SIG;
 
-use Test::More tests=>42;
+use Test::More tests=>56;
 use strict;
 
 BEGIN {use_ok('Net::DNS'); }                                 # test 1
@@ -218,10 +218,6 @@ is( $rsasigrr->vrfyerrstr, "No Error", "vrfyerrstr eq No Error");    # test 24
 ########
 ####   Couple of SIG0 tests
 
-
-
-
-
 my $update1 = Net::DNS::Update->new("test.test");
 ok ( $update1, 'Creating Update packet 1' );                      #test 25
 
@@ -381,6 +377,101 @@ ok ( $sigrsasha1, 'RSA SHA1 signature created');                               #
 
 ok ($sigrsasha1->verify($datarrset,$rsasha1keyrr),'RSA SHA1 sig verifies');        #test 42
 
+
+### Test usability of the private key object.. same set of test as above
+
+
+my $dsaprivate=Net::DNS::RR::SIG::Private->new($keypathdsa);
+
+my $dsasigrr_p=Net::DNS::RR::SIG->create($nldatarrset,
+				    $dsaprivate
+				    );
+ok( $dsasigrr_p, 'DSA signature with bind generated key ');             # test 43
+
+my $rsaprivate=Net::DNS::RR::SIG::Private->new($keypathrsa);
+my $rsasigrr_p=Net::DNS::RR::SIG->create($nldatarrset,
+				    $rsaprivate
+				    );
+ok( $rsasigrr_p, 'RSA signature with bind generated key');            # test 44
+
+
+ok( $dsasigrr_p->verify($nldatarrset,$dsakeyrr),'DSA sig (test 2) verifies');       # test 45
+
+is( $dsasigrr_p->vrfyerrstr, "No Error", "vrfyerrstr eq No Error");    # test 46
+
+ok( $rsasigrr_p->verify($nldatarrset,$rsakeyrr),'RSA sig (test 2) verifies');       
+
+is( $rsasigrr_p->vrfyerrstr, "No Error", "vrfyerrstr eq No Error");    # test 48
+
+
+
+
+
+
+
+########
+####   Couple of SIG0 tests  repeated with the private key  object as input.
+
+my $update1_p = Net::DNS::Update->new("test.test");
+ok ( $update1, 'Creating Update packet 1' );                      #test 49
+
+$update1_p->push("update", Net::DNS::rr_add("test.test.test 3600 IN A 10.0.0.1"));
+$update1_p->sign_sig0($rsaprivate);
+
+
+my $update2_p = Net::DNS::Update->new("test.test");
+ok ( $update2_p, 'Creating Update packet 2' );                       #test 50
+
+$update2_p->sign_sig0($dsaprivate);
+
+
+
+
+
+$update1_p->data;
+$update2_p->data;
+my $sigrr1_p=$update1_p->pop("additional");
+ok ($sigrr1_p,"Obtained RSA sig from packet");                        #test 51
+
+my $sigrr2_p=$update2_p->pop("additional");
+ok ($sigrr2_p,"Obtained DSA sig from packet");                        #test 52
+ok ($sigrr1_p->verify($update1_p, $rsakeyrr),'RSA SIG0 verification of packet data');
+
+
+                                                                    #test 53
+ok ($sigrr2_p->verify($update2_p, $dsakeyrr),'DSA SIG0 verification of packet data');
+
+                                                           #test 54
+
+ok (!$sigrr1_p->verify($update2_p, $rsakeyrr),'RSA SIG0 fails with invalid data');
+                                                                    #test 55
+ok (!$sigrr2_p->verify($update1_p, $dsakeyrr),'RSA SIG0 fails with invalid data');
+                                                                    #test 56
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 unlink($keypathrsa);
 unlink($keypathdsa);
 unlink($keypathrsasha1);
+
+
+
+
+
+
+

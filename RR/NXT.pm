@@ -1,6 +1,6 @@
 package Net::DNS::RR::NXT;
 
-# $Id: NXT.pm,v 1.5 2002/09/26 07:16:28 olaf Exp $
+# $Id: NXT.pm,v 1.6 2002/12/20 10:20:21 olaf Exp $
 
 use strict;
 use vars qw(@ISA $VERSION);
@@ -13,7 +13,7 @@ use Net::DNS::Packet;
 use Carp;
 
 @ISA = qw(Net::DNS::RR);
-$VERSION = do { my @r=(q$Revision: 1.5 $=~/\d+/g); sprintf "%d."."%03d"x$#r,@r };
+$VERSION = do { my @r=(q$Revision: 1.6 $=~/\d+/g); sprintf "%d."."%03d"x$#r,@r };
 
 sub new {
     my ($class, $self, $data, $offset) = @_;
@@ -110,11 +110,12 @@ sub _typestr2typebm {
 	$typebitarray[$Net::DNS::typesbyname{uc($typelist[$i])}]=1;
     }
     
-    my $finalsize;
-    if ( @typebitarray % 4){
+    my $finalsize=0;
+    {
 	use integer;
 	$finalsize = 8 * ((@typebitarray / 8)  + 1);
     }
+
     for (my $i=0;$i< $finalsize; $i++){
 	$typebitarray[$i]=0 if ! defined $typebitarray[$i];
     }

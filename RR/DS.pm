@@ -1,6 +1,6 @@
 package Net::DNS::RR::DS;
 
-# $Id: DS.pm,v 1.5 2002/08/14 13:44:53 olaf Exp $
+# $Id: DS.pm,v 1.6 2002/12/20 10:20:21 olaf Exp $
 
 
 use strict;
@@ -8,8 +8,9 @@ use vars qw(@ISA $VERSION);
 
 use Net::DNS;
 use Carp;
+use Digest::BubbleBabble qw( bubblebabble );
 
-$VERSION = do { my @r=(q$Revision: 1.5 $=~/\d+/g); sprintf "%d."."%03d"x$#r,@r };
+$VERSION = do { my @r=(q$Revision: 1.6 $=~/\d+/g); sprintf "%d."."%03d"x$#r,@r };
 my $debug=0;
 
 @ISA = qw(Net::DNS::RR);
@@ -65,6 +66,7 @@ sub rdatastr {
 	    $rdatastr .= "  "  . "$self->{algorithm}";
 	    $rdatastr .= "  "  . "$self->{digtype}";
 	    $rdatastr .= "  "  . "$self->{digest}";
+	    $rdatastr .= " ; ".$self->babble;   
 	    }
 	else {
 	    $rdatastr = "; no data";
@@ -95,6 +97,15 @@ sub verify {
 	return 0;
     }
 }
+
+
+
+
+sub babble {
+    my $self=shift;
+    return bubblebabble(Digest=>$self->digestbin);
+}
+
 
 sub create {
     my ($class, $keyrr ,%args) = @_;
@@ -217,9 +228,21 @@ Returns the digest as  binary material
 
 =head2 keytag
 
-    print "keytag" = ", $dsrr->keytag, "\n";
+    print "keytag" ." = ". $dsrr->keytag . "\n";
 
 Returns the key tag of the key. (RFC2535 4.1.6)
+
+
+=head2 babble
+
+   print $dsrr->babble;
+
+Returns the 'BabbleBubble' representation of the digest. The
+'BabbleBubble' string may be handy for telephone confirmation.
+
+The 'BabbleBubble' string returned as a comment behind the RDATA when
+the string method is called.
+
 
 
 =head1 TODO 

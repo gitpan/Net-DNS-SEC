@@ -1,6 +1,6 @@
 #!/usr/bin/perl  -sw 
 # Test script for keysetfunctionalty
-# $Id: 10-keyset.t,v 1.4 2002/11/06 10:37:06 olaf Exp $
+# $Id: 10-keyset.t,v 1.5 2002/12/20 10:20:21 olaf Exp $
 # 
 # Called in a fashion simmilar to:
 # /usr/bin/perl -Iblib/arch -Iblib/lib -I/usr/lib/perl5/5.6.1/i386-freebsd \
@@ -122,13 +122,13 @@ is (ref($keyset), "Net::DNS::Keyset", "Keyeset object created");
 my @ds=$keyset->extract_ds;
 
 is ($ds[0]->string, "test.tld.	0	IN	DS	42495  1  1  ".
-    "0ffbeba0831b10b8b83440dab81a2148576da9f6",
+    "0ffbeba0831b10b8b83440dab81a2148576da9f6 ; xefoz-rupop-babuc-rugor-mavef-gybot-puvoc-pumig-mahek-tepaz-kixox",
     "DS 1 generated from keyset");                             # test 8
 
 
 is ($ds[1]->string, "test.tld.	0	IN	DS	9734  3  1  ".
-    "0e045bfe67dec6e54d0f1338877a53841902ab4a",                 # test 9
-    "DS 1 generated from keyset");
+    "0e045bfe67dec6e54d0f1338877a53841902ab4a ; xefib-gakiz-vynat-vacov-hyfeb-zugif-mecil-pegam-gykib-dapyg-pexox",
+    "DS 1 generated from keyset");                             # test 9
     
 ##
 #  Corupted keyset

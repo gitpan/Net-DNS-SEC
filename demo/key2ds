@@ -1,0 +1,39 @@
+#!/usr/bin/perl
+
+ use strict;
+ use Net::DNS;
+
+ # A little util to convert Key records to DS records
+ # From stdin to stdout
+ # 
+ # Author: Miek Gieben, NLnetLabs
+
+ my $key;
+ while (<>) { chomp; $key .= $_ };
+
+ my $keyrr = new Net::DNS::RR($key);
+ my $dsrr = create Net::DNS::RR::DS($keyrr);
+ print $dsrr->string,"\n";
+ exit 0;
+
+=head1 NAME
+
+key2ds - Utility to convert a DNSSEC KEY to a DS record
+
+=head1 SYNOPSIS
+
+C<key2ds>
+
+=head1 DESCIPTION
+
+C<key2ds> reads the key data from STDIN and print the corresponding
+DS record on STDOUT.
+
+=head1 COPYRIGHT
+
+ This program is free software; you can redistribute it and/or modify
+ it under the same terms as Perl itself. 
+
+=cut
+
+0;

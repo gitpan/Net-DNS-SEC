@@ -10,14 +10,18 @@ use File::Basename;
 # global variables
 $VERSION = "0.1";
 $verbose = 0;
+$printds = 0;
 $progname = basename($0);
 chomp($progname);
 
 # main program
-getopts('vhVf:n:');
+getopts('dvhVf:n:');
 
+if (defined($opt_d)) {
+  $printds = 1;
+}
 if (defined($opt_v)) {
-	$verbose = 1;
+  $verbose = 1;
 }
 if (defined($opt_h)) {
 	&usage();
@@ -28,6 +32,11 @@ if (defined($opt_V)) {
 if ($#ARGV < 0) {
 	&usage();
 }
+# silent some compiler warnings until i figure them out 
+$opt_d=0;
+$opt_v=0;
+$opt_h=0;
+$opt_V=0;
 &make_keyset(@ARGV);
 exit(0);
 
@@ -35,7 +44,8 @@ exit(0);
 sub usage {
 	print("usage: $progname [-vhV] file\n");
 	print("Options:\n");
-	print("       -v    Be verbose.\n");
+  print("       -d    Print the DS record for each key in the keyset.\n");
+  print("       -v    Be verbose.\n");
 	print("       -h    Print this usage message.\n");
 	print("       -V    Print version information.\n");
 	print("       file  BIND public key file.\n");
@@ -53,24 +63,61 @@ sub make_keyset {
 	my $directory = dirname($file);
 	print("Processing file: $file\n");
 
+  if ($verbose) {
+    print("Opening $file\n");
+  }
 	open(FILE, $file) or die("$progname: unable to open $file.\n");
-	my $keyrr = Net::DNS::RR->new(<FILE>);
 
-	if ($verbose) {
-		$keyrr->print();
-	}
+  if ($verbose) {
+    print("Reading $file\n");
+  }
+  my $keyrr_txt;
+  while (<FILE>) {
+    if (m/^\$.*/) {
+      if ($verbose) {
+        print("Discarding BIND keyword in $file\n");
+      }
+      next;
+    }
+    $keyrr_txt = $keyrr_txt . $_;
+  }
 
+  if ($verbose) {
+    print("Creating KEY RR\n");
+  }
+	my $keyrr = Net::DNS::RR->new($keyrr_txt);
+
+  if ($verbose) {
+    print("Creating Keyset\n");
+  }
 	my @keys = ($keyrr);
 	use Net::DNS::Keyset;
 	my $keyset = Net::DNS::Keyset->new(\@keys, "$directory") or
 	    die("$progname: unable to create keyset. $Net::DNS::Keyset::keyset_err.\n");
 
+  if ($verbose) {
+    print("Verifying Keyset\n");
+  }
 	$keyset->verify() or
 	    die("$progname: unable to verify keyset. $Net::DNS::Keyset::keyset_err.\n");
 
-	$keyset->print();
-	$keyset->writekeyset() or
+  if ($verbose) {
+    print("Keyset:\n");
+	  $keyset->print();
+    print("Writing Keyset\n");
+  }
+	$keyset->writekeyset("signed-") or
 	    die("$progname: unable to write keyset. $Net::DNS::Keyset::keyset_err.\n");
+
+  if ($printds) {
+    if ($verbose) {
+      print("Extracting DS RR\n");
+    }
+    my @ds=$keyset->extract_ds();
+    foreach $ds (@ds) {
+      $ds->print();
+    }
+  }
 }
 
 =head1 NAME
@@ -92,8 +139,8 @@ The options are as follows:
 
 =item
 
--v	Be verbose.
-
+-v  Be verbose.
+-d  Print the DS record for each key in the keyset.
 
 =head2 Author
 

@@ -93,6 +93,9 @@ Net::DNS::SEC - DNSSEC extensions to Net::DNS
                       a self-signed keyset from a BIND public key file 
                       specified on the command line.
 
+  demo/key2ds      -  reads the key data from STDIN and print the 
+                      corresponding DS record on STDOUT. Contributed by 
+                      Miek Gieben
 
 
 6. History
@@ -148,4 +151,4 @@ Based on, and contains, code by Copyright (c) 1997-2001 Michael Fuhr.
 
 
 ------------------------------------------------------------------------------
-$Id: README,v 1.10 2002/11/06 10:36:55 olaf Exp $
+$Id: README,v 1.11 2003/01/03 10:17:48 olaf Exp $

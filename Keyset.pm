@@ -1,5 +1,5 @@
 
-# $Id: Keyset.pm,v 1.2 2002/09/26 07:16:26 olaf Exp $
+# $Id: Keyset.pm,v 1.3 2002/12/20 10:20:18 olaf Exp $
 
 
 package Net::DNS::Keyset;
@@ -37,7 +37,7 @@ use Carp;
 
 use vars qw ( $VERSION @EXPORT $keyset_err );
 
-( $VERSION ) = '$Revision: 1.2 $ ' =~ /\$Revision:\s+([^\s]+)/;
+( $VERSION ) = '$Revision: 1.3 $ ' =~ /\$Revision:\s+([^\s]+)/;
 
 my $debug=0;
 
@@ -542,17 +542,19 @@ sub extract_ds {
 
 =head2 writekeyset
 
-    die $Net::DNS::Keyset::keyset_err if ! $keyset->writekeyset($path);
+    die $Net::DNS::Keyset::keyset_err if ! $keyset->writekeyset($prefix, $path);
 
 
-Writes the keyset to a file named "keyset-<domain>" in the current
-working directory or the directory defined by $path. Returns 0 on
-failure and sets keyset_err.
+Writes the keyset to a file named "keyset-<domain>." in the current
+working directory or the directory defined by $path. $prefix specifies an
+optional prefix that will be prepended to the string "keyset-<domain>."
+Returns 0 on failure and sets keyset_err.
 
 =cut
 
 sub writekeyset {
     my $self=shift;
+    my $prefix=shift;
     my $keysetpath=shift;
     $keyset_err="No Error";
     my $domainname=$self->{'keys'}->[0]->name;
@@ -567,7 +569,7 @@ sub writekeyset {
 	$keysetpath=cwd;
     }
     
-    my $keysetname="$keysetpath/keyset-$domainname.";
+    my $keysetname="$keysetpath/$prefix" . "keyset-$domainname.";
     if (! open(KEYSET,"> $keysetname")   ){
 	$keyset_err= " Could not open $keysetname for writing";
 	return 0;
