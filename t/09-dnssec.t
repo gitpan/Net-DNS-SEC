@@ -1,13 +1,13 @@
 #!/usr/bin/perl  -sw 
 # Test script for dnssec functionalty
-# $Id: 09-dnssec.t,v 1.3 2002/08/14 13:44:53 olaf Exp $
+# $Id: 09-dnssec.t,v 1.4 2002/09/26 07:16:33 olaf Exp $
 # 
 # Called in a fashion simmilar to:
 # /usr/bin/perl -Iblib/arch -Iblib/lib -I/usr/lib/perl5/5.6.1/i386-freebsd \
 # -I/usr/lib/perl5/5.6.1 -e 'use Test::Harness qw(&runtests $verbose); \
 # $verbose=0; runtests @ARGV;' t/09-dnssec.t 
 
-
+use Net::DNS::RR::SIG;
 
 use Test::More tests=>40;
 use strict;

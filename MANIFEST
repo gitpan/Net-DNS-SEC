@@ -7,7 +7,11 @@ RR/DS.pm
 RR/KEY.pm
 RR/NXT.pm
 RR/SIG.pm
+RR/SIG.pm.orig
+SEC.pm
+TODO
 demo/getkeyset.pl
+demo/make-signed-keyset
 t/09-dnssec.t
 t/10-keyset.t
 t/Ksigzero.+001+39700.key
@@ -18,3 +22,4 @@ t/Ktest.+001+40320.key
 t/Ktest.+001+40320.private
 t/Ktest.+003+39002.key
 t/Ktest.+003+39002.private
+t/getpacket.pl

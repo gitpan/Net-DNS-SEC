@@ -1,0 +1,103 @@
+#!/usr/bin/perl
+#
+# takes a bind public key file and creates a self-signed keyset
+#
+
+use Getopt::Std;
+use Net::DNS;
+use File::Basename;
+
+# global variables
+$VERSION = "0.1";
+$verbose = 0;
+$progname = basename($0);
+chomp($progname);
+
+# main program
+getopts('vhVf:n:');
+
+if (defined($opt_v)) {
+	$verbose = 1;
+}
+if (defined($opt_h)) {
+	&usage();
+}
+if (defined($opt_V)) {
+	&version();
+}
+if ($#ARGV < 0) {
+	&usage();
+}
+&make_keyset(@ARGV);
+exit(0);
+
+# print the usage and exit
+sub usage {
+	print("usage: $progname [-vhV] file\n");
+	print("Options:\n");
+	print("       -v    Be verbose.\n");
+	print("       -h    Print this usage message.\n");
+	print("       -V    Print version information.\n");
+	print("       file  BIND public key file.\n");
+	exit(0);
+}
+
+# print version information
+sub version {
+	print("$progname v$VERSION using Net::DNS v", Net::DNS->version, "\n");
+	exit(0);
+}
+
+sub make_keyset {
+	my $file = shift();
+	my $directory = dirname($file);
+	print("Processing file: $file\n");
+
+	open(FILE, $file) or die("$progname: unable to open $file.\n");
+	my $keyrr = Net::DNS::RR->new(<FILE>);
+
+	if ($verbose) {
+		$keyrr->print();
+	}
+
+	my @keys = ($keyrr);
+	use Net::DNS::Keyset;
+	my $keyset = Net::DNS::Keyset->new(\@keys, "$directory") or
+	    die("$progname: unable to create keyset. $Net::DNS::Keyset::keyset_err.\n");
+
+	$keyset->verify() or
+	    die("$progname: unable to verify keyset. $Net::DNS::Keyset::keyset_err.\n");
+
+	$keyset->print();
+	$keyset->writekeyset() or
+	    die("$progname: unable to write keyset. $Net::DNS::Keyset::keyset_err.\n");
+}
+
+=head1 NAME
+
+make-signed-keyset - create a self-signed keyset
+
+=head1 SYNOPSIS
+
+make-signed-keyset [-v] file
+
+=head1 DESCRIPTION
+
+make-signed-keyset is a program that creates a self-signed keyset from
+a BIND public key file specified on the command line.
+
+The options are as follows:
+
+=over
+
+=item
+
+-v	Be verbose.
+
+
+=head2 Author
+
+Contributed by Wes Griffin <wgriffin@jtan.com>
+
+=back
+

@@ -5,16 +5,16 @@ Net::DNS::SEC - DNSSEC extensions to Net::DNS
 1. GENERAL INFO.
 
   This module implements RFC 2535, RFC 2931 and 
-  draft-ietf-dnsext-delegation-signer-0.7txt.
+  draft-ietf-dnsext-delegation-signer-0.9txt.
 
-  RFC 3235 has been patched into Net::DNS.
+  RFC 3235 support has been patched into Net::DNS.
 
   The extensions provide the following additional features on top of
   the Net::DNS package (http://www.net-dns.org/ version 0.21). 
 
   - DS, SIG, KEY and NXT records. These are all implemented as RR
-    objects.  The cryptography has been implemented using Crypt::DSA,
-    Crypt::OpenSSL::RSA and related modules.
+    objects.  The cryptography has been implemented using
+    Crypt::OpenSSL::DSA, Crypt::OpenSSL::RSA and related modules.
 
   The reason for not making these RRs a part of the regular Net::DNS
   distribution is that they rely on crypto modules that do not easily
@@ -44,10 +44,9 @@ Net::DNS::SEC - DNSSEC extensions to Net::DNS
   Net::DNS::SEC functionality.
 
   Among other straightforward routines you will need to have
-  Crypt::DSA, Crypt::OpenSSL::RSA and Math::Pari installed.
+  Crypt::OpenSSL::DSA and Crypt::OpenSSL::RSA installed.
 
-  The package was developed on FreeBSD 4.5 with perl5.6.1, I used
-  the ports to install Math::Pari and the Crypto libraries.
+  The package was developed on FreeBSD 4.5 with perl5.6.1, 
   
   'make test' is successful with perl5.00503.
   
@@ -90,6 +89,10 @@ Net::DNS::SEC - DNSSEC extensions to Net::DNS
   demo/getkeyset.pl - is a small demonstration program that will get
                       fetch the keyset for a specified domain, stores
                       them and prints out the DS RRs to STD out.
+  demo/make-signed-keyset - A script contributed by Wes Griffin creates 
+                      a self-signed keyset from a BIND public key file 
+                      specified on the command line.
+
 
 
 6. History
@@ -145,4 +148,4 @@ Based on, and contains, code by Copyright (c) 1997-2001 Michael Fuhr.
 
 
 ------------------------------------------------------------------------------
-$Id: README,v 1.7 2002/08/16 09:07:26 olaf Exp $
+$Id: README,v 1.9 2002/10/02 12:10:29 olaf Exp $

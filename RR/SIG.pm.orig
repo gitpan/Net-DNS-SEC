@@ -1,61 +1,53 @@
 # perldoc SIG.pm for documentation.
 # Specs: RFC 2535 section 4
-# $Id: SIG.pm,v 1.8 2002/10/02 10:19:30 olaf Exp $
+# $Id: SIG.pm,v 1.4 2002/06/17 14:36:57 olaf Exp $
 
 package Net::DNS::RR::SIG;
 
-use vars qw(@ISA $VERSION @EXPORT );
-
-use Net::DNS;
-use Carp;
-
-use Crypt::OpenSSL::DSA;
-use Crypt::OpenSSL::RSA;
-
-use File::Basename;
-use MIME::Base64;
-use Math::BigInt;    
-use Time::Local;
-use Digest::SHA1 qw (sha1);
-
-
-
-
-
-
-#
-# Most of the cryptovariables should be interpred as unsigne
-#
-#
-
-
-require Exporter;
-
-$VERSION = do { my @r=(q$Revision: 1.8 $=~/\d+/g); sprintf "%d."."%03d"x$#r,@r };
-@ISA = qw (
-	   Exporter
-	 Net::DNS::RR
-	   );
-
-@EXPORT = qw (
-	      );
 
 
 use strict;
+use vars qw(@ISA $VERSION);
+use Net::DNS;
+use Carp;
+use File::Basename;
+use MIME::Base64;
+use Math::Pari;      #DSA relies on this.
+
+
+ $VERSION = do { my @r=(q$Revision: 1.4 $=~/\d+/g); sprintf "%d."."%03d"x$#r,@r };
+
+
+
 my $debug=0;
-my $crypt_open_ssl=1;
 
-# Little helper function to put a BigInt into a binary (unsigned,
-#network order )
 
-sub bi2bin {
+#
+# The DSA implementation relies on Math::Pari objects. These are helper
+# functions we need to deal with DSA
+# These functions translate a Math Pari object into a binary string.
+# and vice verse
+# bin2mp is avialable in Crypt::DSA::Util but we use a local copy intead
+# These function where copied from Net::SSH::Perl::Util
+
+sub bin2mp {
+    my $s = shift;
+    my $p = PARI(0);
+    for my $b (split //, $s) {
+        $p = $p * 256 + ord $b;
+    }
+    $p;
+}
+
+
+sub mp2bin {
     my($p, $l) = @_;
     $l ||= 0;
-    my $base = Math::BigInt->new("+256");
+    my $base = PARI(256);
     my $res = '';
     {
         my $r = $p % $base;
-        my $d = ($p-$r) / $base;
+        my $d = PARI($p-$r) / $base;
         $res = chr($r) . $res;
         if ($d >= $base) {
             $p = $d;
@@ -79,10 +71,6 @@ sub bi2bin {
 #   # relevant pieces of ANS.1
 
 
-#  As soon as there is a creator method that directly takes the
-#  pivate/public key paramaters for Crypt::OpenSSL::RSA thes uggly
-#  litte functions can go.
-
 sub ANS1_integer{
     my $integer=shift;
 
@@ -94,17 +82,14 @@ sub ANS1_integer{
     #       Length octets
     #       Data octets
 
-    
     $integer = pack("C",0) . $integer  if (unpack("C",$integer) & 0x80);
     my $integerlength=length $integer;
     if ($integerlength>127){
-	my $a = Math::BigInt->new( "+".$integerlength);
-	my $binlength = Net::DNS::RR::SIG::bi2bin($a);
-
-	$integer= pack("C",0x02).pack("C",length($binlength) | 0x80 ).$binlength .$integer;
-
+	my $a = PARI $integerlength;
+	my $binlength = Net::DNS::RR::SIG::mp2bin($a);
 	
-        }else{
+	$integer= pack("C",0x02).pack("C",length($binlength) | 0x80 ).$binlength .$integer;
+    }else{
 	$integer= pack("C",0x02).pack("C",$integerlength).$integer;  
     }
     return $integer;
@@ -113,50 +98,14 @@ sub ANS1_integer{
 
 
 
-sub ANS1_INTEGER_to_BITSTRING{
-
-    #  Does not really take bitstrings as input..  we expect multibles
-    # of 8 bits...uggly uggly.
-
-    my $sequence=shift;
-    $sequence=pack("C",0x00).$sequence;
-
-    my $sequencelength=length $sequence;
-    # secuence: 0x16 with bit 6 set  so type 0x30 followed by length.
-    if ($sequencelength>127){
-	my $a = Math::BigInt->new( "+".$sequencelength);
-	my $binlength = Net::DNS::RR::SIG::bi2bin($a);
-	
-	$sequence= pack("C",0x03).pack("C",length($binlength) | 0x80 ).$binlength .$sequence;
-    }else{
-	$sequence= pack("C",0x03).pack("C",$sequencelength).$sequence;  
-    }
-    return $sequence;
-    
-    
-    
-}
-
-sub ANS1_dsaEncryption_OBJECT{
-    # See http://www.alvestrand.no/objectid/
-    # rfc3279.html  section 2.3.2
-    # and <openssl src>/crypto/objects/objects.h
-
-    my $identifyer=pack("C*", 0x2A,0x86,0x48,0xCE,0x38,0x04,0x01);
-    my $idlength=length($identifyer);
-    $identifyer= pack("C",0x06).pack("C",$idlength).$identifyer;
-  
-
-}
-
 sub ANS1_sequence{
     # Helper function to convert a sequence of bits to an ANS1 sequence.
     my $sequence=shift;
     my $sequencelength=length $sequence;
     # secuence: 0x16 with bit 6 set  so type 0x30 followed by length.
     if ($sequencelength>127){
-	my $a = Math::BigInt->new( "+".$sequencelength);
-	my $binlength = Net::DNS::RR::SIG::bi2bin($a);
+	my $a = PARI $sequencelength;
+	my $binlength = Net::DNS::RR::SIG::mp2bin($a);
 	
 	$sequence= pack("C",0x30).pack("C",length($binlength) | 0x80 ).$binlength .$sequence;
     }else{
@@ -166,13 +115,7 @@ sub ANS1_sequence{
 }
 
 
-sub ANS1_null{
-    my $null=pack("C",0x05).pack("C",0x00);
-    return $null;
-}
-
-
-
+@ISA = qw(Net::DNS::RR);
 
 sub new {
     my ($class, $self, $data, $offset) = @_;
@@ -223,13 +166,13 @@ sub new_from_string {
     if ($string) {
 	$string =~ tr/()//d;
 	$string =~ s/;.*$//mg;
-	$string =~ s/\n//mg;
 	my ($typecovered, $algoritm,
 	    $labels, $orgttl, $sigexpiration,
-	    $siginceptation, $keytag,$signame,$sig) = 
+	    $siginceptation, $keytag,$signame) = 
 		$string =~ 
-		    /^\s*(\S+)\s+(\d+)\s+(\d+)\s+(\d+)\s+(\d+)\s+(\d+)\s+(\d+)\s+(\S+)\s+(.*)/;
+		    /^\s*(\S+)\s+(\d+)\s+(\d+)\s+(\d+)\s+(\d+)\s+(\d+)\s+(\d+)\s+(\S+)/;
 	croak (" Invallid SIG RR, check your fomat ") if !$keytag;
+	my $sig=$';       # everything after last match...
 	$sig =~ s/\s*//g;
 	$self->{"typecovered"}= $typecovered;
 	$self->{"algorithm"}= $algoritm;
@@ -285,6 +228,7 @@ sub rr_rdata_without_sigbin {
 	$rdata .= pack("C",$self->{algorithm});
 	$rdata .= pack("C",$self->{"labels"});
 	$rdata .= pack("N",$self->{"orgttl"});
+	use Time::Local;
 	$self->{"sigexpiration"} =~ /(\d{4})(\d{2})(\d{2})(\d{2})(\d{2})(\d{2})/;
 	$rdata .= pack("N",timegm ($6, $5, $4, $3, $2-1, $1-1900));
 
@@ -338,17 +282,11 @@ sub rr_rdata {
 		my $sigdata=$self->_CreateSigData($data);
 		my $signature;
 
-		if ($self->{"algorithm"} == 1 ||
-		    $self->{"algorithm"} == 5)
-		{  #RSA
+		if ($self->{"algorithm"} == 1){  #RSA
 		    my $rsa_priv = Crypt::OpenSSL::RSA->new();
 		    eval {
 			$rsa_priv->use_pkcs1_oaep_padding;
-			if ($self->{"algorithm"} == 1) {
-			    $rsa_priv->use_md5_hash;
-			} else {
-			    $rsa_priv->use_sha1_hash;
-			}
+			$rsa_priv->use_md5_hash;
 			$rsa_priv->load_private_key($self->{"private_key"});
 		    };
 		    die "Error loading RSA private key " . $@ if $@;
@@ -361,33 +299,39 @@ sub rr_rdata {
 		    print "\n SIGNED" if $debug ;
 		    
 		}elsif ($self->{"algorithm"} == 3){  #DSA
+		    use Crypt::DSA::Key;
+		    use Crypt::DSA;
+		    my $dsa = Crypt::DSA->new;
 
-
-		    my $private_dsa = $self->{"private_key"};
+		    my $prikey = $self->{"private_key"};
 
 
 		    # If $sigzero then we want to sign data if given
 		    # in the argument. If the argument is empty we
 		    # sign when the packet put on the wire.
 
-		    if (my $sig_obj= $private_dsa->do_sign(sha1($sigdata)))
+		    if (my $sig= $dsa->sign(
+					    Message    => $sigdata,
+					    Key        => $prikey,
+					    ))
 		    {
-			
 			print "\n SIGNED" if $debug ;
-			# See RFC 2535 for the content of the SIG
-			my $T_parameter= (length($private_dsa->get_g)-64)/8;
+
+			# See RFC 2535 for the content of the SIG and
+			# see Crypt::DSA::Signature for the methods to
+			# access the data.
+
+
+			my $base_g=$self->{"private_key"}->{"base_g"};
+			my $T_parameter= (length(decode_base64($base_g))-64)/8;
 			$signature=pack("C",$T_parameter);
-			$signature.=$sig_obj->get_r;
-			$signature.=$sig_obj->get_s;
+			$signature.=Net::DNS::RR::SIG::mp2bin($sig->r);
+			$signature.=Net::DNS::RR::SIG::mp2bin($sig->s);
 		    }else
 		    {  
 			confess "creation of DSA Signature failed " ;
 		    }
 		}
-		
-		
-		
-		
 		
 		
 		
@@ -583,7 +527,7 @@ sub create {
 		croak "Private Key Format not regognized";
 	    }
 	}elsif	    (/^Algorithm:\s*(\d*)/) {
-	    if ($1 != 1 && $1 != 3 && $1 != 5) {
+	    if ($1 != 1 && $1 != 3) {
 		croak "Key $key_file algorithm is not RSA or DSA (those are the only implemented algorithms) ";
 	    }
 	    
@@ -604,22 +548,25 @@ sub create {
 	} elsif (/^Coefficient:\s*(\S+)/) {
 	    $Coefficient=ANS1_integer(decode_base64($1));
 	} elsif (/^Prime\(p\):\s*(\S+)/) {				#RSA
-	    $prime_p=decode_base64($1);
+	    $prime_p=$1;
 	} elsif (/^Subprime\(q\):\s*(\S+)/) {
-	    $subprime_q=decode_base64($1);
+	    $subprime_q=$1;
 	} elsif (/^Base\(g\):\s*(\S+)/) {
-	    $base_g=decode_base64($1);
+	    $base_g=$1;
 	} elsif (/^Private_value\(x\):\s*(\S+)/) {
-	    $private_val_x=decode_base64($1);
+	    $private_val_x=$1;
 	} elsif (/^Public_value\(y\):\s*(\S+)/) { 
-	    $public_val_y=decode_base64($1);
+	    $public_val_y=$1;
 	}
     }
     close(KEYFH);
     
     #
     # Enjoy the crypto
-    if ($self->{"algorithm"} == 1 || $self->{"algorithm"} == 5) {  #RSA
+    if ($self->{"algorithm"} == 1){  #RSA
+	use Crypt::OpenSSL::RSA;
+	
+
 	my $Version=ANS1_integer(pack("C",0));
 	my $RSAPrivateKey="-----BEGIN RSA PRIVATE KEY-----\n".
 	    encode_base64(
@@ -641,11 +588,7 @@ sub create {
 	$self->{"private_key"}=$RSAPrivateKey;
 	eval {
 	    $rsa_priv->use_pkcs1_oaep_padding;
-	    if ($self->{"algorithm"} == 1) {
-		$rsa_priv->use_md5_hash;
-	    } else {
-		$rsa_priv->use_sha1_hash;
-	    }
+	    $rsa_priv->use_md5_hash;
 	    $rsa_priv->load_private_key($RSAPrivateKey);
 	};
 	die "RSA private key loading failed:".$@ if $@;
@@ -657,35 +600,47 @@ sub create {
 	print "\n SIGNED" if $debug ;
 	
     }elsif ($self->{"algorithm"} == 3){  #DSA
-	my $private_dsa = Crypt::OpenSSL::DSA->new();
-	$private_dsa->set_p($prime_p);
-	$private_dsa->set_q($subprime_q);
-	$private_dsa->set_g($base_g);
-	$private_dsa->set_priv_key($private_val_x);
-	$private_dsa->set_pub_key($public_val_y);
-	$self->{"private_key"}=$private_dsa;
-	
+	use Crypt::DSA::Key;
+	use Crypt::DSA;
+	my $dsa = Crypt::DSA->new;
+	my $prikey = Crypt::DSA::Key->new;
+	#See perldoc Crypt::DSA::Key for the methods below
+	$prikey->p(&Net::DNS::RR::SIG::bin2mp(decode_base64($prime_p)));
+	$prikey->q(&Net::DNS::RR::SIG::bin2mp(decode_base64($subprime_q)));
+	$prikey->g(&Net::DNS::RR::SIG::bin2mp(decode_base64($base_g)));
+	$prikey->priv_key(&Net::DNS::RR::SIG::bin2mp(decode_base64($private_val_x)));
+	$prikey->pub_key(&Net::DNS::RR::SIG::bin2mp(decode_base64($public_val_y)));
+
+
+	$self->{"private_key"}=$prikey;
+	$self->{"private_key"}->{"base_g"}=$base_g;
+
 	# If $sigzero then we want to sign data if given in the
 	# argument. If the argument is empty we sign when the packet
 	# put on the wire.
-	
-      	if ($datarrset ne "" ){
-	    if (my $sig_obj= $private_dsa->do_sign(sha1($sigdata)))
+
+	if ($datarrset ne "" ){
+	    if (my $sig= $dsa->sign(
+				    Message    => $sigdata,
+				    Key        => $prikey,
+				    ))
 	    {
-		
 		print "\n SIGNED" if $debug ;
-		# See RFC 2535 for the content of the SIG
-		my $T_parameter= (length($private_dsa->get_g)-64)/8;
+		# See RFC 2535 for the content of the SIG and see 
+		# Crypt::DSA::Signature  for the methods to access the data.
+		my $T_parameter= (length(decode_base64($base_g))-64)/8;
 		$signature=pack("C",$T_parameter);
-		$signature.=$sig_obj->get_r;
-		$signature.=$sig_obj->get_s;
+		$signature.=Net::DNS::RR::SIG::mp2bin($sig->r);
+		$signature.=Net::DNS::RR::SIG::mp2bin($sig->s);
 	    }else
 	    {  
 		confess "creation of DSA Signature failed " ;
 	    }
 	}
-	
+	    
     }
+
+
     if ($datarrset ne "" ){
 	# Replace the "sig" by the real signature and return the object.
 	$self->{"sigbin"}=$signature;
@@ -798,15 +753,11 @@ sub verify {
     my $signature=$self->sigbin; 
     my $verified=0;
     if ( $self->algorithm == 1 ){    #Verifying for RSA
-	$verified=$self->_verifyRSA($sigdata,$signature,$keyrr,0) || return 0;
+	$verified=$self->_verifyRSA($sigdata,$signature,$keyrr) || return 0;
     }     
     elsif ( $self->algorithm == 3 )  # Verifying for DSA
     {
 	 $verified=$self->_verifyDSA($sigdata,$signature,$keyrr) || return 0;
-    }
-    elsif ( $self->algorithm == 5 )  # Verifying for RSASHA1
-    {
-	$verified=$self->_verifyRSA($sigdata,$signature,$keyrr,1) || return 0;
     }
     else                                  # Verifying other algorithms
     { 
@@ -877,94 +828,121 @@ sub _verifyDSA {
     print "\nDSA verification called with key:\n". $keyrr->string . 
 	
 	" and sig:\n" . $self->string ."\n" if $debug;
-
     # RSA RFC2536
     #
     # Setup a DSA::Key. 
     #
+    use Crypt::DSA;
 
-
+    # first extract variables from the keymaterial (RFC2535 section2)
+    # Also read FIPS PUB 186 (Federal Information Processing Standards Publication 186
+    # 
+    # Public Key Elements
+    my $T_field_key=&Net::DNS::RR::SIG::bin2mp(substr($keyrr->keybin,
+						 0,
+						 1));
+    my $Q_field=&Net::DNS::RR::SIG::bin2mp(substr($keyrr->keybin, 
+						 1,
+						 20));
+    my $P_field=&Net::DNS::RR::SIG::bin2mp(substr($keyrr->keybin, 
+						 21, 
+						 64+$T_field_key*8)) ;
+    my $G_field=&Net::DNS::RR::SIG::bin2mp(substr($keyrr->keybin, 
+						 21+64+$T_field_key*8,
+						 64+$T_field_key*8));
+    my $Y_field=&Net::DNS::RR::SIG::bin2mp(substr($keyrr->keybin, 
+						 21+2*(64+$T_field_key*8),
+						 64+$T_field_key*8)) ;
     
+    if ( $debug ) {
+	print "\n\n------------Studying DSA key content.-----------------".
+	    "\n KEY MAT=". unpack("H*",$keyrr->keybin);
+	print "\n T_field=". unpack("H*",substr($keyrr->keybin,
+						0,						1));
+	print "\n T_field=". $T_field_key;
+	print "\n Q_field=". unpack("H*",substr($keyrr->keybin, 
+						1,
+						20));
+	print "\n Q_field=". $Q_field;
+	print "\n P_field=". unpack("H*",,substr($keyrr->keybin, 
+						 21, 
+						 64+$T_field_key*8)) ;
+	print "\n P_field=". $P_field;
+	print "\n G_field=". unpack("H*",substr($keyrr->keybin, 
+						21+64+$T_field_key*8,
+						64+$T_field_key*8));
+	print "\n G_field=". $G_field;
+	print "\n Y_field=". unpack("H*",substr($keyrr->keybin, 
+						21+2*(64+$T_field_key*8),
+						64+$T_field_key*8)) ;
+	print "\n Y_field=". $Y_field;
+	print "\n-----------------------------\n";
+    }
     
+    my $dsa= new Crypt::DSA;
+    my $dsakey= new Crypt::DSA::Key;
     
-    my $t_param=ord substr($keyrr->keybin,
-			0,
-			1);   # This works since T is only one octed .
+    $dsakey->p($P_field);       # See FIPS186 section 4
+    $dsakey->g($G_field);
+    $dsakey->q($Q_field);
+    $dsakey->pub_key($Y_field); 
+
+    # Signature elements.  (See RFC2536 section 3 and FIPS186 section 5)
     
-    my $q_param=substr($keyrr->keybin, 
-		       1,
-		       20);
-    my $p_param=substr($keyrr->keybin, 
-		       21, 
-		       64+$t_param*8 );
-    my $g_param=substr($keyrr->keybin, 
-		       21+64+$t_param*8,
-				    64+$t_param*8);
+    my $T_field_sig=&Net::DNS::RR::SIG::bin2mp(substr($self->sigbin,
+						 0,
+						 1));
+    my $R_field=&Net::DNS::RR::SIG::bin2mp(substr($self->sigbin,
+						 1,
+						 20));
+    my $S_field=&Net::DNS::RR::SIG::bin2mp(substr($self->sigbin,
+						 21,
+						 20));
+
+    if ( $debug ) {
+	print "\n\n------------Studying DSA sig content.-----------------".
+	    "\n SIG MAT=". unpack("H*",$self->sigbin);
+	print "\n T_field=". unpack("H*",substr($self->sigbin,
+						0,
+						1));
+	print "\n T_field=". $T_field_sig;
+	print "\n R_field=". unpack("H*",substr($self->sigbin, 
+						1,
+						20));
+	print "\n R_field=". $R_field;
+	print "\n S_field=". unpack("H*",,substr($self->sigbin, 
+						 21, 
+						 20)) ;
+	print "\n S_field=". $S_field;
+	print "\n-----------------------------\n";
+    }
     
+    my $dsasig= new Crypt::DSA::Signature;
+    $dsasig->r($R_field);
+    $dsasig->s($S_field);
 
-
-    #rfc3279  section 2.3.2
-    # (...)
-    # The DSA public key MUST be ASN.1 DER encoded as an INTEGER; this
-    # encoding shall be used as the contents (i.e., the value) of the
-    # subjectPublicKey component (a BIT STRING) of the
-    # SubjectPublicKeyInfo data element.
-    # (...)
-
-    
-my $pubkey_param=substr($keyrr->keybin, 
-			21+2*(64+$t_param*8),
-			64+$t_param*8);
-
-my $dsa_pub=Crypt::OpenSSL::DSA->new();
-    $dsa_pub->set_q($q_param);
-    $dsa_pub->set_g($g_param);
-    $dsa_pub->set_p($p_param);
-    $dsa_pub->set_pub_key($pubkey_param);
-
-
-
-    my $r_field=(substr($self->sigbin,
-			1,
-			20));
-    my $s_field=(substr($self->sigbin,
-			21,
-			20));
-    
-    
-    my $DSAsig=Crypt::OpenSSL::DSA::Signature->new();
-    $DSAsig->set_r($r_field);
-    $DSAsig->set_s($s_field);
-
-
-    if (my $valid=$dsa_pub->do_verify (sha1( $sigdata) ,
-				       $DSAsig
-				       )){
-	if ($valid==-1){
-	    print "Crypt::OpenSSL::DSA Verification failed with error\n" if $debug;
-	    $self->{"vrfyerrstr"}="DSA Verification failed with error";
-	}else{
-	    print "Crypt::OpenSSL::DSA Verification successful:$valid\n" if $debug;;
-	    
-	    $self->{"vrfyerrstr"}="DSA Verification successful ";
-	    return(1);
-	}
+    if ( $dsa->verify ( 
+			Message => $sigdata,
+			Signature => $dsasig,
+			Key => $dsakey,
+			)){
+	$self->{"vrfyerrstr"}="DSA Verification successful ";
+	return(1);
     }else{
-	print "Crypt::OpenSSL::DSA Verification failed\n " if $debug;;
 	$self->{"vrfyerrstr"}="DSA Verification failed ";
     }
     
     $self->{"vrfyerrstr"}="DSA Verification failed: undefined error ";
     
-    
-    return 0;	
+    return 0;
 }
+
 
 
 sub _verifyRSA {
     # Implementation using crypt::openssl
 
-    my ($self, $sigdata, $signature, $keyrr, $isSHA) = @_; 
+    my ($self, $sigdata, $signature, $keyrr) = @_; 
 
     print "\nRSA verification called with key:\n". $keyrr->string . 
 	
@@ -975,14 +953,11 @@ sub _verifyRSA {
     # 
     # Again we need to put the public key into ANS1 DER encoding so that
     # the RSA public key can read it.
+    use Crypt::OpenSSL::RSA;
 
     my $rsa_pub = Crypt::OpenSSL::RSA->new();
     $rsa_pub->use_pkcs1_oaep_padding;
-    if ($isSHA) {
-	$rsa_pub->use_sha1_hash;
-    } else {
-	$rsa_pub->use_md5_hash;
-    }
+    $rsa_pub->use_md5_hash;
     
     my $explength;
     my $exponent;
@@ -1053,13 +1028,13 @@ sub _verifyRSA {
     $RSAPublicKey="-----BEGIN RSA PUBLIC KEY-----\n".
 	encode_base64($sequence) .
 	    "-----END RSA PUBLIC KEY-----\n";
-    
-    
+
+
     eval {
 	$rsa_pub->load_public_key($RSAPublicKey);
     };
     die "Could not load public key: " . $@ if $@;
-    
+
     my $verified;
     eval {
 	$verified=$rsa_pub->verify($sigdata, $signature);
@@ -1430,22 +1405,12 @@ suitable to be used for signing large zones.
 
 - Clean up the code.
 
+- Add RSA with SHA hashes (currently in draft)
+
 - If this code is still around by 2030 you have a few years to check
 the proper handling of times...
 
 - Add wildcard handling
-
-
-=head1 ACKNOWLEDGMENTS
-
-Andy Vaskys (Network Associates Laboratories) supplied the code for
-handling RSA with SHA1 (Algorithm 5).
-
-Chris Reinardt for maintianing Net::DNS.  
-
-T.J. Mather, <tjmather@tjmather.com>, the Crypt::OpenSSL::DSA
-maintainer, for his quick responses to bug report and feature
-requests.
 
 
 =head1 COPYRIGHT
@@ -1473,7 +1438,6 @@ OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 
 Based on, and contains, code by Copyright (c) 1997 Michael Fuhr.
 
-This code uses Crypt::OpenSSL which uses the openssl library
 
 
 =head1 SEE ALSO

@@ -1,6 +1,6 @@
 #!/usr/bin/perl  -sw 
 # Test script for keysetfunctionalty
-# $Id: 10-keyset.t,v 1.2 2002/08/14 13:44:53 olaf Exp $
+# $Id: 10-keyset.t,v 1.3 2002/09/26 07:16:33 olaf Exp $
 # 
 # Called in a fashion simmilar to:
 # /usr/bin/perl -Iblib/arch -Iblib/lib -I/usr/lib/perl5/5.6.1/i386-freebsd \
@@ -10,7 +10,7 @@
 
 
 #use Test::More  qw(no_plan);
-use Test::More tests => 11;
+use Test::More tests => 12;
 use strict;
 
 
@@ -207,9 +207,20 @@ $keyset=Net::DNS::Keyset->new($packet);
 is (ref($keyset), "Net::DNS::Keyset", "Keyeset object from packet");  # test 11
 
 
+
+my $keyset2= Net::DNS::Keyset->new($datarrset,"./");
+is (ref($keyset2), "Net::DNS::Keyset", "Keyeset object from KEY RR and signature");  
+
+# test 11
+#print $Net::DNS::Keyset::keyset_err;
+#$keyset->print;
+
+
 unlink($keypathdsa);
 unlink($keypathrsa);
 unlink($keysetpath);
+
+
 
 
 0;

@@ -1,5 +1,5 @@
 
-# $Id: Keyset.pm,v 1.1 2002/06/28 07:20:33 olaf Exp $
+# $Id: Keyset.pm,v 1.2 2002/09/26 07:16:26 olaf Exp $
 
 
 package Net::DNS::Keyset;
@@ -16,10 +16,16 @@ use Net::DNS::Keyset;
 
 =head1 DESCRIPTION
 
+
+
+
 A keyset is a "administrative" unit used for DNSSEC maintenance.
 
 The bind dnssec-signzone tool uses it to genertate DS records. This class
 provides interfaces for reading keysets, creating and parsing them.
+
+Note that this class is still being developed. Attributes and methods
+are subject to change.
 
 =cut
 
@@ -31,7 +37,7 @@ use Carp;
 
 use vars qw ( $VERSION @EXPORT $keyset_err );
 
-( $VERSION ) = '$Revision: 1.1 $ ' =~ /\$Revision:\s+([^\s]+)/;
+( $VERSION ) = '$Revision: 1.2 $ ' =~ /\$Revision:\s+([^\s]+)/;
 
 my $debug=0;
 
@@ -287,7 +293,7 @@ sub new_from_keys {
     if (  defined $privatekeypath ){
 	$privatekeypath =~ s!\/*\s*$!! ; #strip trailing spaces and slashes
 	if (! -d $privatekeypath){
-	    $keyset_err= "Directory " . $privatekeypath . 
+	    $keyset_err= "The file " . $privatekeypath . 
 		" could not be found\n";
 	    return 0;
 	}
@@ -373,6 +379,8 @@ sub new_from_packet {
 
 	}
     }
+
+
     my $ks;
     my $keyset= {
 	keys => [ @keyrr ],
@@ -394,7 +402,7 @@ sub new_from_packet {
 
 =head2 keys
 
-    @keyrr=$keyset-keys;
+    @keyrr=$keyset->keys;
 
 Returns an array of Net::DNS::RR::Key objects
 
@@ -408,7 +416,7 @@ sub keys {
 
 =head2 sigs
 
-    @keyrr=$keyset-keys;
+    @keyrr=$keyset->sigs;
 
 Returns an array of Net::DNS::RR::Sig objects
 
