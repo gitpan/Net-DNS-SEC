@@ -1,6 +1,6 @@
 # perldoc SIG.pm for documentation.
 # Specs: RFC 2535 section 4
-# $Id: SIG.pm,v 1.10 2002/12/20 10:20:21 olaf Exp $
+# $Id: SIG.pm,v 1.11 2003/01/08 08:13:11 olaf Exp $
 
 package Net::DNS::RR::SIG;
 
@@ -33,7 +33,7 @@ use Digest::SHA1 qw (sha1);
 
 require Exporter;
 
-$VERSION = do { my @r=(q$Revision: 1.10 $=~/\d+/g); sprintf "%d."."%03d"x$#r,@r };
+$VERSION = do { my @r=(q$Revision: 1.11 $=~/\d+/g); sprintf "%d."."%03d"x$#r,@r };
 @ISA = qw (
 	   Exporter
 	 Net::DNS::RR
@@ -218,7 +218,8 @@ sub rr_rdata {
 		if ($self->{"algorithm"} == 1 ||
 		    $self->{"algorithm"} == 5)
 		{  #RSA
-		    my $rsa_priv = Crypt::OpenSSL::RSA->new();
+
+		    my $rsa_priv=Crypt::OpenSSL::RSA->new_private_key($self->{"private_key"});
 		    eval {
 			$rsa_priv->use_pkcs1_oaep_padding;
 			if ($self->{"algorithm"} == 1) {
@@ -226,7 +227,7 @@ sub rr_rdata {
 			} else {
 			    $rsa_priv->use_sha1_hash;
 			}
-			$rsa_priv->load_private_key($self->{"private_key"});
+
 		    };
 		    die "Error loading RSA private key " . $@ if $@;
 
@@ -470,7 +471,7 @@ sub create {
 	    die "Private key mismatch, not RSAMD5 or RSASHA.";
 	    
 	}
-	my $rsa_priv = Crypt::OpenSSL::RSA->new();
+	my $rsa_priv = Crypt::OpenSSL::RSA->new_private_key($Private->privatekey);
 	$self->{"private_key"}=$Private->privatekey;
 	eval {
 	    $rsa_priv->use_pkcs1_oaep_padding;
@@ -479,7 +480,7 @@ sub create {
 	    } else {
 		$rsa_priv->use_sha1_hash;
 	    }
-	    $rsa_priv->load_private_key($Private->privatekey);
+
 	};
 	die "RSA private key loading failed:".$@ if $@;
 	eval {
@@ -816,13 +817,6 @@ sub _verifyRSA {
     # Again we need to put the public key into ANS1 DER encoding so that
     # the RSA public key can read it.
 
-    my $rsa_pub = Crypt::OpenSSL::RSA->new();
-    $rsa_pub->use_pkcs1_oaep_padding;
-    if ($isSHA) {
-	$rsa_pub->use_sha1_hash;
-    } else {
-	$rsa_pub->use_md5_hash;
-    }
     
     my $explength;
     my $exponent;
@@ -895,10 +889,18 @@ sub _verifyRSA {
 	    "-----END RSA PUBLIC KEY-----\n";
     
     
-    eval {
-	$rsa_pub->load_public_key($RSAPublicKey);
-    };
-    die "Could not load public key: " . $@ if $@;
+
+    my $rsa_pub = Crypt::OpenSSL::RSA->new_public_key($RSAPublicKey);
+
+    die "Could not load public key" unless $rsa_pub;
+    $rsa_pub->use_pkcs1_oaep_padding;
+    if ($isSHA) {
+	$rsa_pub->use_sha1_hash;
+    } else {
+	$rsa_pub->use_md5_hash;
+    }
+    
+
     
     my $verified;
     eval {

@@ -1,5 +1,5 @@
 #
-# $Id: Makefile.PL,v 1.15 2003/01/06 09:03:13 olaf Exp $
+# $Id: Makefile.PL,v 1.16 2003/01/09 06:53:46 olaf Exp $
 #
 
 eval { require 5.00503  };
@@ -22,7 +22,7 @@ WriteMakefile(
       'PREREQ_PM'             => {
 	Net::DNS                  => 0.32,
 	Test::More                => 0.47,
-	Crypt::OpenSSL::RSA       => 0.13,
+	Crypt::OpenSSL::RSA       => 0.17,
 	Crypt::OpenSSL::DSA       => 0.10,
 	File::Basename            => 0.0,
 	MIME::Base64              => 0.0,

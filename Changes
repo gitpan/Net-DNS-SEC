@@ -1,5 +1,11 @@
 Revision history for Perl extension Net::DNS::SEC.
 
+
+0.10 January 8 2002
+
+   BUG:  - Crypt::OpenSSL::RSA::new method has been depricated. Code has
+	   been modified to deal with the new constructors
+
 0.09 January 6 2002
 
    FEAT: - Added Net::DNS::RR::SIG::Private. The class provides 
@@ -155,7 +161,7 @@ Net::DNS. The history of those is documented below.
 
 0.19-DNSSEC-0.3: 
   Solved patch problems that where due to the 
-  $Id: Changes,v 1.14 2003/01/06 09:03:13 olaf Exp $ in headers not 
+  $Id: Changes,v 1.15 2003/01/08 08:13:09 olaf Exp $ in headers not 
   being from the original distribution.
 
   Added DSA signature creation
@@ -187,4 +193,4 @@ Net::DNS. The history of those is documented below.
 
 
 ---------------------------------------------------------------------------
-$Id: Changes,v 1.14 2003/01/06 09:03:13 olaf Exp $
+$Id: Changes,v 1.15 2003/01/08 08:13:09 olaf Exp $
