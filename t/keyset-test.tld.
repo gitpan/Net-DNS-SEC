@@ -1,0 +1,35 @@
+test.tld.	0	IN	KEY	256  3  1 ( 
+			AQOi+0LmBAfV+4CdCoy81y0Z9fejYXzbXrh8
+			7u2gaJZ12ItO5bGtegfBykgUs76ElH1fGvWB
+			paHqh3roImc7MGkhCMh7+G2lE7aeYsUXn5wH
+			dBFEwZBaards8JcMEcT8nHyKHNZlq9fAhQ36
+			guqGdZuRPqxgYfwz71VJb2t96KX/5w== 
+			) ; Key ID = 42495
+test.tld.	0	IN	KEY	256  3  3 ( 
+			CI0YHeX8DlMFJjaXA+lM7P7TM8t17m5wm/8K
+			MO1fLaBB2Wbq3s0/jMudrauMDg1G3SrOWOgX
+			2AITudhGzT0c0FTxztM81IbmVETd/l5XXUEG
+			0/joY2DNeyxD6I4Y94VcgUyf0l9ronUw+wXB
+			hWCuueJPXSDIbbUDdcI7srlslykC+LQRnsbx
+			B5YJMgmkPaPZU8GpRcdrT/4mFmGdyL4/z8Y6
+			+eiQbc0AXXSjQ9/r+jPlSlyZfz0qqM++f1pF
+			NEj2wzYAmAUGTOtCFdzH00++Gd5bTM39tpCF
+			pSS6knxhrM2SRUp84zpof2Hw41WAY1GIsQEg
+			tBrTsQzNx73/4kNgVs4JqMmqFv0xmVNq7XsY
+			MMr6viiQnZBSlNR35n0cT1sEvZgNxQR2fS25
+			hIs7B+7xUg+5t9XKyA1acSDtNm4SshQLrqyj
+			Yep2huIk6N2pNMr+v2z/FTRSMTdkBz550C+9
+			nLVKbzC3vpFl+3xl7l1jyFAllZ2wHj9kp8aY
+			8VNN/RPQNkZOg6fRLtKF7DPIXFFJ0b+npMnA
+			 
+			) ; Key ID = 9734
+test.tld.	360	IN	SIG	KEY  1  2  0  20021206105834 (
+			20021106105834 42495  test.tld
+			DjUpeDDBWd8bZXSE6hcxF/VUiv3fbLQHwAqGzKM4PQrST
+			HrfPTKIqoULsiIviurvSTuUCptqDgqiyXJ5KJa1s5FEUj
+			PhM4ZGv8gWIoOBfhyvAf/s8Q0LheHKXg5Sd0AwFiaJszr
+			/psJBCNIBDm9crV9XG3xza4lZ7WB1wiSYkV0= )
+test.tld.	360	IN	SIG	KEY  3  2  0  20021206105834 (
+			20021106105834 09734  test.tld
+			CIyuAgpdRK7eMHhGssuohBRzzdQpVnFMh/JuQhi6bwGp3
+			fZcv/EC/pw= )

@@ -1,6 +1,6 @@
 #!/usr/bin/perl  -sw 
 # Test script for keysetfunctionalty
-# $Id: 10-keyset.t,v 1.3 2002/09/26 07:16:33 olaf Exp $
+# $Id: 10-keyset.t,v 1.4 2002/11/06 10:37:06 olaf Exp $
 # 
 # Called in a fashion simmilar to:
 # /usr/bin/perl -Iblib/arch -Iblib/lib -I/usr/lib/perl5/5.6.1/i386-freebsd \
@@ -83,7 +83,7 @@ close(DSA);
 
 # Create keysets
 
-my $keysetpath="keyset-test.tld.";
+my $keysetpath="t/keyset-test.tld.";
 
 open (KEYSET,">$keysetpath") or die "Could not open $keysetpath";
 

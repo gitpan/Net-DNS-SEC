@@ -1,6 +1,6 @@
 # perldoc SIG.pm for documentation.
 # Specs: RFC 2535 section 4
-# $Id: SIG.pm,v 1.8 2002/10/02 10:19:30 olaf Exp $
+# $Id: SIG.pm,v 1.9 2002/11/06 10:37:06 olaf Exp $
 
 package Net::DNS::RR::SIG;
 
@@ -31,7 +31,7 @@ use Digest::SHA1 qw (sha1);
 
 require Exporter;
 
-$VERSION = do { my @r=(q$Revision: 1.8 $=~/\d+/g); sprintf "%d."."%03d"x$#r,@r };
+$VERSION = do { my @r=(q$Revision: 1.9 $=~/\d+/g); sprintf "%d."."%03d"x$#r,@r };
 @ISA = qw (
 	   Exporter
 	 Net::DNS::RR
@@ -374,11 +374,26 @@ sub rr_rdata {
 		    {
 			
 			print "\n SIGNED" if $debug ;
-			# See RFC 2535 for the content of the SIG
+			# See RFC 2536 for the content of the DSA SIG rdata 
 			my $T_parameter= (length($private_dsa->get_g)-64)/8;
 			$signature=pack("C",$T_parameter);
-			$signature.=$sig_obj->get_r;
-			$signature.=$sig_obj->get_s;
+			my $sig_r_param=$sig_obj->get_r;
+			my $sig_s_param=$sig_obj->get_s;
+			# both the R and S paramater in the RDATA need to be
+			# 20 octets
+			while (length($sig_r_param)<20){	
+			    $sig_r_param=pack("x").$sig_r_param ;
+			}
+			while (length($sig_s_param)<20) {	
+			    $sig_s_param=pack("x").$sig_s_param ;
+			}
+
+
+			$signature.=$sig_r_param.$sig_s_param;
+
+
+			
+
 		    }else
 		    {  
 			confess "creation of DSA Signature failed " ;
@@ -617,6 +632,7 @@ sub create {
     }
     close(KEYFH);
     
+
     #
     # Enjoy the crypto
     if ($self->{"algorithm"} == 1 || $self->{"algorithm"} == 5) {  #RSA
@@ -677,8 +693,20 @@ sub create {
 		# See RFC 2535 for the content of the SIG
 		my $T_parameter= (length($private_dsa->get_g)-64)/8;
 		$signature=pack("C",$T_parameter);
-		$signature.=$sig_obj->get_r;
-		$signature.=$sig_obj->get_s;
+
+		my $sig_r_param=$sig_obj->get_r;
+		my $sig_s_param=$sig_obj->get_s;
+		# both the R and S paramater in the RDATA need to be
+		# 20 octets:
+		while (length($sig_r_param)<20){
+		    $sig_r_param=pack('x').$sig_r_param ; 
+		}
+		while (length($sig_s_param)<20) {	
+		    $sig_s_param=pack('x').$sig_s_param ;
+		}
+		$signature.=$sig_r_param.$sig_s_param;
+
+
 	    }else
 	    {  
 		confess "creation of DSA Signature failed " ;
@@ -931,7 +959,6 @@ my $dsa_pub=Crypt::OpenSSL::DSA->new();
 			21,
 			20));
     
-    
     my $DSAsig=Crypt::OpenSSL::DSA::Signature->new();
     $DSAsig->set_r($r_field);
     $DSAsig->set_s($s_field);
@@ -943,6 +970,7 @@ my $dsa_pub=Crypt::OpenSSL::DSA->new();
 	if ($valid==-1){
 	    print "Crypt::OpenSSL::DSA Verification failed with error\n" if $debug;
 	    $self->{"vrfyerrstr"}="DSA Verification failed with error";
+	    return(0);
 	}else{
 	    print "Crypt::OpenSSL::DSA Verification successful:$valid\n" if $debug;;
 	    
@@ -952,10 +980,10 @@ my $dsa_pub=Crypt::OpenSSL::DSA->new();
     }else{
 	print "Crypt::OpenSSL::DSA Verification failed\n " if $debug;;
 	$self->{"vrfyerrstr"}="DSA Verification failed ";
+	return(0);
     }
     
     $self->{"vrfyerrstr"}="DSA Verification failed: undefined error ";
-    
     
     return 0;	
 }

@@ -1,5 +1,5 @@
 #
-# $Id: Makefile.PL,v 1.12 2002/10/02 10:19:27 olaf Exp $
+# $Id: Makefile.PL,v 1.13 2002/11/06 10:58:08 olaf Exp $
 #
 
 eval { require 5.00503  };
@@ -15,11 +15,13 @@ SHUCKS
 use ExtUtils::MakeMaker;
 # See lib/ExtUtils/MakeMaker.pm for details of how to influence
 # the contents of the Makefile that is written.
+
 WriteMakefile(
       'NAME'	=> 'Net::DNS::SEC',
       'VERSION_FROM'	=> 'SEC.pm',
       'PREREQ_PM'             => {
 	Net::DNS                  => 0.27,
+	Test::More                => 0.47,
 	Crypt::OpenSSL::RSA       => 0.13,
 	Crypt::OpenSSL::DSA       => 0.10,
 	File::Basename            => 0.0,

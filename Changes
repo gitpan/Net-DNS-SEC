@@ -1,5 +1,19 @@
 Revision history for Perl extension Net::DNS::SEC.
 
+0.08 November 4 2002
+
+   BUG:  - DSA signature verification failed at random about 1 per 10
+           sigatures. Corrected allignment problem that lead to this.
+	   Added 'stresstest' that loops over creation and verification
+	   of signatures to spot these kind of seldomly occuring errors.
+          
+           On my VAIO PII 500Mhz the take about a minute:
+ 	   Files=3, Tests=3056, 69 wallclock secs 
+                               (63.30 cusr +  0.70 csys = 63.99 CPU)
+
+
+   FEAT: - Added Test::More as dependency as on some systems diag was failing.
+
 
 0.07 October 2 2002
 
@@ -108,7 +122,7 @@ Net::DNS. The history of those is documented below.
 
 0.19-DNSSEC-0.3: 
   Solved patch problems that where due to the 
-  $Id: Changes,v 1.9 2002/10/02 10:19:27 olaf Exp $ in headers not 
+  $Id: Changes,v 1.11 2002/11/06 10:58:08 olaf Exp $ in headers not 
   being from the original distribution.
 
   Added DSA signature creation
@@ -140,4 +154,4 @@ Net::DNS. The history of those is documented below.
 
 
 ---------------------------------------------------------------------------
-$Id: Changes,v 1.9 2002/10/02 10:19:27 olaf Exp $
+$Id: Changes,v 1.11 2002/11/06 10:58:08 olaf Exp $
