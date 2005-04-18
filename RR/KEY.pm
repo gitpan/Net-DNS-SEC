@@ -1,6 +1,6 @@
 package Net::DNS::RR::KEY;
 
-# $Id: KEY.pm,v 1.6 2002/08/14 13:44:53 olaf Exp $
+# $Id: KEY.pm 260 2005-03-31 11:44:39Z olaf $
 
 use strict;
 use vars qw(@ISA $VERSION);
@@ -10,7 +10,7 @@ use MIME::Base64;
 use Carp;
 
 @ISA = qw(Net::DNS::RR);
-$VERSION = do { my @r=(q$Revision: 1.6 $=~/\d+/g); sprintf "%d."."%03d"x$#r,@r };
+$VERSION = do { my @r=(q$Revision: 260 $=~/\d+/g); sprintf "%d."."%03d"x$#r,@r };
 sub new {
     my ($class, $self, $data, $offset) = @_;
     if ($self->{"rdlength"} > 0) {
@@ -162,7 +162,7 @@ Net::DNS::RR::KEY - DNS KEY resource record
 
 =head1 SYNOPSIS
 
-C<use Net::DNS::RR>;
+C<use Net::DNS::RR;>
 
 =head1 DESCRIPTION
 
@@ -232,7 +232,7 @@ K\<fqdn\>+\<algorithm\>+\<keyid\>.private
 
 =head1 COPYRIGHT
 
-Copyright (c) 2001  RIPE NCC.  Author Olaf M. Kolkman <net-dns-sec@ripe.net>
+Copyright (c) 2001-2005  RIPE NCC.  Author Olaf M. Kolkman <olaf@net-dns.org>
 
 All Rights Reserved
 
@@ -258,8 +258,10 @@ Based on, and contains, code by Copyright (c) 1997 Michael Fuhr.
 
 =head1 SEE ALSO
 
+L<http://www.net-dns.org/> 
+
 L<perl(1)>, L<Net::DNS>, L<Net::DNS::Resolver>, L<Net::DNS::Packet>,
 L<Net::DNS::Header>, L<Net::DNS::Question>, L<Net::DNS::RR>,
-RFC 2435 Section 3
+RFC 2931.
 
 =cut

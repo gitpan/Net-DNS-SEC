@@ -1,14 +1,10 @@
 TODO for Net::DNS::SEC package.
 
 ----------------------------------------------------------------------
-Last modified for version 0.11
+Last modified for version 0.13_1
 ----------------------------------------------------------------------
-
-- Update RFC references as soon as drafts are published as such.
 
 - Code cleanup
 
-- Delete Net::DNS::RR::SIG::Private as it is replaced by
-  Net::DNS::SEC::Private
   
 

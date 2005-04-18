@@ -1,6 +1,6 @@
 #!/usr/bin/perl  -sw 
 # Test script for dnssec functionalty
-# $Id: 13-utilities.t,v 1.2 2004/06/04 16:06:48 olaf Exp $
+# $Id: 13-utilities.t 222 2005-03-04 09:03:31Z olaf $
 # 
 # Called in a fashion simmilar to:
 # /usr/bin/perl -Iblib/arch -Iblib/lib -I/usr/lib/perl5/5.6.1/i386-freebsd \

@@ -1,5 +1,5 @@
 #
-# $Id: Makefile.PL,v 1.20 2004/03/09 14:28:00 olaf Exp $
+# $Id: Makefile.PL 260 2005-03-31 11:44:39Z olaf $
 #
 
 
@@ -40,11 +40,10 @@ WriteMakefile(
 	Digest::SHA1              => 0.0,
       },
       'ABSTRACT'                  => 'DNSSEC extensions to Net::DNS',
-      'AUTHOR'                    => 'Olaf M. Kolkman <net-dns-sec@ripe.net>',
+      'AUTHOR'                    => 'Olaf M. Kolkman <olaf@net-dns.org>',
       'PM' => { 
 	        'Keyset.pm' => '$(INST_LIBDIR)/Keyset.pm',
 		'SEC.pm'    => '$(INST_LIBDIR)/SEC.pm',
-		'RR/SIG/Private.pm'    => '$(INST_LIBDIR)/RR/SIG/Private.pm',
 		'SEC/Private.pm'    => '$(INST_LIBDIR)/SEC/Private.pm',
 		'RR/DS.pm'  => '$(INST_LIBDIR)/RR/DS.pm',
 		'RR/NXT.pm' => '$(INST_LIBDIR)/RR/NXT.pm',
@@ -59,3 +58,10 @@ WriteMakefile(
 
 );
 
+
+
+sub MY::libscan {
+    my $path = $_[1];
+    return '' if $path =~ /\B\.svn\b/;
+    return $path;
+}

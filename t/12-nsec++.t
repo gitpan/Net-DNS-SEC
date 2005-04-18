@@ -1,6 +1,6 @@
 #!/usr/bin/perl  -sw 
 # Test script for dnssec functionalty
-# $Id: 12-nsec++.t,v 1.2 2003/12/10 08:50:15 olaf Exp $
+# $Id: 12-nsec++.t 222 2005-03-04 09:03:31Z olaf $
 # 
 use Net::DNS::RR::RRSIG;
 

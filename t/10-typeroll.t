@@ -1,6 +1,6 @@
 #!/usr/bin/perl  -sw 
 # Test script for dnssec functionalty
-# $Id: 10-typeroll.t,v 1.2 2004/01/27 10:45:49 olaf Exp $
+# $Id: 10-typeroll.t 222 2005-03-04 09:03:31Z olaf $
 # 
 # Called in a fashion simmilar to:
 # /usr/bin/perl -Iblib/arch -Iblib/lib -I/usr/lib/perl5/5.6.1/i386-freebsd \

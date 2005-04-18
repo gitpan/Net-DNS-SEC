@@ -1,6 +1,6 @@
 #!/usr/bin/perl  -sw 
 # Test script for keysetfunctionalty
-# $Id: 10-keyset.t,v 1.9 2004/06/04 16:06:48 olaf Exp $
+# $Id: 10-keyset.t 270 2005-04-18 10:18:49Z olaf $
 # 
 # Called in a fashion simmilar to:
 # /usr/bin/perl -Iblib/arch -Iblib/lib -I/usr/lib/perl5/5.6.1/i386-freebsd \
@@ -10,7 +10,7 @@
 
 
 #use Test::More  qw(no_plan);
-use Test::More tests => 16;
+use Test::More tests => 21;
 use strict;
 
 
@@ -166,8 +166,7 @@ $keyset=Net::DNS::Keyset->new($keysetpath);
 
 
 ok ( ! $keyset , "Corrupted keyset not loaded");   # test 10
-
-is( $Net::DNS::Keyset::keyset_err , "RSA Verification failed on key test.tld 42495"
+is( $Net::DNS::Keyset::keyset_err , "RSA Verification failed on key test.tld 42495 "
      , "Correct Error message" );                   # test 11
 
 
@@ -223,18 +222,18 @@ my $packet = Net::DNS::Packet->new(\$packetdata);
 $keyset=Net::DNS::Keyset->new($packet);
 is (ref($keyset), "Net::DNS::Keyset", "Keyeset object from packet");  # test 12
 
+is (join(" ",sort($keyset->verify)),"14804 64431","Verify method returned the two proper keytags");     # test 13
+
+
 
 
 my $keyset2= Net::DNS::Keyset->new($datarrset,"./");
 is (ref($keyset2), "Net::DNS::Keyset", "Keyeset object from DNSKEY RR and signature");  
 
-# test 13
+# test 14
 #print $Net::DNS::Keyset::keyset_err;
 #$keyset->print;
 
-
-unlink($keypathdsa);
-unlink($keypathrsa);
 unlink($keysetpath);
 
 
@@ -339,13 +338,61 @@ my $ks=Net::DNS::Keyset->new(\@keyrr,\@sigrr);
 ok($ks,"Keyset created from two arrays.");
 my @result;
 @result=$ks->keys;
-ok(eq_array(\@result,\@keyrr),"Keys out equal to keys in");   # test 15
+ok(eq_array(\@result,\@keyrr),"Keys out equal to keys in");   # test 16
 @result=$ks->sigs;
-ok(eq_array(\@result,\@sigrr),"Sigs out equal to sigss in");  # test 16
+ok(eq_array(\@result,\@sigrr),"Sigs out equal to sigss in");  # test 17
+
+
+
+
+
+open (KEYSET,">$keysetpath") or die "Could not open $keysetpath";
+
+$datarrset= [ $rsakeyrr, $dsakeyrr ];
+
+
+$sigrsa= create Net::DNS::RR::RRSIG($datarrset,$keypathrsa, 
+				    (
+				     ttl => 360, 
+#				     sigval => 100,
+				     ));
+
+$sigdsa= create Net::DNS::RR::RRSIG($datarrset,$keypathdsa, 
+				    (
+				     ttl => 360, 
+#				     sigval => 100,
+				     ));
+
+
+ok ( $sigrsa, 'RSA signature created');                               # test 18
+
+print KEYSET $rsakeyrr->string ."\n";
+print KEYSET $dsakeyrr->string ."\n";
+print KEYSET $sigrsa->string . "\n";
+close(KEYSET);
+
+
+$keyset=Net::DNS::Keyset->new($keysetpath);
+
+is (join(" ",sort($keyset->verify)),"42495","Verify method returned the  keytags");     # test 13
+
+ok (! $keyset->verify(9734),"Verification agains keytag 9734 failed"); # Test 19
+
+
+is( $Net::DNS::Keyset::keyset_err , "No signature made with 9734 found"
+     , "Correct Error message" );                   # test 20
+
+
+
+unlink($keysetpath);
+unlink($keypathdsa);
+unlink($keypathrsa);
 
 
 
 0;
+
+
 
 
 

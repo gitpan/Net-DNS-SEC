@@ -5,22 +5,21 @@ Net::DNS::SEC - DNSSEC extensions to Net::DNS
 IMPORTANT UPGRADE NOTE.
 
 If you upgrade from version 0,9 or 0.10 to version 0.11 or later make
-sure you read the CHANGES file. Version 0.11 replaces
-Net::DNS::RR::SIG::Private by Net::DNS::SEC::Private. Besides this
-version implement draft-ietf-dnsext-dnssec-2535typecode-change-04,
-which deprecates SIG, KEY and NXT.
+sure you read the CHANGES file. 
 
 	
 1. GENERAL INFO.
 
   This module implements DNS Resource Record types that are relevant
-  for DNSSEC operations. The implementation is based on the DNSSEC-bis
-  document set.
+  for DNSSEC operations. This package implements RFC4034
+  "Resource Records for the DNS Security Extensions" and RFC2931 "DNS
+  Request and Transaction Signatures ( SIG(0)s )"
 
-  RFC 3235 support has been patched into Net::DNS.
+  RFC 3225 (Indicating Resolver Support of DNSSEC) support has been
+  is available Net::DNS.
 
   The extensions provide the following additional features on top of
-  the Net::DNS package (http://www.net-dns.org/ version 0.21). 
+  the Net::DNS package (http://www.net-dns.org/). 
 
   - DS, RRSIG, DNSKEY and NSEC records. These are all implemented as RR
     objects.  The cryptography has been implemented using
@@ -41,7 +40,7 @@ which deprecates SIG, KEY and NXT.
        Net::DNS::RR::NSEC
        Net::DNS::RR::DS
   and for the use of SIG0 see:
-       Net::DNS::Packet (sign_sig0
+       Net::DNS::Packet (sign_sig0)
        Net::DNS::RR::SIG
        Net::DNS::SEC::Private
        Net::DNS::RR::KEY
@@ -64,7 +63,6 @@ which deprecates SIG, KEY and NXT.
   The package was initially developed on FreeBSD 4.5 with perl5.6.1, 
   as of version 0.11 development and testing where done on 
   MacOS 10.2.6 with perl, v5.8.0 built for darwin.
-
 
 
 3. Install
@@ -91,13 +89,21 @@ which deprecates SIG, KEY and NXT.
 
 4. Maintenance
 
-  If you find bugs in the extensions or have DNSSEC feature request
-  please mail to net-dns-sec@ripe.net.
+  Please use the CPAN request tracker if you find bugs in the
+  extensions or have DNSSEC feature request. The request tracker is 
+  available through:
 
-  Net::DNS is maintained by a team lead by Chris Reinhardt. They have
-  been so kind to include a number of hooks for Net::DNS::SEC in the
+   https://rt.cpan.org/NoAuth/ReportBug.html?Queue=Net-DNS-SEC
+  
+  Net::DNS contains a number of hooks for Net::DNS::SEC in the
   Net::DNS package. If you have problems with Net::DNS in general see:
   http://www.net-dns.org/
+
+  A snapshot of the development code is available through subversion:
+	http://www.net-dns.org/svn/net-dns-sec/trunk
+
+  Note that the code on the trunk may not be functional.
+
 
 
 5. Demos
@@ -131,11 +137,11 @@ which deprecates SIG, KEY and NXT.
   Crypt::OpenSSL::[RSA|DSA] modules
 
 
+
 8. Author information
 
   Olaf M. Kolkman, RIPE NCC.
-  http://www.ripe.net/disi
-  support: net-dns-sec@ripe.net
+  support: olaf@net-dns.org
 
 
 9. COPYRIGHT
@@ -170,4 +176,4 @@ Based on, and contains, code by Copyright (c) 1997-2001 Michael Fuhr.
 
 
 ------------------------------------------------------------------------------
-$Id: README,v 1.13 2004/06/04 16:06:48 olaf Exp $
+$Id: README 260 2005-03-31 11:44:39Z olaf $

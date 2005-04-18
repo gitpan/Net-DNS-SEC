@@ -18,7 +18,7 @@ use Digest::SHA1 qw (sha1);
 
 require Exporter;
 
-$VERSION = do { my @r=(q$Revision: 1.4 $=~/\d+/g); sprintf "%d."."%03d"x$#r,@r };
+$VERSION = do { my @r=(q$Revision: 260 $=~/\d+/g); sprintf "%d."."%03d"x$#r,@r };
 
 sub new {
     my ($class,  $key_file) = @_;
@@ -301,7 +301,7 @@ Net::DNS::SEC::Private - DNS SIG Private key object
 
 =head1 SYNOPSIS
 
-C<use Net::DNS::SEC::Private>;
+use Net::DNS::SEC::Private;
 my $private=Net::DNS::SEC::Private->new($keypath);
 
 =head1 DESCRIPTION
@@ -458,7 +458,7 @@ Then a self signature over the public key is created and verified.
 
 =head1 COPYRIGHT
 
-Copyright (c) 2002, 2003  RIPE NCC.  Author Olaf M. Kolkman <net-dns-sec@ripe.net>
+Copyright (c) 2002-2005 RIPE NCC.  Author Olaf M. Kolkman <olaf@net-dns.org>
 
 All Rights Reserved
 
@@ -484,8 +484,9 @@ This code uses Crypt::OpenSSL which uses the openssl library
 
 =head1 SEE ALSO
 
-L<perl(1)>, L<Net::DNS>, L<Net::DNS::RR::SIG>, L<Crypt::OpenSSL::RSA>,L<Crypt::OpenSSL::DSA>
-RFC 2435 Section 4, RFC 2931.
+L<http://www.net-dns.org/>
+
+L<perl(1)>, L<Net::DNS>, L<Net::DNS::RR::SIG>, L<Crypt::OpenSSL::RSA>,L<Crypt::OpenSSL::DSA>, RFC 2435 Section 4, RFC 2931.
 
 =cut
 

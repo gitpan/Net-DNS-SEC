@@ -1,6 +1,6 @@
 #!/usr/bin/perl  -sw 
 # Test script for dnssec functionalty
-# $Id: 09-dnssec.t,v 1.8 2003/12/17 12:16:10 olaf Exp $
+# $Id: 09-dnssec.t 260 2005-03-31 11:44:39Z olaf $
 # 
 # Called in a fashion simmilar to:
 # /usr/bin/perl -Iblib/arch -Iblib/lib -I/usr/lib/perl5/5.6.1/i386-freebsd \
@@ -114,7 +114,7 @@ close(DSA);
 
 # Create the signature records.
 
-my $sigrsa= create Net::DNS::RR::SIG($datarrset,$keypathrsa, 
+my $sigrsa= create Net::DNS::RR::RRSIG($datarrset,$keypathrsa, 
 				    (
 				     ttl => 360, 
 #				     sigval => 100,
@@ -123,7 +123,7 @@ my $sigrsa= create Net::DNS::RR::SIG($datarrset,$keypathrsa,
 
 ok ( $sigrsa, 'RSA signature created');                               # test 7
 
-my $sigdsa= create Net::DNS::RR::SIG($datarrset,$keypathdsa, 
+my $sigdsa= create Net::DNS::RR::RRSIG($datarrset,$keypathdsa, 
 				    (
 				     ttl => 360, 
 #				     sigval => 100,
@@ -208,13 +208,13 @@ my ($nlkey1, $nlsig1, $nlNS1, $nlNS2, $nlNS3, $nldatarrset);
     $nlNS3=new Net::DNS::RR("host100.ws.disi.  600   IN A    10.1.3.100");
     $nldatarrset=[$nlNS1,$nlNS3, $nlNS2];
 
-my $dsasigrr=Net::DNS::RR::SIG->create($nldatarrset,
+my $dsasigrr=Net::DNS::RR::RRSIG->create($nldatarrset,
 				    $keypathdsa
 				    );
 ok( $dsasigrr, 'DSA signature with bind generated key');             # test 20
 
 
-my $rsasigrr=Net::DNS::RR::SIG->create($nldatarrset,
+my $rsasigrr=Net::DNS::RR::RRSIG->create($nldatarrset,
 				    $keypathrsa
 				    );
 ok( $rsasigrr, 'RSA signature with bind generated key');            # test 21
@@ -277,7 +277,7 @@ $datarr1 = Net::DNS::RR->new("test.tld.	7000	IN	SOA (
 			     2002042603 43200 7200 1209600 7200)");
 
 $datarrset = [ $datarr1 ] ;
-$sigrsa= create Net::DNS::RR::SIG($datarrset,$keypathrsa, 
+$sigrsa= create Net::DNS::RR::RRSIG($datarrset,$keypathrsa, 
 				    (
 				     ttl => 360, 
 #				     sigval => 100,
@@ -298,17 +298,47 @@ ok ($sigrsa->verify($datarrset,$rsakeyrr),'RSA sig over SOA  with escaped dot ve
 # Cross check with a  signature generated with bind tools.
 # test fail after October 2030 :
 
-my $bindkey=Net::DNS::RR->new("test.foo       3600         IN KEY  256 3 1  (
-                              AQPDgM2XU2rluutXFw6IJjDRSGHehcc1ZtMoG5RR/
-                              jXJD1bZNFgqsKlJkVfj9wzrzAnBg7ZQSHwxYIGDm
-                              ocdBtW3 )");
+my $bindkey=Net::DNS::RR->new(" foo.example                        3600    DNSKEY  256 3 5 (
+                                        AQMLaOdD3VKofLiblKFdjnJpVFPD1mbIxh2H
+                                        +JaHkblnFH5cKn/mHU21ODD4mubkPqrhpEWi
+                                        Omm5+rpj90YdeFilf05tncc+3vr3ttSKKpXz
+                                        nV1h+IuX4tUwnCd1xH8+FrvoSJLgFCR97VG7
+                                        wwKOIXjjttpnoj+eX8wnlR0u8DxXH8q7o2Un
+                                        o5T1htoz/RtjUdbkuTpn4a7XRt98GcBQ1YGd
+                                        iOk3c5sVSCqHeEpsHTSSa5DYcNbBD71d+ahc
+                                        jkKVJXyAGRNEjEvYRQ6XSQ84rH7okO3Pl18V
+                                        rBDEMw6mivD0970W/Y0T2nBORTDR7h9D/62+
+                                        SmqCxuW6ISPvhL8VgO9R64i9/vo3K95JIEQB
+                                        LH+dab2olsuM+O9rVkBaIe+qNT6hT0ScRR6E
+                                        eDdA0CH+zqATqGrENT6I4XES+tuVJKK6Cph5
+                                        L3uO5QeevoFgh3jJDKHawi/QA2P0mhtTNF1E
+                                        Q7XwlHZVefVxUmLjJ5r7UBKaa7xAg8W4RKCR
+                                        9w==
+                                        ) ; key id = 43787
+");
 
 
-my $bindsig=Net::DNS::RR->new("test.foo        3600        IN  SIG     (
-                               KEY 1 2 3600 20300101000000  
-                               20020523123523 1749 test.foo. 
-                               YUf+2kUnz3bMCfRJyraFTxcmiTCMiGkfvwaeLa8oXzJX  
-                              PUfCpYzJUb9lH7/J4H8hk+Yg2RU81s423IFs155Yag== )");
+my $bindsig=Net::DNS::RR->new("foo.example    3600    RRSIG   (
+                                        DNSKEY 5 2 3600 20320101000000 
+                                        20050330103924 43787 foo.example.
+                                        BfAfvJtmvnhxMTo6frGc7bSNJS0M5D6zWBK3
+                                        WSoeYtDEyLhNDJSNL34lVlR8zkuKOLZ0b3mU
+                                        duscHd5f/AVb5mhVjmAGIIY4LWv9WIJlGBAG
+                                        mzlsYpx/fNWk8er55bSy5XRDB/46uIfTGVFs
+                                        4gjO39HgNOEH8IniuBvTvdK8/KhSZUlru1FP
+                                        Hzo2n+Jxv3weiVm1Q+bUBjJoX8GZ9sPeC83s
+                                        JHA8BhGwbvUIOCZUaFUwF5cREJUvyK32Uc+L
+                                        qIgJOWlCgkCOBDjLmnsKrIQ085ymJAIK2M8k
+                                        65e7+IrsysNZSBLoEeVaDZn0/AoYpoOnphCw
+                                        ibTt2ETYR4rgdO2Ffqzot9ZkSSnjZ5FwNmmS
+                                        rthYddYAofScUX/5rtHYeLPk1D6iTcQGmdeu
+                                        HY/7YgkrjaPRAwZ8SW9H4Ud78kFmVBLfIFRj
+                                        df7O4KRmQdufVpoFb7fOy1c/JtmnZp3kQZuw
+                                        vrAyfMJK5QXD1TM1CYFFeF2gyCRNzhv2sDQ= )
+
+
+
+");
 
 
 my    $binddataset=[$bindkey];
@@ -319,18 +349,56 @@ ok( $bindsig->verify($binddataset,$bindkey),
 
 
 
-my $nxtrr=Net::DNS::RR->new("sub.tld.		100	IN	NXT	b1.sub.tld. NS SOA SIG KEY NXT");
+my $nsecrr=Net::DNS::RR->new("foo.example.			300	NSEC	foo.example. SOA RRSIG NSEC DNSKEY");
 
-ok ( $nxtrr, 'NXT RR created from string');		# test 37
+ok ( $nsecrr, 'NSEC RR created from string');		# test 37
 
-my $nxtsig=Net::DNS::RR->new("sub.tld.		100	IN	SIG	NXT 1 2 100 20300627095441 20020814112311 23495 sub.tld. dGES80B4hlMUq7rS5etQ03emiq+y9gchIc/VO650PE3ssSJMcELzl9T2 /RiKOs5plEGl+iyHpo0XTSW0oEi8D4SX/4vXHpE5PHK2ME/40JW8ULT7 DEI+zmqmcZnvMKCktysKMLcSa6nLo8AOtEa/FtiIYes7r9Ff6tCydryC 4Qg=");
+my $nsecsig=Net::DNS::RR->new("foo.example.   300   RRSIG  (
+					NSEC 5 2 300 20320101000000 
+					20050330103924 43787 foo.example.
+					CF3JXoyzhdi0hNj4gsEz+a8u8LedRrFtZpDc
+					gvwdsQLYD+UTFEE/zbomMBxdh1M5EsVAnead
+					5vTn1AeSvbBzy976FoAd6lDYEGgUvCEJUsng
+					UHiCvBX6Netnqo4d7Tnzi0wsCvtAIMYuYa/T
+					3FnLMaJepNKp+QctcO8RpjlLb+b8rNAxsNcv
+					SaBxwAhPDvqQfPGmMQr5+Ga1c/1QCCkDyMzX
+					sZ0YqzZgeU+9kkqent4hPBdI8vlsISpTZgmC
+					BmNniBpPwpAHSAqCM0EyKu9Jni2laYT7Xsu2
+					LpQ2NU6lYRfOVu/OG98IevFZZ90YHbvF84e8
+					rHWllbuFLTien++AQitKCM9wxSPIoOFXq3O4
+					pEV00Ja9UAQMvHtRiC5AronayV8fSRjooiJe
+					67eLFYSV6t3K1Qlx4nKuTbM+9TFevvgWKk6w
+					a6hHetCohec/7xTftU9R329Jm9fWQCrOLuYa
+					gOKAKiwn8AtOTKyJec0wC2/lqrlMcToYtIM= )
 
-my $nxtkey=Net::DNS::RR->new("sub.tld.		100	IN	KEY	256 3 1 AQPw02b9MnR8aJplOyI1CB0u1zBGi9xFAPiZ1NkdDlqne3lSXpGHzQNT hf16EIdk+diCroSOFdz3jA/0fnHbG80wQ35k2YvVVqooHHel9nAeMHJF SgAzgV2Ht7hOnagaK0V4zbcvDnHm6kyiPuLExvknehLg6G9b+yNtZJ0g g1vHGQ==");
 
 
-my @nxtdata=($nxtrr);
+");
 
-ok( $nxtsig->verify(\@nxtdata,$nxtkey), "SIG over NXT verifies");   # test 38
+my $nseckey=Net::DNS::RR->new("foo.example.   3600	DNSKEY	256 3 5  (
+					AQMLaOdD3VKofLiblKFdjnJpVFPD1mbIxh2H
+					+JaHkblnFH5cKn/mHU21ODD4mubkPqrhpEWi
+					Omm5+rpj90YdeFilf05tncc+3vr3ttSKKpXz
+					nV1h+IuX4tUwnCd1xH8+FrvoSJLgFCR97VG7
+					wwKOIXjjttpnoj+eX8wnlR0u8DxXH8q7o2Un
+					o5T1htoz/RtjUdbkuTpn4a7XRt98GcBQ1YGd
+					iOk3c5sVSCqHeEpsHTSSa5DYcNbBD71d+ahc
+					jkKVJXyAGRNEjEvYRQ6XSQ84rH7okO3Pl18V
+					rBDEMw6mivD0970W/Y0T2nBORTDR7h9D/62+
+					SmqCxuW6ISPvhL8VgO9R64i9/vo3K95JIEQB
+					LH+dab2olsuM+O9rVkBaIe+qNT6hT0ScRR6E
+					eDdA0CH+zqATqGrENT6I4XES+tuVJKK6Cph5
+					L3uO5QeevoFgh3jJDKHawi/QA2P0mhtTNF1E
+					Q7XwlHZVefVxUmLjJ5r7UBKaa7xAg8W4RKCR
+					9w==
+					) ; key id = 43787
+
+
+");
+
+my @nsecdata=($nsecrr);
+
+ok( $nsecsig->verify(\@nsecdata,$nseckey), "RRSIG over NSEC verifies");   # test 38
 
 0;
 
@@ -377,7 +445,7 @@ close(RSA);
 
 
 
-my $sigrsasha1= create Net::DNS::RR::SIG($datarrset,$keypathrsasha1, 
+my $sigrsasha1= create Net::DNS::RR::RRSIG($datarrset,$keypathrsasha1, 
 				    (
 				     ttl => 360, 
 #				     sigval => 100,
@@ -396,13 +464,13 @@ ok ($sigrsasha1->verify($datarrset,$rsasha1keyrr),'RSA SHA1 sig verifies');     
 
 my $dsaprivate=Net::DNS::SEC::Private->new($keypathdsa);
 
-my $dsasigrr_p=Net::DNS::RR::SIG->create($nldatarrset,
+my $dsasigrr_p=Net::DNS::RR::RRSIG->create($nldatarrset,
 				    $dsaprivate
 				    );
 ok( $dsasigrr_p, 'DSA signature with bind generated key ');             # test 44
 
 my $rsaprivate=Net::DNS::SEC::Private->new($keypathrsa);
-my $rsasigrr_p=Net::DNS::RR::SIG->create($nldatarrset,
+my $rsasigrr_p=Net::DNS::RR::RRSIG->create($nldatarrset,
 				    $rsaprivate
 				    );
 ok( $rsasigrr_p, 'RSA signature with bind generated key');            # test 45
@@ -436,8 +504,6 @@ my $update2_p = Net::DNS::Update->new("test.test");
 ok ( $update2_p, 'Creating Update packet 2' );                       # test 51
 
 $update2_p->sign_sig0($dsaprivate);
-
-
 
 
 

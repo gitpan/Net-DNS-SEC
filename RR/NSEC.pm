@@ -1,6 +1,6 @@
 package Net::DNS::RR::NSEC;
 
-# $Id: NSEC.pm,v 1.4 2004/05/13 14:00:17 olaf Exp $
+# $Id: NSEC.pm 260 2005-03-31 11:44:39Z olaf $
 
 use strict;
 use vars qw(@ISA $VERSION);
@@ -13,7 +13,7 @@ use Data::Dumper;
 use Carp;
 
 @ISA = qw(Net::DNS::RR);
-$VERSION = do { my @r=(q$Revision: 1.4 $=~/\d+/g); sprintf "%d."."%03d"x$#r,@r };
+$VERSION = do { my @r=(q$Revision: 260 $=~/\d+/g); sprintf "%d."."%03d"x$#r,@r };
 
 sub new {
     my ($class, $self, $data, $offset) = @_;
@@ -112,7 +112,7 @@ sub _canonicalRdata {
 
 sub _typestr2typebm {
 
-    # This implements draft-ietfdnsext-nsec-rdata-01.
+
     # typebm= (WindowBlockNumber |BitmapLength|Bitmap)+
 
     my @typelist= @_;
@@ -195,7 +195,7 @@ Net::DNS::RR::NSEC - DNS NSEC resource record
 
 =head1 SYNOPSIS
 
-C<use Net::DNS::RR>;
+C<use Net::DNS::RR;>
 
 =head1 DESCRIPTION
 
@@ -229,7 +229,7 @@ on daily basis.
 
 =head1 COPYRIGHT
 
-Copyright (c) 2001  RIPE NCC.  Author Olaf M. Kolkman <net-dns-sec@ripe.net>
+Copyright (c) 2001-2005  RIPE NCC.  Author Olaf M. Kolkman <olaf@net-dns.org>
 
 All Rights Reserved
 
@@ -255,8 +255,10 @@ Based on, and contains, code by Copyright (c) 1997 Michael Fuhr.
 
 =head1 SEE ALSO
 
+L<http://www.net-dns.org/> 
+
 L<perl(1)>, L<Net::DNS>, L<Net::DNS::Resolver>, L<Net::DNS::Packet>,
 L<Net::DNS::Header>, L<Net::DNS::Question>, L<Net::DNS::RR>,
-RFC 2435 Section 5
+RFC4033, RFC4034, RFC4035.
 
 =cut

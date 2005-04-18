@@ -1,5 +1,5 @@
 # Test script for dnssec functionalty
-# $Id: 07-sec.t,v 1.4 2004/06/11 16:14:35 olaf Exp $
+# $Id: 07-sec.t 222 2005-03-04 09:03:31Z olaf $
 # 
 # Called in a fashion simmilar to:
 # /usr/bin/perl -Iblib/arch -Iblib/lib -I/usr/lib/perl5/5.6.1/i386-freebsd \
@@ -59,7 +59,7 @@ my $rsakey=Net::DNS::SEC::Private->new_rsa_priv($keyblob);
 
 my $privkeyfilename="t/Kexample.com.+005+34247.private";
 my $pubkeyfilename="t/Kexample.com.+005+34247.key";
-my $rsakey=Net::DNS::SEC::Private->new($privkeyfilename);
+$rsakey=Net::DNS::SEC::Private->new($privkeyfilename);
 my $privkey;
 my $pubkey;
 

@@ -1,6 +1,6 @@
 # perldoc SIG.pm for documentation.
 # Specs: RFC 2535 section 4
-# $Id: SIG.pm,v 1.16 2004/06/04 16:06:48 olaf Exp $
+# $Id: SIG.pm 260 2005-03-31 11:44:39Z olaf $
 
 package Net::DNS::RR::SIG;
 
@@ -33,7 +33,7 @@ use Digest::SHA1 qw (sha1);
 
 require Exporter;
 
-$VERSION = do { my @r=(q$Revision: 1.16 $=~/\d+/g); sprintf "%d."."%03d"x$#r,@r };
+$VERSION = do { my @r=(q$Revision: 260 $=~/\d+/g); sprintf "%d."."%03d"x$#r,@r };
 @ISA = qw (
 	   Exporter
 	 Net::DNS::RR
@@ -75,7 +75,7 @@ sub new {
 					   $expt[3] ,$expt[2] , $expt[1]  , 
 					   $expt[0]);
 	my @inct=gmtime(unpack("N",substr($$data,$offsettosiginc,4)));
-	$self->{"siginceptation"}=  sprintf ("%d%02d%02d%02d%02d%02d",
+	$self->{"siginception"}=  sprintf ("%d%02d%02d%02d%02d%02d",
 					     $inct[5]+1900 ,$inct[4]+1 , 
 					     $inct[3] ,$inct[2] , $inct[1]  ,
 					     $inct[0]);
@@ -104,7 +104,7 @@ sub new_from_string {
 	$string =~ s/\n//mg;
 	my ($typecovered, $algoritm,
 	    $labels, $orgttl, $sigexpiration,
-	    $siginceptation, $keytag,$signame,$sig) = 
+	    $siginception, $keytag,$signame,$sig) = 
 		$string =~ 
 		    /^\s*(\S+)\s+(\d+)\s+(\d+)\s+(\d+)\s+(\d+)\s+(\d+)\s+(\d+)\s+(\S+)\s+(.*)/;
 	croak (" Invallid SIG RR, check your fomat ") if !$keytag;
@@ -114,9 +114,9 @@ sub new_from_string {
 	$self->{"labels"}= lc($labels);
 	$self->{"orgttl"}= $orgttl;
 	_checktimeformat($sigexpiration);
-	_checktimeformat($siginceptation);
+	_checktimeformat($siginception);
 	$self->{"sigexpiration"}=  $sigexpiration;
-	$self->{"siginceptation"}= $siginceptation;
+	$self->{"siginception"}= $siginception;
 	$self->{"keytag"}= $keytag;
 	$self->{"signame"}= lc($signame);
 	$self->{"sig"}= $sig;
@@ -136,7 +136,7 @@ sub rdatastr {
 	    $rdatastr .= "  "  . "$self->{labels}";
 	    $rdatastr .= "  "  . "$self->{orgttl}";
 	    $rdatastr .= "  "  . "$self->{sigexpiration}";
-	    $rdatastr .= " (\n\t\t\t"  . "$self->{siginceptation}";
+	    $rdatastr .= " (\n\t\t\t"  . "$self->{siginception}";
 	    $rdatastr .= " "  . "$self->{keytag}";
 	    $rdatastr .= "  "  . "$self->{signame}";
 	    # do some nice formatting
@@ -166,7 +166,7 @@ sub rr_rdata_without_sigbin {
 	$self->{"sigexpiration"} =~ /(\d{4})(\d{2})(\d{2})(\d{2})(\d{2})(\d{2})/;
 	$rdata .= pack("N",timegm ($6, $5, $4, $3, $2-1, $1-1900));
 
-	$self->{"siginceptation"} =~ /(\d{4})(\d{2})(\d{2})(\d{2})(\d{2})(\d{2})/;
+	$self->{"siginception"} =~ /(\d{4})(\d{2})(\d{2})(\d{2})(\d{2})(\d{2})/;
 	$rdata .= pack("N",timegm ($6, $5, $4, $3, $2-1, $1-1900));
 	$rdata .= pack("n",$self->{"keytag"});
 	# Since we will need canonical and expanded names while checking 
@@ -221,7 +221,6 @@ sub rr_rdata {
 		{  #RSA
 
 
-#		  my $rsa_priv=Crypt::OpenSSL::RSA->new_private_key($self->{"private_key"});
 		  my $rsa_priv=$self->{"private_key"};
 		    eval {
 			$rsa_priv->use_pkcs1_oaep_padding;
@@ -319,8 +318,8 @@ sub create {
     die "Create did not manage obtain a Net::DNS::SEC::Private object "unless (UNIVERSAL::isa($Private,"Net::DNS::SEC::Private"));
 
     $self->{"algorithm"}=$Private->algorithm;
-     $self->{"keytag"}=$Private->keytag;
-     $self->{"signame"}=$Private->signame;
+    $self->{"keytag"}=$Private->keytag;
+    $self->{"signame"}=$Private->signame;
 
 
     # if $datarrset is a plain datastrream then construct a sigzero sig.
@@ -368,19 +367,19 @@ sub create {
 
     if ($args{"sigin"}){
 	_checktimeformat($args{"sigin"});
-	print "\nSetting siginceptation to " . $args{"sigin"} if $debug;
-	$self->{"siginceptation"} =$args{"sigin"};
+	print "\nSetting siginception to " . $args{"sigin"} if $debug;
+	$self->{"siginception"} =$args{"sigin"};
     }else{
 	my @inct=gmtime(time);
 	my $currentdatestring=  sprintf ("%d%02d%02d%02d%02d%02d",
 					 $inct[5]+1900 ,$inct[4]+1 , 
 					 $inct[3] ,$inct[2] , $inct[1]  ,
 					 $inct[0]);	
-	$self->{"siginceptation"} = $currentdatestring ;
+	$self->{"siginception"} = $currentdatestring ;
     }
 
     # This will fail if the dateformat is not correct...
-    $self->{"siginceptation"} =~ 
+    $self->{"siginception"} =~ 
 	/(\d{4})(\d{2})(\d{2})(\d{2})(\d{2})(\d{2})/ ;
     my $siginc_time=timegm ($6, $5, $4, $3, $2-1, $1-1900);
 
@@ -401,9 +400,9 @@ sub create {
 					   $inct[0]);	
     }elsif ($args{"sigex"}) { #sigexpiration set by the argument
 	_checktimeformat($args{"sigex"});
-	if ( $self->{"siginceptation"} > $args{"sigex"} ){
+	if ( $self->{"siginception"} > $args{"sigex"} ){
 	    croak "Signature can only expire after it has been incepted (".
-		$args{"sigex"} . "<" . $self->{"siginceptation"} .
+		$args{"sigex"} . "<" . $self->{"siginception"} .
 		    ")";
 	}
 	print "\nSetting sigexpiration to " . $args{"sigexp"} if $debug;
@@ -461,9 +460,6 @@ sub create {
     
     my $sigdata=$self->_CreateSigData($datarrset);
 
-
-
-
     my $signature;
     
     #
@@ -496,11 +492,11 @@ sub create {
     }elsif ($self->{"algorithm"} == 3){  #DSA
 	$self->{"private_key"}=$Private->privatekey;
 	my $private_dsa=$Private->privatekey;
+
 	# If $sigzero then we want to sign data if given in the
 	# argument. If the argument is empty we sign when the packet
 	# put on the wire.
-	
-      	if ($datarrset ne "" ){
+	if ($datarrset ne "" ){
 	    if (my $sig_obj= $private_dsa->do_sign(sha1($sigdata)))
 	    {
 		
@@ -668,9 +664,9 @@ sub verify {
 					     $inct[5]+1900 ,$inct[4]+1 , 
 					     $inct[3] ,$inct[2] , $inct[1]  ,
 					     $inct[0]);	
-	if ($self->{"siginceptation"} > $currentdatestring ){
+	if ($self->{"siginception"} > $currentdatestring ){
 	    $self->{"vrfyerrstr"}= "Signature may only be used in the future; after " .
-		$self->{"siginceptation"} ;
+		$self->{"siginception"} ;
 	    return 0;
 	}elsif($self->{"sigexpiration"} < $currentdatestring ){
 	    $self->{"vrfyerrstr"}= "Signature has expired since: " .
@@ -909,7 +905,7 @@ sub _verifyRSA {
 
 sub _CreateSigData {
     # this is the data that will be  signed, it will be fed to the
-    # verifier. See RFC2535 4.1.8 on how this string is constructed
+    # verifier. See RFC4034 section 6 on how this string is constructed
 
     # This method is called by the method that creates as signature
     # and by the method that verifies the signature. It is assumed
@@ -1071,6 +1067,12 @@ sub _checktimeformat {
 }
 
 
+# The previous versions had a typo... *Sigh*
+sub siginceptation {
+    my $self=shift;
+    return $self->siginception(@_);
+}
+
 
 
 1;
@@ -1082,16 +1084,16 @@ Net::DNS::RR::SIG - DNS SIG resource record
 
 =head1 SYNOPSIS
 
-C<use Net::DNS::RR>;
+C<use Net::DNS::RR;>
 
 =head1 DESCRIPTION
 
 
 IMPORTANT: For any other use than SIG0 signatures the SIG RR has been
-depricated. Use the DNSSIG instead.
+deprecated (RFC3755). Use the DNSSIG instead.
 
-All functionality remains present although a warning will be printed
-at first usage of the verify and create methods.
+All functionality currently remains present although a warning will be
+printed at first usage of the verify and create methods.
 
 
 Class for DNS Address (SIG) resource records. In addition to the
@@ -1099,32 +1101,48 @@ regular methods in the Net::DNS::RR the Class contains a method to
 sign RRsets using private keys (create). And a class for verifying
 signatures over RRsets (verify).
 
-The SIG RR is an implementation of RFC 2535 and RFC 2931.
+The SIG RR is an implementation of RFC 2931.
 
 
 
+=head1 SIG0 Support
+
+When Net::DNS::RR::SIG.pm is available the Net::DNS::Packet module will have
+the abilityh for sig0 support. See L<Net::DNS::Packet> for details.
+
+
+    my $keypathrsa="Ktest.example.+001+11567.private";
+    my $update1 = Net::DNS::Update->new("test.example");
+
+    $update1->push("update", Net::DNS::rr_add("foo.test.example 3600 IN A 10.0.0.1"));
+    $update1->sign_sig0($keypathrsa);
 
 
 =head1 METHODS
 
-=head2 create
-    
-Create a signature over a RR set or over a packet (SIG0).
+=head2 create 
 
-    my $keypath= 
-            "/home/olaf/keys/Kbla.foo.+001+60114.private";
-    my $sigrr= create Net::DNS::RR::SIG(\@datarrset,
-					$keypath);
-    my $sigrr= create Net::DNS::RR::SIG(\@datarrset,
-					$keypath,
-					\%arguments);
-    $sigrr->print;
 
 create is an alternative constructor for a SIG RR object.  
 
-The first argument is either reference to an array that contains the
-RRset that needs to be signed or a string containing the data over
-wich a SIG0 type of signature needs to be constructed.
+You are advised to create a packet object and then use the sign_sig0
+method to create a sig0 signature. 
+
+
+To create a signature over a packet (SIG0) you can use the following
+alternative recipe.
+
+    my $keypath= 
+            "/home/olaf/keys/Kbla.foo.+001+60114.private";
+
+    $sig0 = Net::DNS::RR::SIG->create('', $keypath);
+    $packet->push('additional', $sig0) if $sig0;
+    $packet->data;  # When the data method on a packet is called
+                    # the actual sig0 calculation is done.
+
+
+The first argument to the create method should be an empty string in
+order for the SIG0 magic to work.
 
 The second argument is a string containing the path to a file
 containing the the private key as generated with dnssec-keygen, a
@@ -1134,7 +1152,7 @@ The third argument is an anonymous hash containing the following
 possible arguments:  
 
     ( ttl => 3600,                        # TTL 
-      sigin =>   20010501010101,          # signature inceptation 
+      sigin =>   20010501010101,          # signature inception
       sigex =>   20010501010101,          # signature expiration
       sigval => 1.5                       # signature validity
       )
@@ -1143,24 +1161,22 @@ The default for the ttl is 3600 seconds. sigin and sigex need to be
 specified in the following format 'yyyymmddhhmmss'. The default for
 sigin is the time of signing. 
 
-sigval is the validity of the signature in minutes for SIG0s and days
-for other signatures (sigex=sigin+sigval).  If sigval is specified
-then sigex is ignored. The default for sigval is 5 minutes for SIG0s
-and 30 days other types of signatures.
+sigval is the validity of the signature in minutes. If sigval is
+specified then sigex is ignored. The default for sigval is 5 minutes.
 
 Note that for SIG0 signatures the default sigin is calculated at the
 moment the object is created, not at the moment that the packet is put
-on the wire (with ....). So do not leave the object hanging around for
-more than a couple of seconds before sending it.
+on the wire. 
+
 
 Notes: 
 
 - Do not change the name of the file generated by dnssec-keygen, the
-create method uses the filename as generated by dnssec-keygen to determine 
-the keyowner, algorithm and the keyid (keytag).
+  create method uses the filename as generated by dnssec-keygen to determine 
+  the keyowner, algorithm and the keyid (keytag).
 
-- Only RSA signatures (algorithm 1) and DSA signatures (algorithm 3)
-  have been implemented.
+- Only RSA signatures (algorithm 1 and 5) and DSA signatures
+  (algorithm 3) have been implemented.
 
 
 
@@ -1168,7 +1184,8 @@ the keyowner, algorithm and the keyid (keytag).
 
     print "typecovered =", $rr->typecovered, "\n"
 
-Returns the qtype covered by the sig.
+Returns the type covered by the sig (should be TYPE000 with common
+SIG0 usage)
 
 =head2 algorithm
 
@@ -1176,28 +1193,15 @@ Returns the qtype covered by the sig.
 
 Returns the algorithm number used for the signature
 
-=head2 labels
-
-    print "labels =", $rr->labels, "\n"
-
-Returns the the number of labels of the RRs over wich the 
-sig was made.
-
-=head2 orgttl
-
-    print "orgttl =", $rr->orgttl, "\n"
-
-Returns the RRs the original TTL of the signature
-
 =head2 sigexpiration
 
     print "sigexpiration =", $rr->sigexpiration, "\n"
 
 Returns the expiration date of the signature
 
-=head2 siginceptation
+=head2 siginception
 
-    print "siginceptation =", $rr->siginceptation, "\n"
+    print "siginception =", $rr->siginception, "\n"
 
 Returns the date the signature was incepted.
 
@@ -1224,19 +1228,14 @@ Returns the base64 representation of the signature.
 
 =head2 verify and vrfyerrstr
 
-    $sigrr->verify($data, $keyrr) || croak $sigrr->vrfyerrstr;
+
+    my $sigrr=$update1->pop("additional");
+    $sigrr->verify($packet, $keyrr) || croak $sigrr->vrfyerrstr;
 
 
-If $data contains a reference to an array of RR objects then them
-method verifies the RRset against the signature contained in the
-$sigrr object itself using the public key in $keyrr.  Because of the
-KeyID bug in bind (see below) a check on keyid is not performed.
-
-
-If $data contains a reference to a Net::DNS::Packet and if $sig->type
+If the first argument is a Net::DNS::Packet object and if $sig->type
 equals zero a a sig0 verification is performed. Note that the
 signature needs to be 'popped' from the packet before verifying.
-
 
 Returns 0 on error and sets $sig->vrfyerrstr
 
@@ -1250,16 +1249,15 @@ Returns 0 on error and sets $sig->vrfyerrstr
 =head1 Remarks
 
 - The code is not optimized for speed whatsoever. It is probably not
-suitable to be used for signing large zones. 
+  suitable to be used for signing large zones. 
 
 =head1 TODO
 
-- Clean up the code.
+- Clean up the code, it still contains some cruft left from the times that
+  the SIG RR was used for signing packets and RR sets.
 
 - If this code is still around by 2030 you have a few years to check
-the proper handling of times...
-
-- Add wildcard handling
+  the proper handling of times...
 
 
 =head1 ACKNOWLEDGMENTS
@@ -1276,8 +1274,8 @@ requests.
 
 =head1 COPYRIGHT
 
-Copyright (c) 2001, 2002  RIPE NCC.  Author Olaf M. Kolkman 
-<net-dns-sec@ripe.net>
+Copyright (c) 2001-2005  RIPE NCC.  Author Olaf M. Kolkman 
+<olaf@net-dns.org>
 
 All Rights Reserved
 
@@ -1305,10 +1303,11 @@ This code uses Crypt::OpenSSL which uses the openssl library
 
 =head1 SEE ALSO
 
+L<http://www.net-dns.org/> 
+
 L<perl(1)>, L<Net::DNS>, L<Net::DNS::Resolver>, L<Net::DNS::Packet>,
 L<Net::DNS::Header>, L<Net::DNS::Question>,
-L<Net::DNS::RR>,L<Crypt::OpenSSL::RSA>,L<Crypt::OpenSSL::DSA> RFC 2435 Section
-4, RFC 2931.
+L<Net::DNS::RR>,L<Crypt::OpenSSL::RSA>,L<Crypt::OpenSSL::DSA>, RFC 2931.
 
 =cut
 

@@ -1,5 +1,37 @@
 Revision history for Perl extension Net::DNS::SEC.
 
+
+
+
+0.12_01 April 18, 2005. (beta release for version 0.13)
+
+   FEAT (!!!): Changed the symantics of the Net::DNS::Keyset::verify method.
+	 Read the perldoc for details. The requirement that each key in a 
+         keyset has to be selfsigned has been loosened.
+
+   FEAT: Added a "carp" to the new methods of the NXT RR. Warning that
+	 that record is depricated.
+
+   FEAT: Cleaned the tests so that RRSIG and DNSKEY are used except for 
+         SIG0 based tests.
+
+   FEAT: Changed the name of the siginceptation[SIC] to siginception.
+	 Thanks Jakob Schlyter for notifying me of this mistyping.
+	 An alias for the method remains available. 	
+
+
+   FEAT: Renamed unset_sep() to clear_sep().
+
+
+   NOTE: To avoid confusion the Net::DNS::SIG::Private class has been
+         removed. Use Net::DNS::SEC::Private!
+
+   DOC:  Added references to RFC 4033, RFC 4034 and RFC 4035. Rewrote parts
+         of the perlpod.
+   
+
+
+
 0.12 June 2004 "DNSSEC-bis Release"
 
    FEAT: Added utility function key_difference() to Net::DNS::SEC. See
@@ -38,9 +70,9 @@ Revision history for Perl extension Net::DNS::SEC.
 
 0.11_2  Jan 27 2004 Development snapshot.
 
-   FEAT: - Prelimanary support for draf-ietf-dnssec-nsec-rdata-02. This
+   FEAT: - Prelimanary support for draft-ietf-dnssec-nsec-rdata-02. This
 	   depends on support for unknown RR types (Net::DNS version
-           0.44)
+           0.44) 
    
 
 0.11_1  Sep 23 2003 Development snapshot.
@@ -53,9 +85,9 @@ Revision history for Perl extension Net::DNS::SEC.
 
 0.11 August 28 2003
 
-   FEAT: - Implemented draft-ietf-dnsext-dnssec-2535typcode-change-04.txt
+   FEAT: - Implemented draft-ietf-dnsext-dnssec-2535typcode-change-04.txt 
            This document has been through review and will be published
-           as standard track RFCs shortly.
+           as standard track RFCs shortly. (Publsished as RFC3755).
            IMPORTANT: the implementation of the typecode roll deprecated 
            the use of SIG->create for any other reason than SIG0. If
            you try to create SIGs over RRsets you will be warned.
@@ -235,7 +267,7 @@ Net::DNS. The history of those is documented below.
 
 0.19-DNSSEC-0.3: 
   Solved patch problems that where due to the 
-  $Id: Changes,v 1.26 2004/06/04 16:06:48 olaf Exp $ in headers not 
+  $Id: Changes 272 2005-04-18 10:42:40Z olaf $ in headers not 
   being from the original distribution.
 
   Added DSA signature creation
@@ -267,4 +299,4 @@ Net::DNS. The history of those is documented below.
 
 
 ---------------------------------------------------------------------------
-$Id: Changes,v 1.26 2004/06/04 16:06:48 olaf Exp $
+$Id: Changes 272 2005-04-18 10:42:40Z olaf $

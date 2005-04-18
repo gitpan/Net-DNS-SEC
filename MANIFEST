@@ -14,7 +14,6 @@ RR/NSEC.pm
 RR/NXT.pm
 RR/RRSIG.pm
 RR/SIG.pm
-RR/SIG/Private.pm
 SEC.pm
 SEC/Private.pm
 t/00-pod.t
@@ -29,5 +28,4 @@ t/13-utilities.t
 t/getpacket.pl
 t/Kexample.com.+005+34247.key
 t/Kexample.com.+005+34247.private
-t/keyset-test.tld.
 TODO

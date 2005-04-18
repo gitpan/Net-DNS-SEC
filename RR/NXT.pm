@@ -1,6 +1,6 @@
 package Net::DNS::RR::NXT;
 
-# $Id: NXT.pm,v 1.7 2003/08/27 14:09:25 olaf Exp $
+# $Id: NXT.pm 260 2005-03-31 11:44:39Z olaf $
 
 use strict;
 use vars qw(@ISA $VERSION);
@@ -13,10 +13,11 @@ use Net::DNS::Packet;
 use Carp;
 
 @ISA = qw(Net::DNS::RR);
-$VERSION = do { my @r=(q$Revision: 1.7 $=~/\d+/g); sprintf "%d."."%03d"x$#r,@r };
+$VERSION = do { my @r=(q$Revision: 260 $=~/\d+/g); sprintf "%d."."%03d"x$#r,@r };
 
 sub new {
     my ($class, $self, $data, $offset) = @_;
+    carp "The NXT RR is depricated as of RFC3755, please refrain from using this record";
     
     if ($self->{"rdlength"} > 0) {
 	my($nxtdname,$nxtoffset) = 
@@ -32,12 +33,12 @@ sub new {
 	$self->{"typelist"} = join " " 
 	    ,  _typebm2typestr($typebm);
     }
-    
     return bless $self, $class;
 }
 
 sub new_from_string {
     my ($class, $self, $string) = @_;
+    carp "The NXT RR is depricated as of RFC3755";
     if ($string) {
 	$string =~ tr/()//d;
 	$string =~ s/;.*$//mg;
@@ -166,14 +167,16 @@ Net::DNS::RR::NXT - DNS NXT resource record
 
 =head1 SYNOPSIS
 
-C<use Net::DNS::RR>;
+C<use Net::DNS::RR;>
 
 =head1 DESCRIPTION
 
+B<NOTE: THE NXT RR has been deprecated! Use NSEC instead.>
+
+
+
 Class for DNS Address (NXT) resource records.
 
-NOTE: THE NXT RR has been deprecated! Use NSEC instead.
-      (SEE RFC.... for details).
 
 =head1 METHODS
 
@@ -203,7 +206,7 @@ on daily basis.
 
 =head1 COPYRIGHT
 
-Copyright (c) 2001  RIPE NCC.  Author Olaf M. Kolkman <net-dns-sec@ripe.net>
+Copyright (c) 2001-2005  RIPE NCC.  Author Olaf M. Kolkman <olaf@net-dns.org>
 
 All Rights Reserved
 
@@ -225,12 +228,14 @@ OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 
 Based on, and contains, code by Copyright (c) 1997 Michael Fuhr.
 
-
-
 =head1 SEE ALSO
+
+L<http://www.net-dns.org/> 
 
 L<perl(1)>, L<Net::DNS>, L<Net::DNS::Resolver>, L<Net::DNS::Packet>,
 L<Net::DNS::Header>, L<Net::DNS::Question>, L<Net::DNS::RR>,
 RFC 2435 Section 5
+
+
 
 =cut

@@ -1,5 +1,5 @@
 
-# $Id: Keyset.pm,v 1.6 2004/06/11 16:14:35 olaf Exp $
+# $Id: Keyset.pm 269 2005-04-13 13:12:04Z olaf $
 
 
 package Net::DNS::Keyset;
@@ -37,11 +37,11 @@ use Carp;
 
 use vars qw ( $VERSION @EXPORT $keyset_err );
 
-( $VERSION ) = '$Revision: 1.6 $ ' =~ /\$Revision:\s+([^\s]+)/;
+( $VERSION ) = '$Revision: 269 $ ' =~ /\$Revision:\s+([^\s]+)/;
 
 my $debug=0;
 
-   
+
 
 sub new {
 	my $retval;
@@ -485,48 +485,102 @@ sub sigs {
 
 
 =head2 verify
-
+    
     die $Net::DNS::Keyset::keyset_err if $keyset->verify;
 
-Verifies if all keys in the set are self signed. Sets
-$Net::DNS::Keyset::keyset_err on failure.
+If no arguments are given:
+    
+    - Verifies if all signatures present verify the keyset.
+    - Verifies if there are DNSKEYs with the SEP flag set there is
+      at least one RRSIG made using that key
+    - Verifies that if there are no DNSKEYS with the SEP flag set there is
+      at lease one RRSIG made with one of the keys from the keyset.
+    
+
+
+If an argument is given it is should be the KEYID of one of the keys
+in the keyset and the method verifies if the the RRSIG with that made
+with that key verifies.
+
+The argument returns 0 if verification fails and sets
+$Net::DNS::Keyset::keyset_err.
+
+If verification succeeds an array is returne with the key-tags of the
+keys for which signatures verified.
+
 
 =cut
 
 
-
+    
 sub verify {
     my $self=shift;
+    my $keyid=shift;
     my $key;
     my $sig;
+    
 
-    foreach $key ($self->keys) {
-	my $key_not_verified=1;
-	foreach $sig ($self->sigs) {
-	    print "Checking: " . $key->name .":". $key->keytag . 
-		"---" .
-		    $sig->signame .":". $sig->keytag .  "\n" if $debug;
-	    if ($key->keytag == $sig->keytag &&
-		$key->name."." eq $sig->signame ){
-		print "...\n" if $debug;
+
+
+    my $one_sep_key_found=0;
+    my $one_sep_key_validated=0;
+    my $one_key_validated=0;
+    my $key_id_found=0;
+    my @tags_verified=();
+
+    
+  KEY:    foreach $key ($self->keys) {
+      $one_sep_key_found=1 if $key->is_sep;
+      foreach $sig ($self->sigs) {
+	  print "Checking: " . $key->name .":". $key->keytag . 
+	      ($key->is_sep?"(SEP)":"") .
+	      "---" .
+	      $sig->signame .":". $sig->keytag .  "\n" if $debug;
+	  
+	  if ($key->keytag == $sig->keytag &&
+	      $key->name."." eq $sig->signame ){
+	      print "...\n" if $debug;
 		my @keys=$self->keys ;
 		if (! $sig->verify( \@keys , $key)){
-		    $keyset_err= $sig->vrfyerrstr. " on key ". $key->name.			" ".$key->keytag;
-		    print "Not verified:".  $sig->vrfyerrstr ."\n"if $debug;
-		    return 0;
+		    $keyset_err="" if ($keyset_err eq "No Error");
+		    $keyset_err .= $sig->vrfyerrstr. " on key ". $key->name.			" ".$key->keytag ." ";
+
+		    # If we did supply an argument we want to fail if
+		    # the signature made with that keytag failed.
+
+		    if (defined $keyid && $sig->keytag == $keyid ){
+			$keyset_err= "Signature made with $keyid did not validate";
+			return 0;
+		    }
+		    # If we did not supply an argument we want to fail if any 
+		    # of the signatures failed
+		    return 0 if (! defined $keyid);
+		    
+		    next KEY;
 		}
-		$key_not_verified=0;
+	      push @tags_verified, $key->keytag;
+	      # past verification
+		$one_key_validated=1;
+		$one_sep_key_validated=1 if $key->is_sep;    
+		$key_id_found=1 if (defined $keyid && $key->keytag == $keyid );
 		print "verified " .$key->keytag."\n" if $debug;
 
 	    }
-	}
-	if ($key_not_verified){
-	    $keyset_err= "Key with keyid ". $key->keytag." was not selfsigned\n";
+      }
 
-	    return 0;
-	}
+  }
+    if ($one_sep_key_found && ! $one_sep_key_validated){
+	$keyset_err= "One key had the SEP flag set but non of the keys had a signature";
+	return 0;
+    }elsif(  ! $one_key_validated ){
+	$keyset_err= "None of the keys in the keyset had a signature";
+	return 0;
+    }elsif ( defined($keyid) && ! $key_id_found ){
+	$keyset_err= "No signature made with $keyid found";
+	return 0;
     }
-    return 1;
+    @tags_verified = ($keyid) if defined ($keyid);
+    return @tags_verified;
 }
 
 

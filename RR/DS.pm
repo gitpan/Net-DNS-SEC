@@ -1,6 +1,6 @@
 package Net::DNS::RR::DS;
 
-# $Id: DS.pm,v 1.12 2004/06/04 16:06:48 olaf Exp $
+# $Id: DS.pm 260 2005-03-31 11:44:39Z olaf $
 
 
 use strict;
@@ -23,7 +23,7 @@ BEGIN {
 
 
 
-$VERSION = do { my @r=(q$Revision: 1.12 $=~/\d+/g); sprintf "%d."."%03d"x$#r,@r };
+$VERSION = do { my @r=(q$Revision: 260 $=~/\d+/g); sprintf "%d."."%03d"x$#r,@r };
 my $debug=0;
 
 @ISA = qw(Net::DNS::RR);
@@ -192,7 +192,7 @@ Net::DNS::RR::DS - DNS DS resource record
 
 =head1 SYNOPSIS
 
-C<use Net::DNS::RR>;
+C<use Net::DNS::RR;>
 
 =head1 DESCRIPTION
 
@@ -271,20 +271,9 @@ the string method is called.
 
 
 
-=head1 TODO 
-
-This is an implementation of
-draft-ietf-dnsext-delegation-signer-0.7.txt.  In Net::DNS.pm the QTYPE
-assigned to this RR is 42. Note that IANA has not assigned a QTYPE
-yet.
-
-When using this code with other implementations of DS you may want to
-verify this the QTYPE value.
-
-
 =head1 COPYRIGHT
 
-Copyright (c) 2001  RIPE NCC.  Author Olaf M. Kolkman <net-dns-sec@ripe.net>
+Copyright (c) 2001-2005  RIPE NCC.  Author Olaf M. Kolkman <olaf@net-dns.org>
 
 All Rights Reserved
 
@@ -310,9 +299,11 @@ Based on, and contains, code by Copyright (c) 1997 Michael Fuhr.
 
 =head1 SEE ALSO
 
+L<http://www.net-dns.org/> 
+
 L<perl(1)>, L<Net::DNS>, L<Net::DNS::Resolver>, L<Net::DNS::Packet>,
 L<Net::DNS::Header>, L<Net::DNS::Question>, L<Net::DNS::RR>,
-draft-ietf-dnssext-delegation-signer
+RFC 4033, RFC4034, RFC4035
 
 =cut
 

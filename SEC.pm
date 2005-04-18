@@ -1,5 +1,5 @@
 #
-# $Id: SEC.pm,v 1.16 2004/06/04 16:06:48 olaf Exp $
+# $Id: SEC.pm 272 2005-04-18 10:42:40Z olaf $
 #
 
 use strict;
@@ -14,7 +14,7 @@ use strict;
 use Exporter;
 use vars qw($VERSION @EXPORT_OK @ISA);
 @ISA=qw(Exporter);
-$VERSION = '0.12';
+$VERSION = '0.12_01';
 
 @EXPORT_OK= qw (
               key_difference
@@ -28,42 +28,36 @@ Net::DNS::SEC - DNSSEC extensions to Net::DNS
 
 =head1 SYNOPSIS
 
-C<use Net::DNS>;
+C<use Net::DNS;>
 
-Net::DNS::SEC contains some code inherited by DNSSEC related RR
-classes.
+The Net::DNS::SEC module implements a few class methods used by the
+other modules in this suite and a few functions that can be exported.
+
 
 =head1 DESCRIPTION
 
-The Net::DSN::SEC suit provides the resource records that are
-needed for Secure DNS (RFC2535). DNSSEC is a protocol that is still
-under development.
+The Net::DSN::SEC suite provides the resource records that are needed
+for DNSSEC (RFC 4033, 4034 and 4035). 
 
-We have currently implemented the RFC2535 specifications with addition
-of the 'delegation-signer' draft, the "typecode roll draft" and SIG0
-support. That later is useful for dynamic updates with public keys.
+It also provides support for SIG0. That later is useful for dynamic
+updates using key-pairs.
 
 RSA and DSA crypto routines are supported.
 
-For details see Net::DNS::RR::SIG, Net::DNS::RR::KEY,
-Net::DNS::RR::NXT Net::DNS::RR::RRSIG, Net::DNS::RR::DNSKEY,
-Net::DNS::RR::NSEC and Net::DNS::RR:DS.
+For details see L<Net::DNS::RR::RRSIG>, L<Net::DNS::RR::DNSKEY>,
+L<Net::DNS::RR::NSEC> and L<Net::DNS::RR:DS>.  and see
+L<Net::DNS::RR::SIG> and L<Net::DNS::RR::KEY> for the use with SIG0.
 
-Net::DNS will load the modules for the secure RRs when they are
-available through the Net::DNS::SEC package.
+Net::DNS contains all needed hooks to load the Net::DNS::SEC
+extensions when they are available.
 
-See Net::DNS for general help.
+See L<Net::DNS> for general help.
 
-The Net::DNS::SEC module implements a few class methods used by the other
-modules in this suite and a few functions that can be exported.
+=head1 Utility function
 
-
-=head1 Utility functions
-
-Use the following construct if you want to use these functions in your code.
+Use the following construct if you want to use thos function in your code.
 
    use Net::DNS::SEC qw( key_difference );
-
 
 
 =head2 key_difference
@@ -120,7 +114,6 @@ are not exported.
     $memonic=$self->algorithm("mnemonic");
 
 
-
 The algorithm method is used to set or read the value of the algorithm
 field in Net::DNS::RR::DNSKEY and Net::DNS::RR::RRSIG.
 
@@ -129,10 +122,35 @@ when the argument equals the string "mnemonic" the method will return the
 mnemonic of the algorithm.
 
 Can also be called as a class method to do Mnemonic to Value conversion.
+
+=head1 COPYRIGHT
+
+Copyright (c) 2001-2005  RIPE NCC.  Author Olaf M. Kolkman <olaf@net-dns.org>
+
+All Rights Reserved
+
+Permission to use, copy, modify, and distribute this software and its
+documentation for any purpose and without fee is hereby granted,
+provided that the above copyright notice appear in all copies and that
+both that copyright notice and this permission notice appear in
+supporting documentation, and that the name of the author not be
+used in advertising or publicity pertaining to distribution of the
+software without specific, written prior permission.
+
+
+THE AUTHOR DISCLAIMS ALL WARRANTIES WITH REGARD TO THIS SOFTWARE, INCLUDING
+ALL IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS; IN NO EVENT SHALL
+AUTHOR BE LIABLE FOR ANY SPECIAL, INDIRECT OR CONSEQUENTIAL DAMAGES OR ANY
+DAMAGES WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN
+AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
+OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
+
+
  
-
-
 =head1 SEE ALSO
+
+L<http://www.net-dns.org/> 
+
 
 L<perl(1)>, L<Net::DNS>, L<Net::DNS::RR::KEY>, L<Net::DNS::RR::SIG>,
 L<Net::DNS::RR::NXT>, L<Net::DNS::RR::DNSKEY>, L<Net::DNS::RR::RRSIG>,
