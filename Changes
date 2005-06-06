@@ -1,7 +1,22 @@
 Revision history for Perl extension Net::DNS::SEC.
 
+0.12_02 June 6, 2005 (beta 2 release for 0.13)
+
+   Bug: new_from_hash would not correctly create the RR since internally
+	typebm is used to store the data this has been fixed so that
+        the following works
+
+        Net::DNS::RR->new(name=>$name,
+                    ttl=>$ttl,
+                    type=>"NSEC",
+                    nxtdname=>$nxtdname,
+                    typelist=>join(" ",@types)
+                   );
 
 
+   FEAT: Introduced the "use bytes" pragma to force character interpretation
+         of all the scalars. Any utf processing by perl makes the code behave
+         unpredictable.
 
 0.12_01 April 18, 2005. (beta release for version 0.13)
 
@@ -267,7 +282,7 @@ Net::DNS. The history of those is documented below.
 
 0.19-DNSSEC-0.3: 
   Solved patch problems that where due to the 
-  $Id: Changes 272 2005-04-18 10:42:40Z olaf $ in headers not 
+  $Id: Changes 359 2005-06-06 13:54:18Z olaf $ in headers not 
   being from the original distribution.
 
   Added DSA signature creation
@@ -299,4 +314,4 @@ Net::DNS. The history of those is documented below.
 
 
 ---------------------------------------------------------------------------
-$Id: Changes 272 2005-04-18 10:42:40Z olaf $
+$Id: Changes 359 2005-06-06 13:54:18Z olaf $

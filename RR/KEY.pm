@@ -1,16 +1,16 @@
 package Net::DNS::RR::KEY;
 
-# $Id: KEY.pm 260 2005-03-31 11:44:39Z olaf $
+# $Id: KEY.pm 318 2005-05-30 16:36:52Z olaf $
 
 use strict;
 use vars qw(@ISA $VERSION);
-
+use bytes;
 use Net::DNS;
 use MIME::Base64;
 use Carp;
 
 @ISA = qw(Net::DNS::RR);
-$VERSION = do { my @r=(q$Revision: 260 $=~/\d+/g); sprintf "%d."."%03d"x$#r,@r };
+$VERSION = do { my @r=(q$Revision: 318 $=~/\d+/g); sprintf "%d."."%03d"x$#r,@r };
 sub new {
     my ($class, $self, $data, $offset) = @_;
     if ($self->{"rdlength"} > 0) {

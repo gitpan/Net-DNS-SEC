@@ -5,6 +5,8 @@ use vars qw(@ISA $VERSION @EXPORT );
 use Net::DNS;
 use Carp;
 
+use bytes;
+
 use Crypt::OpenSSL::DSA;
 use Crypt::OpenSSL::RSA;
 use Crypt::OpenSSL::Bignum;
@@ -18,7 +20,7 @@ use Digest::SHA1 qw (sha1);
 
 require Exporter;
 
-$VERSION = do { my @r=(q$Revision: 260 $=~/\d+/g); sprintf "%d."."%03d"x$#r,@r };
+$VERSION = do { my @r=(q$Revision: 318 $=~/\d+/g); sprintf "%d."."%03d"x$#r,@r };
 
 sub new {
     my ($class,  $key_file) = @_;

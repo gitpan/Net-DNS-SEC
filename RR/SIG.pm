@@ -1,6 +1,6 @@
 # perldoc SIG.pm for documentation.
 # Specs: RFC 2535 section 4
-# $Id: SIG.pm 260 2005-03-31 11:44:39Z olaf $
+# $Id: SIG.pm 318 2005-05-30 16:36:52Z olaf $
 
 package Net::DNS::RR::SIG;
 
@@ -8,7 +8,7 @@ use vars qw(@ISA $VERSION @EXPORT );
 
 use Net::DNS;
 use Carp;
-
+use bytes;
 use Crypt::OpenSSL::DSA;
 use Crypt::OpenSSL::RSA;
 use Crypt::OpenSSL::Bignum;
@@ -33,7 +33,7 @@ use Digest::SHA1 qw (sha1);
 
 require Exporter;
 
-$VERSION = do { my @r=(q$Revision: 260 $=~/\d+/g); sprintf "%d."."%03d"x$#r,@r };
+$VERSION = do { my @r=(q$Revision: 318 $=~/\d+/g); sprintf "%d."."%03d"x$#r,@r };
 @ISA = qw (
 	   Exporter
 	 Net::DNS::RR

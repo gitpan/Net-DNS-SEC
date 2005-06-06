@@ -4,8 +4,8 @@ Net::DNS::SEC - DNSSEC extensions to Net::DNS
 
 IMPORTANT UPGRADE NOTE.
 
-If you upgrade from version 0,9 or 0.10 to version 0.11 or later make
-sure you read the CHANGES file. 
+Please always read the Changes file. It is accessible
+through: http://search.cpan.org/src/OLAF/Net-DNS-SEC/Changes
 
 	
 1. GENERAL INFO.
@@ -105,8 +105,13 @@ sure you read the CHANGES file.
   Note that the code on the trunk may not be functional.
 
 
+5. Staying up to date.
 
-5. Demos
+  Announcements about Net::DNS::SEC will be done on 
+  http://www.net-dns.net/blog/. An RSS feed is available.
+
+
+6. Demos
   demo/getkeyset.pl - is a small demonstration program that will get
                       fetch the keyset for a specified domain, stores
                       them and prints out the DS RRs to STD out.
@@ -119,7 +124,7 @@ sure you read the CHANGES file.
                       Miek Gieben
 
 
-6. History
+7. History
 
   The modules in this package have somewhat of a history as a set of 
   patches to the original Net::DNS package. 
@@ -128,27 +133,33 @@ sure you read the CHANGES file.
   for CPAN.  See the Changes file for more information.
 
 
-7. Acknowledgements
+8. Acknowledgements
 
-  Thanks to the numerous folk that took an interest during development.
+  Thanks to the numerous folk that took an interest during
+  development.  People that contributed to bug fixes should be
+  acknowledged in the Changes file. If I forgot to mention you there
+  it is not out of bad intention.
+
   Thanks to Chris Reinardt for putting the hooks in Net::DNS and suggesting
   some improvements to the package.
   Thanks Ian Robertson and T.J. Mather for their support with the
-  Crypt::OpenSSL::[RSA|DSA] modules
+  Crypt::OpenSSL::[RSA|DSA] modules.
+
+  
 
 
 
-8. Author information
+9. Author information
 
   Olaf M. Kolkman, RIPE NCC.
   support: olaf@net-dns.org
 
 
-9. COPYRIGHT
+10. COPYRIGHT
 
 Copyright Notice and Disclaimer
 
-Copyright (c) 2001, 2002, 2003, 2004 RIPE NCC.  Author Olaf M. Kolkman
+Copyright (c) 2001-2005 RIPE NCC.  Author Olaf M. Kolkman
 <net-dns-sec@ripe.net>
 
 All Rights Reserved
@@ -176,4 +187,4 @@ Based on, and contains, code by Copyright (c) 1997-2001 Michael Fuhr.
 
 
 ------------------------------------------------------------------------------
-$Id: README 260 2005-03-31 11:44:39Z olaf $
+$Id: README 359 2005-06-06 13:54:18Z olaf $

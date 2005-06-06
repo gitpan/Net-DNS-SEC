@@ -1,5 +1,5 @@
 #
-# $Id: SEC.pm 272 2005-04-18 10:42:40Z olaf $
+# $Id: SEC.pm 359 2005-06-06 13:54:18Z olaf $
 #
 
 use strict;
@@ -8,13 +8,13 @@ use strict;
 
 package Net::DNS::SEC;
 use Net::DNS;
-
+use bytes;
 use Carp;
 use strict;
 use Exporter;
 use vars qw($VERSION @EXPORT_OK @ISA);
 @ISA=qw(Exporter);
-$VERSION = '0.12_01';
+$VERSION = '0.12_02';
 
 @EXPORT_OK= qw (
               key_difference
@@ -153,8 +153,10 @@ L<http://www.net-dns.org/>
 
 
 L<perl(1)>, L<Net::DNS>, L<Net::DNS::RR::KEY>, L<Net::DNS::RR::SIG>,
-L<Net::DNS::RR::NXT>, L<Net::DNS::RR::DNSKEY>, L<Net::DNS::RR::RRSIG>,
+L<Net::DNS::RR::DNSKEY>, L<Net::DNS::RR::RRSIG>,
 L<Net::DNS::RR::NSEC>, L<Net::DNS::RR::DS>, L<Net::DNS::SEC::Private>.
+
+RFC4033, 4034 and 4035.
 
 =cut
 

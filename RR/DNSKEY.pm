@@ -1,10 +1,10 @@
 package Net::DNS::RR::DNSKEY;
 
-# $Id: DNSKEY.pm 266 2005-04-11 14:59:06Z olaf $
+# $Id: DNSKEY.pm 318 2005-05-30 16:36:52Z olaf $
 
 use strict;
 use vars qw(@ISA $VERSION);
-
+use bytes;
 
 use Net::DNS::SEC;
 use MIME::Base64;
@@ -13,7 +13,7 @@ use Carp;
 @ISA = qw(Net::DNS::RR Net::DNS::SEC);
 
 
-$VERSION = do { my @r=(q$Revision: 266 $=~/\d+/g); sprintf "%d."."%03d"x$#r,@r };
+$VERSION = do { my @r=(q$Revision: 318 $=~/\d+/g); sprintf "%d."."%03d"x$#r,@r };
 
 sub new {
     my ($class, $self, $data, $offset) = @_;

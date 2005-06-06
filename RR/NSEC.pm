@@ -1,11 +1,11 @@
 package Net::DNS::RR::NSEC;
 
-# $Id: NSEC.pm 260 2005-03-31 11:44:39Z olaf $
+# $Id: NSEC.pm 318 2005-05-30 16:36:52Z olaf $
 
 use strict;
 use vars qw(@ISA $VERSION);
 use Carp;
-
+use bytes;
 use Net::DNS;
 use Net::DNS::Packet;
 use Data::Dumper;
@@ -13,7 +13,7 @@ use Data::Dumper;
 use Carp;
 
 @ISA = qw(Net::DNS::RR);
-$VERSION = do { my @r=(q$Revision: 260 $=~/\d+/g); sprintf "%d."."%03d"x$#r,@r };
+$VERSION = do { my @r=(q$Revision: 318 $=~/\d+/g); sprintf "%d."."%03d"x$#r,@r };
 
 sub new {
     my ($class, $self, $data, $offset) = @_;
@@ -30,7 +30,7 @@ sub new {
 
 	$self->{"typebm"}=$typebm;
 	$self->{"typelist"} = join " " 
-	    ,  _typebm2typestr($typebm);
+	    ,  _typebm2typearray($typebm);
     }
     
     return bless $self, $class;
@@ -44,11 +44,11 @@ sub new_from_string {
 	$string =~ s/\n//mg;
 	my ($nxtdname,$nxtstr) = 
 	    $string =~ /^\s*(\S+)\s+(.*)/;
-	my @nxttypes = split /\s+/ , $nxtstr;  # everything after last match...
+	my @nxttypes = split ' ' , $nxtstr;  # everything after last match...
 	
 	$self->{"nxtdname"}= lc($nxtdname);
 	$self->{"typelist"}= join " " , sort @nxttypes ;
-	$self->{"typebm"}=_typestr2typebm(@nxttypes);
+	$self->{"typebm"}=_typearray2typebm(@nxttypes);
 	
     }
     return bless $self, $class;
@@ -73,9 +73,10 @@ sub rdatastr {
 	my $self = shift;
 	my $rdatastr;
 
+	
 	if (exists $self->{"nxtdname"}) {
 	    $rdatastr  = $self->{nxtdname};
-	    $rdatastr .= "  "  . "$self->{typelist}";
+	    $rdatastr .= "  "  . $self->typelist();
 	    }
 	else {
 	    $rdatastr = "; no data";
@@ -86,11 +87,13 @@ sub rdatastr {
 
 sub rr_rdata {
     my ($self, $packet, $offset) = @_;
+
+
     my $rdata = "" ;
     if (exists $self->{"nxtdname"}) {
 	# Compression used here... 
 	$rdata = $packet->dn_comp($self->{"nxtdname"},$offset);
-	$rdata .= $self->{"typebm"};
+	$rdata .= $self->typebm();
     }
     
     return $rdata;
@@ -99,18 +102,46 @@ sub rr_rdata {
 
 
 
+sub typebm {
+    my ($self, $new_val) = @_;
+				
+    if (defined $new_val) {
+	$self->{"typebm"} = $new_val;
+	$self->{"typelist"}= join (" ",  _typebm2typearray($self->{"typebm"}));
+    }
+
+    $self->{"typebm"}= _typearray2typebm(split(' ',$self->{"typelist"})) unless $self->{"typebm"};
+    return $self->{"typebm"};
+}
+
+
+sub typelist {
+    my ($self, $new_val) = @_;
+				
+    if (defined $new_val) {
+	$self->{"typelist"} = $new_val;
+	$self->{"typebm"}= _typearray2typebm(split (' ',($self->{"typelist"})));
+    }
+
+    $self->{"typelist"}=  join (" ", 
+ _typebm2typearray($self->{"typebm"})) unless $self->{"typelist"};
+
+    return $self->{"typelist"};
+}
+	   
+
+
 sub _canonicalRdata {
     # rdata contains a compressed domainname... we should not have that.
 	my ($self) = @_;
 	my $rdata;
-
 	$rdata=$self->_name2wire($self->{"nxtdname"});
 	$rdata .= $self->{"typebm"};	
 	return $rdata;
 }
 
 
-sub _typestr2typebm {
+sub _typearray2typebm {
 
 
     # typebm= (WindowBlockNumber |BitmapLength|Bitmap)+
@@ -128,7 +159,7 @@ sub _typestr2typebm {
     
     my $bm;
   TYPE:   for(my $i=0;$i < @typelist; $i++){
-	use integer;
+ 	use integer;
 	my $typenumber=Net::DNS::typesbyname(uc($typelist[$i]));
 	next TYPE if exists ($Net::DSN::qtypesbyname{uc($typelist[$i])});
 	next TYPE if  exists ($Net::DSN::metatypesbyname{uc($typelist[$i])});
@@ -160,7 +191,7 @@ sub _typestr2typebm {
 
 }
 
-sub _typebm2typestr {
+sub _typebm2typearray {
 
 
     # This implements draft-ietfdnsext-nsec-rdata-01.
@@ -184,6 +215,9 @@ sub _typebm2typestr {
 
     return sort @typelist;
 }
+
+
+
 
 
 1;
