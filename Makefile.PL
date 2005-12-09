@@ -1,5 +1,5 @@
 #
-# $Id: Makefile.PL 260 2005-03-31 11:44:39Z olaf $
+# $Id: Makefile.PL 527 2005-12-09 10:51:06Z olaf $
 #
 
 
@@ -29,9 +29,8 @@ WriteMakefile(
 	Test::More                => 0.47,
 	Crypt::OpenSSL::RSA       => 0.19,
 	Crypt::OpenSSL::Bignum    => 0.03,
-
         Crypt::OpenSSL::DSA       => 0.10,
-	Digest::SHA1              => 2.04,
+	Digest::SHA               => 5.23,
 	File::Basename            => 0.0,
 	MIME::Base64              => 0.0,
 	Math::BigInt              => 0.0,

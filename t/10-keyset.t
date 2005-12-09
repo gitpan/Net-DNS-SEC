@@ -1,6 +1,6 @@
 #!/usr/bin/perl  -sw 
 # Test script for keysetfunctionalty
-# $Id: 10-keyset.t 270 2005-04-18 10:18:49Z olaf $
+# $Id: 10-keyset.t 526 2005-12-08 15:19:04Z olaf $
 # 
 # Called in a fashion simmilar to:
 # /usr/bin/perl -Iblib/arch -Iblib/lib -I/usr/lib/perl5/5.6.1/i386-freebsd \
@@ -21,30 +21,25 @@ BEGIN {use_ok('Net::DNS::Keyset'); }                                 # test 1
 #
 # RSA keypair 
 #
-my $keypathrsa="Ktest.tld.+001+42495.private";
+my $keypathrsa="Ktest.tld.+005+15791.private";
 my $privrsakey= << 'ENDRSA' ;
 Private-key-format: v1.2
-Algorithm: 1 (RSA)
-Modulus: ovtC5gQH1fuAnQqMvNctGfX3o2F82164fO7toGiWddiLTuWxrXoHwcpIFLO+hJR9Xxr1gaWh6od66CJnOzBpIQjIe/htpRO2nmLFF5+cB3QRRMGQWmq3bPCXDBHE/Jx8ihzWZavXwIUN+oLqhnWbkT6sYGH8M+9VSW9rfeil/+c=
+Algorithm: 5 (RSASHA1)
+Modulus: tYGOVBZbUOH9GR51zxUGX3EEDaVyua9EZNOayy5mNF3gNZbvHpO1tVR7AY5IHvVlO3n3ad1OGpsVC0TEI+xdAcjit9fGoGqdrCFmDdd41dUS8ReRj8i6vradooRMiPMdD/HPUc4FZ9YseF3KKvryplqg09YxxOKAWPw8yPIMric=
 PublicExponent: Aw==
-PrivateExponent: bKeB7q1ajqerE1xd0zoeEU6lF5ZTPOnQU0nzwEW5o+WyNJkhHlFagTGFYyJ/Aw2o6hH5ARkWnFpR8BbvfMrwv6AeCrahtJgilCpCYxwusOOikbkGR/sXP5ObscRmEuhfzVYBV62yMc34MyspHzXHNZAL+SgRswopy6MgWdAII2s=
-Prime1: 0GNRLAYLvgaIZ+8o/fVST6WEhQd4bDIEHnBtIxHj9NIrHL/nIerA80sth+Pwfed2zp109U+zvcizUSfJDbHRsQ==
-Prime2: yDgaunUKcXw3u3JZ92Crzvflpv92BeKJdL0USBn8Sxqq/xR7BWG03M6AOkjnJwlKF/z1sJHzok3kqZMuIuf5Fw==
-Exponent1: iuzgyAQH1ARa7/TF/qOMNRkDA1pQSCFYFErzbLaX+IwcvdVEwUcrTNzJBUKgU++kib5N+N/NKTB3i2/bXnaLyw==
-Exponent2: hXq8fE4G9lLP0kw7+kByifqZGf+kA+xboyi4MBFS3Lxx/2L8rkEjPd8AJttExLDcD/35IGFNFt6YcQzJbJqmDw==
-Coefficient: gAeUUI6YOtdNAh3kS7pOzYfn0ZrUCV8bGpZoaXANk2RL2zUiaSSa4wudhpHwMJt+psNkkiQyf4v600uHbxro4Q==
+PrivateExponent: eQEJjWQ84Jaou2mj32NZlPYCs8Oh0R+C7eJnMh7uzZPqzmSfabfOeOL8q7QwFKOY0lFPm+jevGdjXNiCwp2TVWZrFINEMwUpxPJCvQQLh0k9Ah3NN2ELPBSlUjkRa10KaRSVSdDaYUM9X1/ZT/9RQagi4ckuy0x6UcRmoSng/Ms=
+Prime1: 3SNqKvY2geGDxgpqUKy2gGKq2LBRZ0CruBsVQXtoBH2dwq1bUScC9HxrTYaGxn2BELZsYRMeGVqZ1WqzsLXeTw==
+Prime2: 0h6u5+odYP2A7/eIALrUZtTDEi1rT+k434qR7Tb/4w/UkEIHw5bS/NP+AH2sNXtCzbYUx1h11m5EgDgjgoVUqQ==
+Exponent1: k2zxcfl5q+utLrGcNch5quxx5crg74Byery41lJFWFO+gcjni29XTahHiQRZ2akAtc7y62IUEOcROPHNIHk+3w==
+Exponent2: jBR0mpwTlf5V9U+wAHyNmeMstsjyNUYl6lxhSM9VQgqNtYFagmSMqI1UAFPII6eB3nljL5BOjvQtqtAXrFjjGw==
+Coefficient: YJYWzNpbdj/11mE4kUwaiH9GQbY+uA28tv4aVAwAEcKPaU1QQ2k8Jlm+VXxh9v02QCFJYln3416972oeCx9eyw==
 ENDRSA
 
-my $rsakeyrr=new Net::DNS::RR ("test.tld. IN DNSKEY 256 3 1 
-AQOi+0LmBAfV+4CdCoy81y0Z9fejYXzbXrh87u2gaJZ12ItO5bGtegfB 
-ykgUs76ElH1fGvWBpaHqh3roImc7MGkhCMh7+G2lE7aeYsUXn5wHdBFE 
-wZBaards8JcMEcT8nHyKHNZlq9fAhQ36guqGdZuRPqxgYfwz71VJb2t9 
-6KX/5w==");
+my $rsakeyrr=new Net::DNS::RR ("test.tld. IN DNSKEY 256 3 5 AQO1gY5UFltQ4f0ZHnXPFQZfcQQNpXK5r0Rk05rLLmY0XeA1lu8ek7W1 VHsBjkge9WU7efdp3U4amxULRMQj7F0ByOK318agap2sIWYN13jV1RLx F5GPyLq+tp2ihEyI8x0P8c9RzgVn1ix4Xcoq+vKmWqDT1jHE4oBY/DzI 8gyuJw==
+");
 
 
 ok( $rsakeyrr, 'RSA public key created');     # test 5
-
-
 
 my $keypathdsa="Ktest.tld.+003+09734.private";
 my $privdsakey= << 'ENDDSA' ;
@@ -89,7 +84,6 @@ open (KEYSET,">$keysetpath") or die "Could not open $keysetpath";
 
 my $datarrset= [ $rsakeyrr, $dsakeyrr ];
 
-
 my $sigrsa= create Net::DNS::RR::RRSIG($datarrset,$keypathrsa, 
 				    (
 				     ttl => 360, 
@@ -113,8 +107,8 @@ close(KEYSET);
 
 my $keyset;
 $keyset=Net::DNS::Keyset->new($keysetpath);
-use Data::Dumper;
 is (ref($keyset), "Net::DNS::Keyset", "Keyeset object read");
+undef $keyset;
 
 $keyset=Net::DNS::Keyset->new($datarrset);
 is (ref($keyset), "Net::DNS::Keyset", "Keyeset object created");
@@ -122,23 +116,22 @@ is (ref($keyset), "Net::DNS::Keyset", "Keyeset object created");
 my @ds=$keyset->extract_ds;
 
 if ($Net::DNS::RR::DS::_Babble){
-    is ($ds[0]->string, "test.tld.	0	IN	DS	42495  1  1  ".
-	"0ffbeba0831b10b8b83440dab81a2148576da9f6 ; xefoz-rupop-babuc-rugor-mavef-gybot-puvoc-pumig-mahek-tepaz-kixox",
+    is (lc($ds[0]->string),lc("test.tld.	0	IN	DS	15791  5  1  C355F0F3F30C69BF2F7EA253ED82FBC280C2496B ; xuboh-hasiz-fosab-super-zyrol-vimuh-firom-dyvos-debis-daduk-rexix"),
 	"DS 1 generated from keyset");                             # test 8-with babble
 
 
-    is ($ds[1]->string, "test.tld.	0	IN	DS	9734  3  1  ".
-	"0e045bfe67dec6e54d0f1338877a53841902ab4a ; xefib-gakiz-vynat-vacov-hyfeb-zugif-mecil-pegam-gykib-dapyg-pexox",
+    is (lc($ds[1]->string),lc("test.tld.	0	IN	DS	9734  3  1  ".
+	"0e045bfe67dec6e54d0f1338877a53841902ab4a ; xefib-gakiz-vynat-vacov-hyfeb-zugif-mecil-pegam-gykib-dapyg-pexox"),
 	"DS 1 generated from keyset");                             # test 9-with babble
 }else{
 
-    is ($ds[0]->string, "test.tld.	0	IN	DS	42495  1  1  ".
-	"0ffbeba0831b10b8b83440dab81a2148576da9f6",
+    is (lc($ds[0]->string), lc("test.tld.	0	IN	DS	15791  1  1  ".
+	"0ffbeba0831b10b8b83440dab81a2148576da9f6"),
 	"DS 1 generated from keyset");                             # test 8-without babble
 
 
-    is ($ds[1]->string, "test.tld.	0	IN	DS	9734  3  1  ".
-	"0e045bfe67dec6e54d0f1338877a53841902ab4a",
+    is (lc($ds[1]->string), lc("test.tld.	0	IN	DS	9734  3  1  ".
+	"0e045bfe67dec6e54d0f1338877a53841902ab4a"),
 	"DS 1 generated from keyset");                             # test 9-without babble
 }
 
@@ -166,7 +159,7 @@ $keyset=Net::DNS::Keyset->new($keysetpath);
 
 
 ok ( ! $keyset , "Corrupted keyset not loaded");   # test 10
-is( $Net::DNS::Keyset::keyset_err , "RSA Verification failed on key test.tld 42495 "
+is( $Net::DNS::Keyset::keyset_err , "RSA Verification failed on key test.tld 15791 "
      , "Correct Error message" );                   # test 11
 
 
@@ -374,7 +367,7 @@ close(KEYSET);
 
 $keyset=Net::DNS::Keyset->new($keysetpath);
 
-is (join(" ",sort($keyset->verify)),"42495","Verify method returned the  keytags");     # test 13
+is (join(" ",sort($keyset->verify)),"15791","Verify method returned the  keytags");     # test 13
 
 ok (! $keyset->verify(9734),"Verification agains keytag 9734 failed"); # Test 19
 

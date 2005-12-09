@@ -1,6 +1,6 @@
 #!/usr/bin/perl  -sw 
 # Test script for dnssec functionalty
-# $Id: 11-sep.t 266 2005-04-11 14:59:06Z olaf $
+# $Id: 11-sep.t 472 2005-07-23 19:52:38Z olaf $
 # 
 # Called in a fashion simmilar to:
 # /usr/bin/perl -Iblib/arch -Iblib/lib -I/usr/lib/perl5/5.6.1/i386-freebsd \
@@ -14,7 +14,7 @@ use strict;
 BEGIN {use_ok('Net::DNS'); }                                 # test 1
 
 
-ok (my $key=Net::DNS::RR->new("test.foo       3600         IN DNSKEY  256 3 RSA/SHA1  (
+ok (my $key=Net::DNS::RR->new("test.foo       3600         IN DNSKEY  256 3 RSASHA1  (
                               AQPDgM2XU2rluutXFw6IJjDRSGHehcc1ZtMoG5RR/
                               jXJD1bZNFgqsKlJkVfj9wzrzAnBg7ZQSHwxYIGDm
                               ocdBtW3 )"),"Key created");

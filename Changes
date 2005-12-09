@@ -1,5 +1,58 @@
 Revision history for Perl extension Net::DNS::SEC.
 
+
+0.13 December 9, 2005 
+
+   FEAT: rt.cpan.org 14588
+
+        Added support for passing (a reference to) an array of keys to the
+	RRSIG verify function.
+
+   FIX/FEAT:
+	The Net::DNS::SEC::Private function will for RSA based keys verify if
+	the keytag in the filename is actually correct.
+	Since at parsing the value of the DNSKEY RR flags is not known we
+	test against the currently defined flag values 256 and 257.
+
+	If we cannot find a keytag match a warning is printed and Private
+	key generation fails
+
+        This inconsistency was spotted by Jakob Shlyter.
+	
+
+   FEAT: Added support for SHA256 to the DS RR. Assigned the expected 
+        digest type2 for SHA256 type hashes.
+	
+        Note that this makes the Net::DNS::SEC depend on Digest::SHA instead
+        of Digest::SHA1.
+
+        The default digest type is still set to 1.
+
+        NB. The code makes assumptions about the IANA assignment of the 
+            digest type. The assignment may change. Do not use SHA256 in 
+	    production zones!!
+
+   FIX: rt.cpan.org #15662
+
+	Roy Arends noticed and patched the label counting did not ignore
+        an initial asterisk label.
+
+   FIX: Wes Hardaker noticed the default TTL values for created signatures to
+        be different from the TTLs from the data that is being signed.
+
+   FIX: Wes Hardaker reported there was a problem with validating
+        RRsets that had ownernames with capitals.
+	The fix depends on a fix in Net::DNS::RR that is available in
+	version 0.53_03 or later of the Net::DNS distribution.
+
+
+  FEAT: Propper dealing with mnemonics for algorithm and digest type
+	added to DS
+
+  FIX/FEAT: Mnemonics were written as RSA/MD5 and RSA/SHA1. This has been
+        corrected tp RSASHA1 and RSAMD5, as in the IANA registry.
+	
+
 0.12_02 June 6, 2005 (beta 2 release for 0.13)
 
    Bug: new_from_hash would not correctly create the RR since internally
@@ -282,7 +335,7 @@ Net::DNS. The history of those is documented below.
 
 0.19-DNSSEC-0.3: 
   Solved patch problems that where due to the 
-  $Id: Changes 359 2005-06-06 13:54:18Z olaf $ in headers not 
+  $Id: Changes 527 2005-12-09 10:51:06Z olaf $ in headers not 
   being from the original distribution.
 
   Added DSA signature creation
@@ -314,4 +367,4 @@ Net::DNS. The history of those is documented below.
 
 
 ---------------------------------------------------------------------------
-$Id: Changes 359 2005-06-06 13:54:18Z olaf $
+$Id: Changes 527 2005-12-09 10:51:06Z olaf $

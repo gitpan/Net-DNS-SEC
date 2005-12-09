@@ -1,6 +1,6 @@
 # perldoc SIG.pm for documentation.
 # Specs: RFC 2535 section 4
-# $Id: SIG.pm 318 2005-05-30 16:36:52Z olaf $
+# $Id: SIG.pm 527 2005-12-09 10:51:06Z olaf $
 
 package Net::DNS::RR::SIG;
 
@@ -18,7 +18,7 @@ use File::Basename;
 use MIME::Base64;
 use Math::BigInt;
 use Time::Local;
-use Digest::SHA1 qw (sha1);
+use Digest::SHA qw (sha1);
 
 
 
@@ -33,7 +33,7 @@ use Digest::SHA1 qw (sha1);
 
 require Exporter;
 
-$VERSION = do { my @r=(q$Revision: 318 $=~/\d+/g); sprintf "%d."."%03d"x$#r,@r };
+$VERSION = do { my @r=(q$Revision: 527 $=~/\d+/g); sprintf "%d."."%03d"x$#r,@r };
 @ISA = qw (
 	   Exporter
 	 Net::DNS::RR
@@ -425,7 +425,7 @@ sub create {
 
     if (!$sigzero)    {   
 	my  $labels=$datarrset->[0]->name;
-	$labels =~ s/\.^//;  # remove trailing dot.
+	$labels =~ s/\.$//;  # remove trailing dot.
 	my @labels= split /\./ , $labels;
 	$self->{"labels"}= scalar(@labels);
 	

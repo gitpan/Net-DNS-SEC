@@ -1,6 +1,6 @@
 package Net::DNS::RR::DS;
 
-# $Id: DS.pm 260 2005-03-31 11:44:39Z olaf $
+# $Id: DS.pm 518 2005-11-23 13:23:53Z olaf $
 
 
 use strict;
@@ -9,8 +9,7 @@ use vars qw(@ISA $VERSION $_Babble);
 use Net::DNS;
 use Carp;
 
-use Digest::SHA1  qw(sha1 sha1_hex );
-
+use Digest::SHA  qw(sha1 sha1_hex sha256 sha256_hex );
 
 BEGIN {
 
@@ -23,7 +22,7 @@ BEGIN {
 
 
 
-$VERSION = do { my @r=(q$Revision: 260 $=~/\d+/g); sprintf "%d."."%03d"x$#r,@r };
+$VERSION = do { my @r=(q$Revision: 518 $=~/\d+/g); sprintf "%d."."%03d"x$#r,@r };
 my $debug=0;
 
 @ISA = qw(Net::DNS::RR);
@@ -35,13 +34,24 @@ sub new {
 	my $offsettoalg=$offset+2;
 	my $offsettodigtype=$offset+3;
 	my $offsettodigest=$offset+4;
-	
+	my $digestlength;
+
+
 	$self->{"keytag"}=unpack("n",substr($$data,$offset,2));
 	$self->{"algorithm"}=unpack("C",substr($$data,$offsettoalg,1));
 	$self->{"digtype"}=unpack("C",substr($$data,$offsettodigtype,1));
+	if ($self->{"digtype"}==1){
+	    $digestlength=20; # SHA1 digest 20 bytes long
+	}elsif($self->{"digtype"}==2){
+	    $digestlength=32; # SHA256 digest 32 bytes long
+	}else{
+	    $digestlength=0;
+	}
 	
 	$self->{"digestbin"}= substr($$data,$offsettodigest,
-				     20); # SHA1 digest 20 bytes long
+				     $digestlength); 
+
+
 	$self->{"digest"}= unpack("H*",$self->{"digestbin"});
 	
 	
@@ -64,8 +74,10 @@ sub new_from_string {
 		# We allow spaces in the digest.
 		$digest=~s/\s//g;
 		$self->{"keytag"}=$keytag;
-		$self->{"algorithm"}=$algorithm;
-		$self->{"digtype"}=$digtype;
+		$self->{"algorithm"}=Net::DNS::SEC->algorithm($algorithm)|| 
+		    return undef;		
+		$self->{"digtype"}=Net::DNS::SEC->digtype($digtype) || 
+		    return undef;
 		$self->{"digest"}=$digest;
 		$self->{"digestbin"}=pack("H*",$digest);
 	    }
@@ -106,7 +118,10 @@ sub rr_rdata {
 
 sub verify {
     my ($self, $key) = @_;
-    my $tstds=create Net::DNS::RR::DS($key);
+    my $tstds=create Net::DNS::RR::DS($key,(
+					  digtype => $self->digtype,
+				      )
+	);
     if ($tstds->digestbin eq $self->digestbin){
 	return 1;
     }else{
@@ -131,9 +146,14 @@ sub create {
     my ($class, $keyrr ,%args) = @_;
 
     my $self;
+
+    # Default SHA1...
     $self->{"digtype"}=1;
-
-
+   
+    if ($args{"digtype"}){
+	$self->{"digtype"}=2 if Net::DNS::SEC->digtype($args{"digtype"})==2;
+    }
+    
     $self->{"name"}=$keyrr->name;  # Label is per definition the same as 
                                    # keylabll
     $self->{"type"}="DS";
@@ -175,8 +195,16 @@ sub create {
     $self->{"algorithm"}=$keyrr->algorithm;
 
     my $data = $keyrr->_name2wire ($keyrr->name) . $keyrr->_canonicalRdata;
-    $self->{"digestbin"}=  sha1($data);
-    $self->{"digest"}= sha1_hex($data);
+
+    if ($self->{"digtype"}==1){
+	$self->{"digestbin"}=  sha1($data);
+	$self->{"digest"}= uc(sha1_hex($data));
+    }elsif($self->{"digtype"}==2){
+	$self->{"digestbin"}=  sha256($data);
+	$self->{"digest"}= uc(sha256_hex($data));
+    }else{
+	return undef;
+    }
 
     return bless $self, $class;
 
@@ -208,9 +236,13 @@ In addition to the regular methods
 This constructor takes a key object as argument and will return a DS
 RR object.
 
-$dsrr=create Net::DNS::RR::DS($keyrr);
+$dsrr=create Net::DNS::RR::DS($keyrr, (
+                  digtype => "SHA256"
+);
 $keyrr->print;
 $dsrr->print;
+
+The digest type defaults to SHA1.
 
 =head2 verify
 

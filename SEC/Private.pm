@@ -15,12 +15,11 @@ use File::Basename;
 use MIME::Base64;
 use Math::BigInt;
 use Time::Local;
-use Digest::SHA1 qw (sha1);
 
 
 require Exporter;
 
-$VERSION = do { my @r=(q$Revision: 318 $=~/\d+/g); sprintf "%d."."%03d"x$#r,@r };
+$VERSION = do { my @r=(q$Revision: 527 $=~/\d+/g); sprintf "%d."."%03d"x$#r,@r };
 
 sub new {
     my ($class,  $key_file) = @_;
@@ -104,6 +103,20 @@ sub new {
 	      $Exponent2,
 	      $Coefficient,
 	);
+
+      # Trying to determine the keytag
+
+
+      my $keytag_from_data1=$self->dump_rsa_keytag(256,1);
+      my $keytag_from_data2=$self->dump_rsa_keytag(257,1);
+      if (($self->{"keytag"} != $keytag_from_data1) &&
+	  ($self->{"keytag"} != $keytag_from_data2)){
+	  warn "NB: filename seems to have the wrong keytag.\n".
+	      "Depending on DNSKEY RR flags set for this key the keytag should be\n".
+	      $keytag_from_data1. " or ".  $keytag_from_data2. " instead of ".$self->{"keytag"}."\n";
+	  return(0);
+      }
+      
     }elsif ($self->{"algorithm"} == 3){  #DSA
 	my $private_dsa = Crypt::OpenSSL::DSA->new();
 	$private_dsa->set_p($prime_p);
@@ -113,7 +126,6 @@ sub new {
 	$private_dsa->set_pub_key($public_val_y);
 	$self->{"privatekey"}=$private_dsa;
     }
-    
     return $self;
 
 }
@@ -239,7 +251,6 @@ sub  dump_rsa_pub {
 
 sub dump_rsa_keytag{
     my $self=shift;
-    
     my $flags;
     if (defined $self->{"flags"}){
 	$flags=$self->{"flags"}
@@ -247,7 +258,12 @@ sub dump_rsa_keytag{
 	$flags=shift;
     }
     return()  unless defined $flags;
-    $self->{"flags"}=$flags; # So this will set flag if empty before
+
+    # This will set flag if empty before, note the undocumented
+    # feature that a non-zero second argument to this function will
+    # _not_ set the flag.
+    $self->{"flags"}=$flags unless shift; 
+
     my $key=$self->dump_rsa_pub;
     return ()  unless $key;
     my $tmprr=Net::DNS::RR->new("tmp  IN DNSKEY $flags 3 5 $key");
@@ -393,7 +409,6 @@ Returns an empty string on failure.
 
 This function will calculate the keytag assuming that key is a used
 with the RSASHA1 signing algorithm and with the DNSKEY flags as input.
-
 
 The flags field may be needed in case it was not specified when the
 key was created. If the object allready knows it's flags vallue the

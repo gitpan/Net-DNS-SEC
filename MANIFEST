@@ -16,7 +16,9 @@ RR/RRSIG.pm
 RR/SIG.pm
 SEC.pm
 SEC/Private.pm
+t/00-load.t
 t/00-pod.t
+t/01-parse.t
 t/07-sec.t
 t/09-dnssec.t
 t/10-keyset.t
@@ -25,6 +27,7 @@ t/11-sep.t
 t/11-sigstress.t
 t/12-nsec++.t
 t/13-utilities.t
+t/14-misc.t
 t/getpacket.pl
 t/Kexample.com.+005+34247.key
 t/Kexample.com.+005+34247.private

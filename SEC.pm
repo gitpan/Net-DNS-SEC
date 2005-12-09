@@ -1,5 +1,5 @@
 #
-# $Id: SEC.pm 359 2005-06-06 13:54:18Z olaf $
+# $Id: SEC.pm 527 2005-12-09 10:51:06Z olaf $
 #
 
 use strict;
@@ -14,7 +14,7 @@ use strict;
 use Exporter;
 use vars qw($VERSION @EXPORT_OK @ISA);
 @ISA=qw(Exporter);
-$VERSION = '0.12_02';
+$VERSION = '0.13';
 
 @EXPORT_OK= qw (
               key_difference
@@ -106,8 +106,8 @@ are not exported.
 
 =head2 algorithm
 
-    $value=Net::DNS::SEC->algorithm("RSA/SHA1");
-    $value=$self->algorithm("RSA/SHA1");
+    $value=Net::DNS::SEC->algorithm("RSASHA1");
+    $value=$self->algorithm("RSASHA1");
     $value=$self->algorithm(5);
 
     $algorithm=$self->algorithm();
@@ -122,6 +122,8 @@ when the argument equals the string "mnemonic" the method will return the
 mnemonic of the algorithm.
 
 Can also be called as a class method to do Mnemonic to Value conversion.
+
+
 
 =head1 COPYRIGHT
 
@@ -163,20 +165,26 @@ RFC4033, 4034 and 4035.
 
 
 
-sub algorithm {
+
+
+ sub algorithm {
     my $self=shift;
     my $argument=shift;
-    # classmethod is true if called as class method.
+
+   # classmethod is true if called as class method.
     my $classmethod=0;
     $classmethod=1 unless  ref ($self);
-
+ 
     my %algbyname = (
-		  "RSA/MD5"		=> 1,		
-#		  "DH"                  => 2,           # Not implemented
-		  "DSA"                 => 3,
-#		  "ECC"                 => 4,           # Not implemented
-		  "RSA/SHA1"            => 5,
-		  );
+		     "RSAMD5"		   => 1,		
+		     "DH"                  => 2,           # Not implemented
+		     "DSA"                 => 3,
+		     "ECC"                 => 4,           # Not implemented
+		     "RSASHA1"             => 5,
+		     "INDIRECT"            => 252,         # Not implemented
+		     "PRIVATEDNS"          => 253,          # Not implemented
+		     "PRIVATEOID"          => 254,          # Not implemented
+		     );      
     my %algbyval = reverse %algbyname;
 
     # If the argument is undefined...
@@ -188,10 +196,9 @@ sub algorithm {
 
     # Argument has some value...
     $argument =~ s/\s//g; # Remove strings to be kind
-
+    $argument =~ s!RSA/!RSA!;  # Be kind for those who use RSA/SHA1
     if ($argument =~ /^\d+$/ ){    #Numeric argument.
-	carp "$argument does not map to a valid algorithm" unless 
-	    exists $algbyval{$argument};
+
 	if ($classmethod){
 	    return $argument ;
 	}else{
@@ -199,16 +206,14 @@ sub algorithm {
 	}
     }else{  # argument is not numeric
 	if ($classmethod){
-	    carp "$argument does not map to a valid algorithm" unless
-		exists $algbyname{uc($argument)};
+	    # This will return undefined if the argument does not exist
 	    return $algbyname{uc($argument)};
 	    
 	}else{ # Not a class method..
 	    if (lc($argument) eq "mnemonic"){
 		return $algbyval{$self->{"algorithm"}};
 	    }else{
-		carp "$argument does not map to a valid algorithm" unless
-		    exists $algbyname{uc($argument)};
+		# This will return undefined if the argument does not exist
 		return $self->{"algorithm"}=$algbyname{uc($argument)};
 	    }	    
 	}
@@ -221,6 +226,66 @@ sub algorithm {
 }
 
 
+
+
+
+
+
+
+
+sub digtype {
+    my $self=shift;
+    my $argument=shift;
+    # classmethod is true if called as class method.
+    my $classmethod=0;
+    $classmethod=1 unless  ref ($self);
+
+    my %digestbyname = (
+			"SHA1"		   => 1,		
+			"SHA256"	   => 2,		
+			);      
+    my %digestbyval = reverse %digestbyname;
+    
+    # If the argument is undefined...
+    
+    if (!defined $argument){
+	return if $classmethod;
+	return $self->{"digest"};
+    }
+
+    # Argument has some value...
+    $argument =~ s/\s//g; # Remove strings to be kind
+
+    if ($argument =~ /^\d+$/ ){    #Numeric argument.
+	carp "$argument does not map to a valid digest" unless 
+	    exists $digestbyval{$argument};
+	if ($classmethod){
+	    return $argument ;
+	}else{
+	    return $self->{"digest"}=$argument ;
+	}
+    }else{  # argument is not numeric
+	if ($classmethod){
+	    carp "$argument does not map to a valid digest" unless
+		exists $digestbyname{uc($argument)};
+	    return $digestbyname{uc($argument)};
+	    
+	}else{ # Not a class method..
+	    if (lc($argument) eq "mnemonic"){
+		return $digestbyval{$self->{"digest"}};
+	    }else{
+		carp "$argument does not map to a valid digest" unless
+		    exists $digestbyname{uc($argument)};
+		return $self->{"digest"}=$digestbyname{uc($argument)};
+	    }	    
+	}
+
+	
+    }	
+    die "digest method should never end here";
+
+	
+}
 
 
 

@@ -1,6 +1,6 @@
 # perldoc RRSIG.pm for documentation.
 # Specs: RFC 2535 section 4
-# $Id: RRSIG.pm 318 2005-05-30 16:36:52Z olaf $
+# $Id: RRSIG.pm 527 2005-12-09 10:51:06Z olaf $
 
 package Net::DNS::RR::RRSIG;
 
@@ -19,7 +19,7 @@ use File::Basename;
 use MIME::Base64;
 use Math::BigInt;
 use Time::Local;
-use Digest::SHA1 qw (sha1);
+use Digest::SHA qw (sha1);
 
 
 
@@ -33,21 +33,23 @@ use Digest::SHA1 qw (sha1);
 
 require Exporter;
 
-$VERSION = do { my @r=(q$Revision: 318 $=~/\d+/g); sprintf "%d."."%03d"x$#r,@r };
+$VERSION = do { my @r=(q$Revision: 527 $=~/\d+/g); sprintf "%d."."%03d"x$#r,@r };
 @ISA = qw (
 	   Exporter
   	 Net::DNS::RR
   	 Net::DNS::SEC
 	   );
 
-@EXPORT = qw (
+
+@EXPORT = qw (          
 	      );
 
 
-use strict;
-my $debug=0;
-my $crypt_open_ssl=1;
 
+
+use strict;
+my $crypt_open_ssl=1;
+my $debug=0;
 
 
 
@@ -172,7 +174,7 @@ sub rr_rdata_without_sigbin {
 	$rdata .= pack("n",$self->{"keytag"});
 	# Since we will need canonical and expanded names while checking 
 	# we do not use the packet->dn_comp here but use RFC1035 p10.
-	{   my @dname= split /\./,lc($self->{"signame"});
+	{   my @dname= split /\./,lc($self->{"signame"});  #/ emacs fontlock
 	    for (my $i=0;$i<@dname;$i++){
 		$rdata .= pack ("C",length $dname[$i] );
 		$rdata .= $dname[$i] ;
@@ -220,8 +222,11 @@ sub create {
 	$Private=Net::DNS::SEC::Private->new($priv_key);
     }
 
-    die "Create did not manage obtain a Net::DNS::SEC::Private object "unless (UNIVERSAL::isa($Private,"Net::DNS::SEC::Private"));
-
+    unless (UNIVERSAL::isa($Private,"Net::DNS::SEC::Private")){
+	$self->{"sigerrstr"}= "Create did not manage to parse a private key into a Net::DNS::SEC::Private object ";
+	return (0);
+	    
+    }
     $self->{"algorithm"}=Net::DNS::SEC->algorithm($Private->algorithm);
     $self->{"keytag"}=$Private->keytag;
     $self->{"signame"}=$Private->signame;
@@ -245,7 +250,7 @@ sub create {
 	print "\nSetting TTL to ".  $args{"ttl"} if $debug;
 	$self->{"ttl"}= $args{"ttl"};
     }else{
-	$self->{"ttl"}= 3600;
+	$self->{"ttl"}= $datarrset->[0]->ttl;
     }
 
     $self->{"typecovered"}=$datarrset->[0]->type;  #Sanity checks elsewhere
@@ -310,10 +315,11 @@ sub create {
 
 
     my  $labels=$datarrset->[0]->name;
-    $labels =~ s/\.^//;  # remove trailing dot.
-    my @labels= split /\./ , $labels;
+    $labels =~ s/\.$//;  # remove trailing dot.
+    $labels =~ s/^\*\.//;  # remove initial asterisk label
+    my @labels= split /\./ , $labels;    # / emacs font-lock-mode	
     $self->{"labels"}= scalar(@labels);
-	
+
 
     # All the TTLs need to be the same in the data RRset.
     if ( @{$datarrset}>1 ){
@@ -414,7 +420,7 @@ sub create {
 
 
 sub verify {
-    my ($self, $dataref, $keyrr) = @_;
+    my ($self, $dataref, $keyrrref ) = @_;
 
     # Reminder...
 
@@ -423,13 +429,68 @@ sub verify {
     # object in the array...  @{$dataref} is length of the array when
     # called in numerical context
 
+    # $keyref is eiter a reference to an array of keys or a a key object.
+
     # if $dataref is not a reference it contains a string with data to be 
     # verified using SIG0
     
     my $sigzero_verify=0;
     my $packet_verify=0;
     my $rrarray_verify=0;
+
+    my $keyrr; # This will be used to store the key to which we want to 
+               # verify.
    
+
+    print "Second argument is of class".ref($keyrrref)."\n" if $debug;;
+    if (ref($keyrrref) eq "ARRAY"){
+	#  We will recurse for each key that matches algorithm and key-id 
+	#  we return when there is a succesful verification.
+        #  If not we'll continue so that we even survive key-id collission.
+	#  The downside of this is that the error string only matches the
+	#  last error.
+	my @keyarray=@{$keyrrref};
+	my $errorstring="";
+	my $i=0;
+	print "Itterating over " . @keyarray ." keys \n" if $debug;
+      KEYRR: foreach my $keyrr (@keyarray) {
+	  $i++;
+	  unless ($keyrr->algorithm == $self->algorithm){
+	      print "key $i: algorithm does not match\n" if $debug;
+	      $errorstring.="key $i: algorithm does not match ";
+	      next KEYRR;
+	  }
+	  unless ($keyrr->keytag == $self->keytag){
+	      print "key $i: keytag does not match (".$keyrr->keytag." ".$self->keytag.")\n" if $debug;
+	      $errorstring.="key $i: keytag does not match ";
+	      next KEYRR ;
+	      
+	  }
+	  my $result=$self->verify($dataref,$keyrr);
+	  print "key $i:".$self->vrfyerrstr if $debug;
+	  $errorstring.="key $i:".$self->vrfyerrstr." ";
+	  next KEYRR unless $result;
+	  $self->{"vrfyerrstr"}="No Error";
+	  return $result;
+      }
+	$self->{"vrfyerrstr"}=$errorstring;	  
+	return (0);
+    }elsif(ref($keyrrref) eq 'Net::DNS::RR::DNSKEY' ||
+	   ref($keyrrref) eq 'Net::DNS::RR::KEY' # we are liberal...
+	){
+	# substitute and continue processing after this conditional
+	$keyrr=$keyrrref;
+	print "Validating using key with keytag:".$keyrr->keytag." \n" if $debug;
+
+    }else{
+	# Error condition
+	$self->{"vrfyerrstr"} = "You are trying to pass ".ref($keyrrref) ." data for a key";
+	return (0);
+    }
+
+
+
+
     print "Verifying data of class:".  ref( $dataref) . "\n" if $debug;
     $sigzero_verify=1 unless (ref($dataref));
     if (! $sigzero_verify ){
@@ -449,6 +510,8 @@ sub verify {
 	    die "Do not know what kind of data this is" . ref( $dataref) . ")\n";
 	}
     }
+
+
 
     $self->{"vrfyerrstr"}="---- Unknown Error Condition ------";
     print "\n ------------------------------- RRSIG DEBUG  -----------------\n"  if $debug;
@@ -814,7 +877,7 @@ sub _CreateSigData {
 		$rawdata->[$i]->{"ttl"}=$self->orgttl;
 		# Some error checking is done to. A RRset is defined by 
 		# Same label,class,qtype
-		if ($rawdata->[$i]->name ne $rawdata->[0]->name){
+		if (lc($rawdata->[$i]->name) ne lc($rawdata->[0]->name)){
 		    print "\nError:\n";
 		    for  (my $j=0; $j<@{$rawdata}; $j++){
 			print "\n";
@@ -984,7 +1047,7 @@ Create a signature over a RR set.
 					$keypath);
     my $sigrr= create Net::DNS::RR::RRSIG(\@datarrset,
 					$keypath,
-					\%arguments);
+					%arguments);
     $sigrr->print;
 
 
@@ -1099,6 +1162,8 @@ Returns the base64 representation of the signature.
 =head2 verify and vrfyerrstr
 
     $sigrr->verify($data, $keyrr) || croak $sigrr->vrfyerrstr;
+    $sigrr->verify($data, [$keyrr, $keyrr2, $keyrr3]) || 
+                  croak $sigrr->vrfyerrstr;
 
 
 If $data contains a reference to an array of RR objects then them
@@ -1106,11 +1171,14 @@ method verifies the RRset against the signature contained in the
 $sigrr object itself using the public key in $keyrr.  Because of the
 KeyID bug in bind (see below) a check on keyid is not performed.
 
-
 If $data contains a reference to a Net::DNS::Packet and if $sig->type
 equals zero a a sig0 verification is performed. Note that the
 signature needs to be 'popped' from the packet before verifying.
 
+The second argument can either be a Net::DNS::RR::KEYRR object or a
+reference to an array of such objects. Verification will return
+successful as soon as one of the keys in the array leads to positive
+validation.
 
 Returns 0 on error and sets $sig->vrfyerrstr
 
