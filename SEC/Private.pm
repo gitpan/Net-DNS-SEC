@@ -19,7 +19,7 @@ use Time::Local;
 
 require Exporter;
 
-$VERSION = do { my @r=(q$Revision: 527 $=~/\d+/g); sprintf "%d."."%03d"x$#r,@r };
+$VERSION = do { my @r=(q$Revision: 543 $=~/\d+/g); sprintf "%d."."%03d"x$#r,@r };
 
 sub new {
     my ($class,  $key_file) = @_;
@@ -105,7 +105,6 @@ sub new {
 	);
 
       # Trying to determine the keytag
-
 
       my $keytag_from_data1=$self->dump_rsa_keytag(256,1);
       my $keytag_from_data2=$self->dump_rsa_keytag(257,1);
@@ -263,10 +262,11 @@ sub dump_rsa_keytag{
     # feature that a non-zero second argument to this function will
     # _not_ set the flag.
     $self->{"flags"}=$flags unless shift; 
-
+    my $alg=$self->{"algorithm"};
+    return () unless ($alg ==1 || $alg ==5);
     my $key=$self->dump_rsa_pub;
     return ()  unless $key;
-    my $tmprr=Net::DNS::RR->new("tmp  IN DNSKEY $flags 3 5 $key");
+    my $tmprr=Net::DNS::RR->new("tmp  IN DNSKEY $flags 3 $alg  $key");
     return $tmprr->keytag;
 }
 
@@ -407,8 +407,8 @@ Returns an empty string on failure.
     my $flags=257;   # SEP key.
     my $keytag=$private->dump_rsa_keytag($flags);
 
-This function will calculate the keytag assuming that key is a used
-with the RSASHA1 signing algorithm and with the DNSKEY flags as input.
+This function will calculate the keyt with the value of the DNSKEY
+flags as input.
 
 The flags field may be needed in case it was not specified when the
 key was created. If the object allready knows it's flags vallue the

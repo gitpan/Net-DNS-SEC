@@ -1,12 +1,12 @@
 # Test script for dnssec functionalty   -*-perl-*-
-# $Id: 07-sec.t 526 2005-12-08 15:19:04Z olaf $
+# $Id: 07-sec.t 556 2006-02-14 09:51:57Z olaf $
 # 
 # Called in a fashion simmilar to:
 # /usr/bin/perl -Iblib/arch -Iblib/lib -I/usr/lib/perl5/5.6.1/i386-freebsd \
 # -I/usr/lib/perl5/5.6.1 -e 'use Test::Harness qw(&runtests $verbose); \
 # $verbose=0; runtests @ARGV;' t/07-sec.t
 
-use Test::More tests=>21;
+use Test::More tests=>23;
 use strict;
 use MIME::Base64;
 
@@ -131,3 +131,15 @@ my $sigrr= create Net::DNS::RR::RRSIG([$tstpubkeyrr],$newkey);
 is ($sigrr->keytag,$tstpubkeyrr->keytag,"Consisted keytag in the created signature");;
 
 ok($sigrr->verify([$tstpubkeyrr],$tstpubkeyrr), "Self verification consistent.");
+
+
+
+
+
+$privkeyfilename="t/Kexample.com.+001+28551.private";
+$pubkeyfilename="t/Kexample.com.+001+28551.key";
+$rsakey=Net::DNS::SEC::Private->new($privkeyfilename);
+
+$rsakeyfromder=Net::DNS::SEC::Private->new_rsa_priv($rsakey->dump_rsa_private_der);
+is ($rsakey->dump_rsa_private_der,$rsakeyfromder->dump_rsa_private_der, "Consistent DER parsing");
+is($rsakey->dump_rsa_keytag(255,1),28551,"Consistent RSAMD5 keytag");

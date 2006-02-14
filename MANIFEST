@@ -29,6 +29,8 @@ t/12-nsec++.t
 t/13-utilities.t
 t/14-misc.t
 t/getpacket.pl
+t/Kexample.com.+001+28551.private
+t/Kexample.com.+001+28551.key
 t/Kexample.com.+005+34247.key
 t/Kexample.com.+005+34247.private
 TODO

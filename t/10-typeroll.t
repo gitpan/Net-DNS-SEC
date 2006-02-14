@@ -1,6 +1,6 @@
 #!/usr/bin/perl  -sw 
 # Test script for dnssec functionalty
-# $Id: 10-typeroll.t 526 2005-12-08 15:19:04Z olaf $
+# $Id: 10-typeroll.t 556 2006-02-14 09:51:57Z olaf $
 # 
 # Called in a fashion simmilar to:
 # /usr/bin/perl -Iblib/arch -Iblib/lib -I/usr/lib/perl5/5.6.1/i386-freebsd \
@@ -46,7 +46,7 @@ $datarrset = [ $datarr1, $datarr2 , $datarr3  ] ;
 #
 # RSA keypair 
 #
-my $keypathrsa="Ktest.tld.+001+50399.private";
+my $keypathrsa="Ktest.tld.+001+11567.private";
 my $privrsakey= << 'ENDRSA' ;
 Private-key-format: v1.2
 Algorithm: 1 (RSA)

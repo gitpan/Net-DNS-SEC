@@ -1,6 +1,13 @@
 Revision history for Perl extension Net::DNS::SEC.
 
 
+0.14 February 14, 2005
+
+   FIX: The introducion of the keytag warning triggered a bug with RSAMD5
+        keys, causing RSAMD5 keys not to be loaded. 
+
+
+
 0.13 December 9, 2005 
 
    FEAT: rt.cpan.org 14588
@@ -335,7 +342,7 @@ Net::DNS. The history of those is documented below.
 
 0.19-DNSSEC-0.3: 
   Solved patch problems that where due to the 
-  $Id: Changes 527 2005-12-09 10:51:06Z olaf $ in headers not 
+  $Id: Changes 557 2006-02-14 10:07:46Z olaf $ in headers not 
   being from the original distribution.
 
   Added DSA signature creation
@@ -367,4 +374,4 @@ Net::DNS. The history of those is documented below.
 
 
 ---------------------------------------------------------------------------
-$Id: Changes 527 2005-12-09 10:51:06Z olaf $
+$Id: Changes 557 2006-02-14 10:07:46Z olaf $

@@ -1,5 +1,5 @@
 #
-# $Id: SEC.pm 527 2005-12-09 10:51:06Z olaf $
+# $Id: SEC.pm 559 2006-02-14 10:12:16Z olaf $
 #
 
 use strict;
@@ -14,7 +14,7 @@ use strict;
 use Exporter;
 use vars qw($VERSION @EXPORT_OK @ISA);
 @ISA=qw(Exporter);
-$VERSION = '0.13';
+$VERSION = '0.14';
 
 @EXPORT_OK= qw (
               key_difference
