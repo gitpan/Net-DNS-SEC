@@ -1,10 +1,16 @@
 #!/usr/bin/perl  -sw 
 # Test script for dnssec functionalty
-# $Id: 12-nsec++.t 296 2005-05-27 11:31:07Z olaf $
+# $Id: 12-nsec++.t 778 2008-12-30 17:19:35Z olaf $
 # 
-use Net::DNS::RR::RRSIG;
 
-use Test::More tests=>10;
+
+
+use Net::DNS::SEC;
+use Test::More tests=>17;
+use Data::Dumper;
+use Net::DNS::RR::NSEC3 qw( name2hash );
+
+
 use strict;
 
 BEGIN {use_ok('Net::DNS'); }                                 # test 1
@@ -64,3 +70,53 @@ is (unpack("H*",$rr->typebm()),$newbitmap,"typebm appropritatly changed after in
 
 $rr2->typebm(pack("H*",$newbitmap));
 is ($rr2->typelist,$newtypelist,"typelist appropritatly changed after invoking typelist method");
+
+
+########################
+
+
+my $foo={};;
+
+
+
+bless($foo,"Net::DNS::RR::NSEC3");
+$foo->salt("aabbccdd");
+
+# H(example) = 0p9mhaveqvm6t7vbl5lop2u3t2rp3tom
+
+is ("0p9mhaveqvm6t7vbl5lop2u3t2rp3tom",lc Net::DNS::RR::NSEC3::name2hash(1,"example.",12,$foo->saltbin),"name2hash over example");
+
+
+# H(x.w.example) = b4um86eghhds6nea196smvmlo4ors995
+is ("b4um86eghhds6nea196smvmlo4ors995",lc Net::DNS::RR::NSEC3::name2hash(1,"x.w.example.",12,$foo->saltbin),"name2hash over example");
+
+# H(c.x.w.example) = 0va5bpr2ou0vk0lbqeeljri88laipsfh
+
+is ("0va5bpr2ou0vk0lbqeeljri88laipsfh",lc Net::DNS::RR::NSEC3::name2hash(1,"c.x.w.example.",12,$foo->saltbin),"name2hash over example");
+
+
+# H(*.x.w.example) = 92pqneegtaue7pjatc3l3qnk738c6v5m
+is ("92pqneegtaue7pjatc3l3qnk738c6v5m",lc Net::DNS::RR::NSEC3::name2hash(1,"*.x.w.example.",12,$foo->saltbin),"name2hash over example");
+
+
+
+my $nsec3param=Net::DNS::RR->new(
+ "alfa.example.com 86400 NSEC3PARAM 2 0 12 aabbccdd",
+		      );
+ok ($nsec3param, "NSEC3PARAM created");
+
+undef $nsec3param;
+$nsec3param=Net::DNS::RR->new(
+ "alfa.example.com 86400 NSEC3PARAM 2 0 12 aabbccfs",
+		      );
+ok (!$nsec3param, "NSEC3PARAM not created with corrupt hex data");
+
+
+
+my $hashalg=Net::DNS::SEC->digtype("SHA1");
+my   $salt=pack("H*","aabbccdd");
+my $iterations=12;
+my    $name="*.x.w.example";
+
+my  $hashedname= name2hash($hashalg,$name,$iterations,$salt);
+is( $hashedname,"92pqneegtaue7pjatc3l3qnk738c6v5m","name2hash exports and works");

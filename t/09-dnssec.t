@@ -1,6 +1,6 @@
 #!/usr/bin/perl  -sw 
 # Test script for dnssec functionalty
-# $Id: 09-dnssec.t 555 2006-02-14 09:34:07Z olaf $
+# $Id: 09-dnssec.t 717 2008-02-25 14:52:54Z olaf $
 # 
 # Called in a fashion simmilar to:
 # /usr/bin/perl -Iblib/arch -Iblib/lib -I/usr/lib/perl5/5.6.1/i386-freebsd \
@@ -329,109 +329,82 @@ ok ($sigrsa->verify($datarrset,$rsakeyrr),'RSA sig over SOA  with escaped dot ve
 
 # Cross check with a  signature generated with bind tools.
 
-
-my $bindkey=Net::DNS::RR->new(" foo.example                        3600    DNSKEY  256 3 5 (
-                                        AQMLaOdD3VKofLiblKFdjnJpVFPD1mbIxh2H
-                                        +JaHkblnFH5cKn/mHU21ODD4mubkPqrhpEWi
-                                        Omm5+rpj90YdeFilf05tncc+3vr3ttSKKpXz
-                                        nV1h+IuX4tUwnCd1xH8+FrvoSJLgFCR97VG7
-                                        wwKOIXjjttpnoj+eX8wnlR0u8DxXH8q7o2Un
-                                        o5T1htoz/RtjUdbkuTpn4a7XRt98GcBQ1YGd
-                                        iOk3c5sVSCqHeEpsHTSSa5DYcNbBD71d+ahc
-                                        jkKVJXyAGRNEjEvYRQ6XSQ84rH7okO3Pl18V
-                                        rBDEMw6mivD0970W/Y0T2nBORTDR7h9D/62+
-                                        SmqCxuW6ISPvhL8VgO9R64i9/vo3K95JIEQB
-                                        LH+dab2olsuM+O9rVkBaIe+qNT6hT0ScRR6E
-                                        eDdA0CH+zqATqGrENT6I4XES+tuVJKK6Cph5
-                                        L3uO5QeevoFgh3jJDKHawi/QA2P0mhtTNF1E
-                                        Q7XwlHZVefVxUmLjJ5r7UBKaa7xAg8W4RKCR
-                                        9w==
-                                        ) ; key id = 43787
+my $bindkey1=Net::DNS::RR->new("
+example.com.				      3600 IN DNSKEY	257 3 5 (
+		  AQPUiszMMAi36agx/V+7Tw95l8PYmoVjHWvOKxx/0iH8ZE3sdEqQncCe
+		  Jg7IVQ+LNWSP9mT/B26eQb5WZ2IKFzNFQTMNi6um+yh3nytazwOwOx00
+		  2VGnwpYwnUFV3bZ5BcgWC8wrUzVGgCVIvX+besZrIXMY60yriRqQqNGO
+		  DnKo2T6zYewfCw4lYxRKYT6RqA0y8nJqyLRmeZ0nYP6uvDYjHEu7mqUf
+		  XBzeZNMy3WgSCTbQoK/RaSR7adTgTe5t972c51Di7TCwxpDzCfAKuPPk
+		  liBM9Z0x4gC0AZfO5Ma0p+dhf2k7wfl8m8xEOEMJITLooy88Nh+u2c9H
+		  F1tw0naH ; key id = 40620
 ");
+my $bindkey2=Net::DNS::RR->new("
+example.com.				      3600 IN DNSKEY	256 3 5 
+		  AQPaoHW/nC0fj9HuCW3hACSGiP0AkPS3dQFXDlEUjv1orbtx06TMmVKG
+		  K5K564OSd6UCf4ZQEu2CMPSAUFGHEZuANKYGwZh0k/HeoVNeom1L3Nt4
+		  tVLiGMzrPQskzeK8sr1NKgqFmckQllMWd0ob8Ud6nqeQLHvXQgv1iHX3
+		  dpBIPLYbRCzueqC5k09APl25PgJjjreyRXrxodvoiiaLHpdL5NtM2S9e
+		  ok2zmuRpYQSF1LTNfWwY9CkgL017Z/Zv00SbcoTM/eTXPqijGtUhh6UX
+		  1gX89ybeyjtfcGbmTcB+I79NykZWoddO8zyzBXzzfFwtsAuryjQ/HFa5
+		  r4mrbhkJ ; key id = 6227
+");
+my $bindsig=Net::DNS::RR->new("
 
-
-my $bindsig=Net::DNS::RR->new("foo.example    3600    RRSIG   (
-                                        DNSKEY 5 2 3600 20320101000000 
-                                        20050330103924 43787 foo.example.
-                                        BfAfvJtmvnhxMTo6frGc7bSNJS0M5D6zWBK3
-                                        WSoeYtDEyLhNDJSNL34lVlR8zkuKOLZ0b3mU
-                                        duscHd5f/AVb5mhVjmAGIIY4LWv9WIJlGBAG
-                                        mzlsYpx/fNWk8er55bSy5XRDB/46uIfTGVFs
-                                        4gjO39HgNOEH8IniuBvTvdK8/KhSZUlru1FP
-                                        Hzo2n+Jxv3weiVm1Q+bUBjJoX8GZ9sPeC83s
-                                        JHA8BhGwbvUIOCZUaFUwF5cREJUvyK32Uc+L
-                                        qIgJOWlCgkCOBDjLmnsKrIQ085ymJAIK2M8k
-                                        65e7+IrsysNZSBLoEeVaDZn0/AoYpoOnphCw
-                                        ibTt2ETYR4rgdO2Ffqzot9ZkSSnjZ5FwNmmS
-                                        rthYddYAofScUX/5rtHYeLPk1D6iTcQGmdeu
-                                        HY/7YgkrjaPRAwZ8SW9H4Ud78kFmVBLfIFRj
-                                        df7O4KRmQdufVpoFb7fOy1c/JtmnZp3kQZuw
-                                        vrAyfMJK5QXD1TM1CYFFeF2gyCRNzhv2sDQ= )
-
-
+example.com.	                       3600    RRSIG   DNSKEY 5 2 3600 20380101000000 (
+                                        20080225134340 40620 example.com.
+                                        KXDsJ6gOFbGUA8cSwLIgnHQ2GwfpUJLWZK7/
+                                        MwF7+G2B5Ds7SQG1UWv0QuyNtWB0ubSn2ipw
+                                        4TclHDKjeYMFLD6I5Zuh4mW7n2QpPN79z57V
+                                        C4Hf23lcWLRSL37jtX2qOPqWnFjy1AoGYzmy
+                                        IksYcjPF5VPZyfQC0YprAQ35UKwAHfF9RMwi
+                                        7vdE0GzON1FkVCWN7uxYjnZT1jxs3EeSnR4+
+                                        6ckK9OBJVHYUnjmIgViq6IuPV08zrelvZHcC
+                                        WNFcjKKNpf3yx5YhyQBJBM6Fofl8Dk4zexsp
+                                        VVjGDLrDwg73dOGEe3E00DQ9zDc++PGVNRPm
+                                        r34ojumh85Ua0YVatw== )
 
 ");
 
 
-my    $binddataset=[$bindkey];
 
-ok( $bindsig->verify($binddataset,$bindkey),
-    'RSA sig generated with bind verifies');        
+my    $binddataset=[$bindkey1, $bindkey2];
+
+ok( $bindsig->verify($binddataset,$bindkey1),
+    'RSA sig generated with bind verifies') || diag ($bindsig->vrfyerrstr);        
 
 
 
 
-my $nsecrr=Net::DNS::RR->new("foo.example.			300	NSEC	foo.example. SOA RRSIG NSEC DNSKEY");
+my $nsecrr=Net::DNS::RR->new("example.com   300     NSEC    itemA.with.caps.example.com. NS SOA TXT RRSIG NSEC DNSKEY
+");
 
 ok ( $nsecrr, 'NSEC RR created from string');		
 
-my $nsecsig=Net::DNS::RR->new("foo.example.   300   RRSIG  (
-					NSEC 5 2 300 20320101000000 
-					20050330103924 43787 foo.example.
-					CF3JXoyzhdi0hNj4gsEz+a8u8LedRrFtZpDc
-					gvwdsQLYD+UTFEE/zbomMBxdh1M5EsVAnead
-					5vTn1AeSvbBzy976FoAd6lDYEGgUvCEJUsng
-					UHiCvBX6Netnqo4d7Tnzi0wsCvtAIMYuYa/T
-					3FnLMaJepNKp+QctcO8RpjlLb+b8rNAxsNcv
-					SaBxwAhPDvqQfPGmMQr5+Ga1c/1QCCkDyMzX
-					sZ0YqzZgeU+9kkqent4hPBdI8vlsISpTZgmC
-					BmNniBpPwpAHSAqCM0EyKu9Jni2laYT7Xsu2
-					LpQ2NU6lYRfOVu/OG98IevFZZ90YHbvF84e8
-					rHWllbuFLTien++AQitKCM9wxSPIoOFXq3O4
-					pEV00Ja9UAQMvHtRiC5AronayV8fSRjooiJe
-					67eLFYSV6t3K1Qlx4nKuTbM+9TFevvgWKk6w
-					a6hHetCohec/7xTftU9R329Jm9fWQCrOLuYa
-					gOKAKiwn8AtOTKyJec0wC2/lqrlMcToYtIM= )
+my $nsecsig=Net::DNS::RR->new("
+
+example.com.  300     RRSIG   NSEC 5 2 300 20380101000000 (
+                                        20080225134340 6227 example.com.
+                                        TyfSavDAslOFzfiAQv29/KjGQBSyptVIHAl/
+                                        +BtV7YL7VBOBBxpYM0laQWfnvRPwqfqO0STD
+                                        u3KpIH95/ZeIPA/20xqR9IqgQNx3NvMmNK2g
+                                        R0qPK/tkKQpHsBGPgARXhQqUwT2HhhmwNOYb
+                                        ZwvnbaarFVq3RWerJUAxWHm3OABqZ1RYr6rL
+                                        JEIIwEuBs9zAmR0G03Ourg+vVzkIgOoiEcBy
+                                        ketBJr7FfFsRAYJ0HWOupSw16lxoUkSrEZ/f
+                                        NpSwOB7zdEuDeojcfK0JaanpWihA0hiiqq0D
+                                        7RKqrnkoTrPVN4lP7bIr4q52jEBlFVIrbIzL
+                                        UGtebocRBrvlmVB3+A== )
 
 
 
 ");
 
-my $nseckey=Net::DNS::RR->new("foo.example.   3600	DNSKEY	256 3 5  (
-					AQMLaOdD3VKofLiblKFdjnJpVFPD1mbIxh2H
-					+JaHkblnFH5cKn/mHU21ODD4mubkPqrhpEWi
-					Omm5+rpj90YdeFilf05tncc+3vr3ttSKKpXz
-					nV1h+IuX4tUwnCd1xH8+FrvoSJLgFCR97VG7
-					wwKOIXjjttpnoj+eX8wnlR0u8DxXH8q7o2Un
-					o5T1htoz/RtjUdbkuTpn4a7XRt98GcBQ1YGd
-					iOk3c5sVSCqHeEpsHTSSa5DYcNbBD71d+ahc
-					jkKVJXyAGRNEjEvYRQ6XSQ84rH7okO3Pl18V
-					rBDEMw6mivD0970W/Y0T2nBORTDR7h9D/62+
-					SmqCxuW6ISPvhL8VgO9R64i9/vo3K95JIEQB
-					LH+dab2olsuM+O9rVkBaIe+qNT6hT0ScRR6E
-					eDdA0CH+zqATqGrENT6I4XES+tuVJKK6Cph5
-					L3uO5QeevoFgh3jJDKHawi/QA2P0mhtTNF1E
-					Q7XwlHZVefVxUmLjJ5r7UBKaa7xAg8W4RKCR
-					9w==
-					) ; key id = 43787
-
-
-");
 
 my @nsecdata=($nsecrr);
 
-ok( $nsecsig->verify(\@nsecdata,$nseckey), "RRSIG over NSEC verifies");   
-
+ok( $nsecsig->verify(\@nsecdata,$bindkey2), "RRSIG over NSEC verifies") || 
+    diag ($nsecsig->vrfyerrstr);        
 #
 # RSA keypair 
 #

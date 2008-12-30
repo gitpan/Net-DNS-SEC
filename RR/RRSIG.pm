@@ -1,6 +1,6 @@
 # perldoc RRSIG.pm for documentation.
 # Specs: RFC 2535 section 4
-# $Id: RRSIG.pm 527 2005-12-09 10:51:06Z olaf $
+# $Id: RRSIG.pm 777 2008-12-30 17:18:54Z olaf $
 
 package Net::DNS::RR::RRSIG;
 
@@ -9,6 +9,7 @@ use vars qw(@ISA $VERSION @EXPORT );
 use Net::DNS;
 use Carp;
 use bytes;
+use Data::Dumper;
 
 use Crypt::OpenSSL::DSA;
 use Crypt::OpenSSL::RSA;
@@ -33,7 +34,7 @@ use Digest::SHA qw (sha1);
 
 require Exporter;
 
-$VERSION = do { my @r=(q$Revision: 527 $=~/\d+/g); sprintf "%d."."%03d"x$#r,@r };
+$VERSION = do { my @r=(q$Revision: 777 $=~/\d+/g); sprintf "%d."."%03d"x$#r,@r };
 @ISA = qw (
 	   Exporter
   	 Net::DNS::RR
@@ -84,7 +85,7 @@ sub new {
 	$self->{"keytag"}=unpack("n",substr($$data,$offsettokeytag,2));
 	my($signame,$sigoffset) = Net::DNS::Packet::dn_expand
 	    ($data, $offsettosignm);
-	$self->{"signame"}=lc($signame).".";  #Add a trailing dot..dn_expand does not do that.
+	$self->{"signame"}=lc($signame); 
 	my($sigmaterial)=substr($$data,$sigoffset,
 				($self->{"rdlength"}-$sigoffset+$offset));
 	$self->{"sigbin"}=$sigmaterial;
@@ -108,7 +109,7 @@ sub new_from_string {
 	    $labels, $orgttl, $sigexpiration,
 	    $siginception, $keytag,$signame,$sig) = 
 		$string =~ 
-		    /^\s*(\S+)\s+(\d+)\s+(\d+)\s+(\d+)\s+(\d+)\s+(\d+)\s+(\d+)\s+(\S+)\s+(.*)/;
+		    /^\s*(\S+)\s+(\S+)\s+(\d+)\s+(\d+)\s+(\d+)\s+(\d+)\s+(\d+)\s+(\S+)\s+(.*)/;
 	croak (" Invallid RRSIG RR, check your fomat ") if !$keytag;
 	$sig =~ s/\s*//g;
 	$self->{"typecovered"}= $typecovered;
@@ -120,7 +121,7 @@ sub new_from_string {
 	$self->{"sigexpiration"}=  $sigexpiration;
 	$self->{"siginception"}= $siginception;
 	$self->{"keytag"}= $keytag;
-	$self->{"signame"}= lc($signame);
+	$self->{"signame"}= lc(Net::DNS::stripdot($signame));
 	$self->{"sig"}= $sig;
 	$self->{"sigbin"}= decode_base64($sig);
 	$self->{"vrfyerrstr"}="";
@@ -140,7 +141,7 @@ sub rdatastr {
 	    $rdatastr .= "  "  . "$self->{sigexpiration}";
 	    $rdatastr .= " (\n\t\t\t"  . "$self->{siginception}";
 	    $rdatastr .= " "  . "$self->{keytag}";
-	    $rdatastr .= "  "  . "$self->{signame}";
+	    $rdatastr .= "  "  . "$self->{signame}.";
 	    # do some nice formatting
 	    my $sigstring=$self->{sig};
 	    $sigstring =~ s/\n//g;
@@ -174,7 +175,7 @@ sub rr_rdata_without_sigbin {
 	$rdata .= pack("n",$self->{"keytag"});
 	# Since we will need canonical and expanded names while checking 
 	# we do not use the packet->dn_comp here but use RFC1035 p10.
-	{   my @dname= split /\./,lc($self->{"signame"});  #/ emacs fontlock
+	{   my @dname= split /\./,lc($self->{"signame"}.".");  #/ emacs fontlock
 	    for (my $i=0;$i<@dname;$i++){
 		$rdata .= pack ("C",length $dname[$i] );
 		$rdata .= $dname[$i] ;
@@ -195,6 +196,7 @@ sub rr_rdata {
 	$rdata=$self->rr_rdata_without_sigbin;
 	
 	if ($self->{"sig"} ne "NOTYETCALCULATED") {
+            $self->{"sigbin"}= decode_base64($self->{"sig"}) unless defined $self->{"sigbin"} ;
 	    $rdata .= $self->{"sigbin"};
 	}else{
 	    die "RRSIGs should not be used for SIG0 type signatures, use Net::DNS::RR::SIG";
@@ -229,8 +231,8 @@ sub create {
     }
     $self->{"algorithm"}=Net::DNS::SEC->algorithm($Private->algorithm);
     $self->{"keytag"}=$Private->keytag;
-    $self->{"signame"}=$Private->signame;
-
+    $self->{"signame"}=Net::DNS::stripdot($Private->signame);
+   
 
     die "Argument is not a reference to an array, are you trying to create a SIG0 using RRSIG?" if ! ref ($datarrset);
 
@@ -247,7 +249,7 @@ sub create {
 
 
     if (defined ($args{ttl})){
-	print "\nSetting TTL to ".  $args{"ttl"} if $debug;
+	print "Setting TTL to ".  $args{"ttl"} . "\n" if $debug;
 	$self->{"ttl"}= $args{"ttl"};
     }else{
 	$self->{"ttl"}= $datarrset->[0]->ttl;
@@ -339,18 +341,19 @@ sub create {
     # more ways to do things)
 
     bless $self, $class;
-
+    
     my $sigdata=$self->_CreateSigData($datarrset);
-
-
-
 
     my $signature;
     
     #
     # Enjoy the crypto
-    if ($self->algorithm == 1 || $self->algorithm == 5) {  #RSA
-	if (! ($Private->algorithm == 1 || $Private->algorithm == 5 )) {
+    if ($self->algorithm == 1 
+	|| $self->algorithm == 5
+	|| $self->algorithm == 7) {  #RSA
+	if (! ($Private->algorithm == 1 
+	       || $Private->algorithm == 5 
+	       || $Private->algorithm == 7  )) {
 	    die "Private key mismatch, not RSAMD5 or RSASHA.";
 	    
 	}
@@ -374,7 +377,7 @@ sub create {
 
 	print "\n SIGNED" if $debug ;
 	
-    }elsif ($self->algorithm == 3){  #DSA
+    }elsif ($self->algorithm == 3 || $self->algorithm == 6  ){  #DSA
 	$self->{"private_key"}=$Private->privatekey;
 	my $private_dsa=$Private->privatekey;
 
@@ -578,11 +581,11 @@ sub verify {
     if ( $self->algorithm == 1 ){    #Verifying for RSA
 	$verified=$self->_verifyRSA($sigdata,$signature,$keyrr,0) || return 0;
     }     
-    elsif ( $self->algorithm == 3 )  # Verifying for DSA
+    elsif ( $self->algorithm == 3 ||  $self->algorithm == 6 )  # Verifying for DSA
     {
 	 $verified=$self->_verifyDSA($sigdata,$signature,$keyrr) || return 0;
     }
-    elsif ( $self->algorithm == 5 )  # Verifying for RSASHA1
+    elsif ( $self->algorithm == 5 ||  $self->algorithm == 7 )  # Verifying for RSASHA1
     {
 	$verified=$self->_verifyRSA($sigdata,$signature,$keyrr,1) || return 0;
     }
@@ -858,9 +861,9 @@ sub _CreateSigData {
     my $sigdata;
     # construction of message 
 
-
+    print "_CreatSigData\n" if $debug;
     my $rdatawithoutsig=$self->rr_rdata_without_sigbin;
-    print "\n\nstrip:\t\t",  unpack("H*", $rdatawithoutsig) if $debug;
+    print "raw RRsig:\t",  unpack("H*", $rdatawithoutsig) if $debug;
     $sigdata= $rdatawithoutsig;
 
 
@@ -943,8 +946,8 @@ sub _CreateSigData {
 		    $self->orgttl . "\n" if 
 			( $rawdata->[0]->{"ttl"}!=$self->orgttl );
 	    }
-	    print "\nRDATA: \t" .$rawdata->[0]->_canonicalRdata ."\t" .
-		unpack("H*",$rawdata->[0]->_canonicalRdata) ."\n" if $debug;
+	    print "\nRDATA:\t\t" .$rawdata->[0]->_canonicalRdata ."\n-----:\t\t" .
+	      unpack("H*",$rawdata->[0]->_canonicalRdata) ."\n" if $debug;
 	    
 	    $rawdata->[0]->{"ttl"}=$self->orgttl;	    
 	    $sigdata .= $rawdata->[0]->_canonicaldata;
@@ -1007,6 +1010,14 @@ sub _checktimeformat {
 sub siginceptation {
     my $self=shift;
     return $self->siginception(@_);
+}
+
+
+
+sub _normalize_dnames {
+	my $self=shift;
+	$self->_normalize_ownername();
+	$self->{'signame'}=lc(Net::DNS::stripdot($self->{'signame'})) if defined $self->{'signame'};
 }
 
 
@@ -1097,8 +1108,8 @@ Notes:
   create method uses the filename as generated by dnssec-keygen to
   determine the keyowner, algorithm and the keyid (keytag).
 
-- Only RSA signatures (algorithm 1) and DSA signatures (algorithm 3)
-  have been implemented.
+- Only RSA signatures (algorithm 1,5 and 7) and DSA signatures 
+  (algorithm 3, and 6) have been implemented.
 
 
 
@@ -1219,6 +1230,7 @@ requests.
 =head1 COPYRIGHT
 
 Copyright (c) 2001 - 2005  RIPE NCC.  Author Olaf M. Kolkman 
+Copyright (c) 2007 - 2008  NLnet Labs.  Author Olaf M. Kolkman 
 <olaf@net-dns.org>
 
 All Rights Reserved

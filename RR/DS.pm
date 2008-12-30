@@ -1,6 +1,6 @@
 package Net::DNS::RR::DS;
 
-# $Id: DS.pm 518 2005-11-23 13:23:53Z olaf $
+# $Id: DS.pm 728 2008-10-12 09:02:24Z olaf $
 
 
 use strict;
@@ -22,7 +22,7 @@ BEGIN {
 
 
 
-$VERSION = do { my @r=(q$Revision: 518 $=~/\d+/g); sprintf "%d."."%03d"x$#r,@r };
+$VERSION = do { my @r=(q$Revision: 728 $=~/\d+/g); sprintf "%d."."%03d"x$#r,@r };
 my $debug=0;
 
 @ISA = qw(Net::DNS::RR);
@@ -105,13 +105,12 @@ sub rdatastr {
 
 sub rr_rdata {
     my $self = shift;
-    
     my $rdata;
-    if (exists $self->{"keytag"}) {
-	$rdata= pack("n",$self->{"keytag"}) ;
-	$rdata.= pack("C",  $self->{"algorithm"}) ;
-	$rdata.= pack("C",  $self->{"digtype"}) ;
-	$rdata.= $self->{"digestbin"}
+    if (exists $self->{"digest"}) {
+      $rdata= pack("n",$self->{"keytag"}) ;
+      $rdata.= pack("C",  $self->{"algorithm"}) ;
+      $rdata.= pack("C",  $self->{"digtype"}) ;
+      $rdata.= $self->digestbin;
     }
     return $rdata;
 }
@@ -135,12 +134,28 @@ sub verify {
 sub babble {
     my $self=shift;
     if ($_Babble){
-	return bubblebabble(Digest=>$self->digestbin);
+        return bubblebabble(Digest=>$self->digestbin);
     }else{
 	return("");
     }
 }
 
+
+sub digestbin {
+    my ($self,$new_val)=@_;
+
+    if (defined $new_val) {
+	$self->{"digestbin"} = $new_val;
+	$self->{"digest"} = unpack("H*",$new_val);
+	return  $self->{"digestbin"};
+    }
+    
+
+    $self->{"digestbin"}=pack("H*",$self->{"digest"}) unless(  $self->{"digestbin"} ); 
+    return $self->{"digestbin"};
+
+
+}
 
 sub create {
     my ($class, $keyrr ,%args) = @_;

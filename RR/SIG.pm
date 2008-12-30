@@ -1,6 +1,6 @@
 # perldoc SIG.pm for documentation.
 # Specs: RFC 2535 section 4
-# $Id: SIG.pm 555 2006-02-14 09:34:07Z olaf $
+# $Id: SIG.pm 777 2008-12-30 17:18:54Z olaf $
 
 package Net::DNS::RR::SIG;
 
@@ -33,7 +33,7 @@ use Digest::SHA qw (sha1);
 
 require Exporter;
 
-$VERSION = do { my @r=(q$Revision: 555 $=~/\d+/g); sprintf "%d."."%03d"x$#r,@r };
+$VERSION = do { my @r=(q$Revision: 777 $=~/\d+/g); sprintf "%d."."%03d"x$#r,@r };
 @ISA = qw (
 	   Exporter
 	 Net::DNS::RR
@@ -82,7 +82,7 @@ sub new {
 	$self->{"keytag"}=unpack("n",substr($$data,$offsettokeytag,2));
 	my($signame,$sigoffset) = Net::DNS::Packet::dn_expand
 	    ($data, $offsettosignm);
-	$self->{"signame"}=lc($signame) ."."; #dn_expand forgets trailing dots.
+	$self->{"signame"}=lc($signame) ;
 	my($sigmaterial)=substr($$data,$sigoffset,
 				($self->{"rdlength"}-$sigoffset+$offset));
 	$self->{"sigbin"}=$sigmaterial;
@@ -118,7 +118,7 @@ sub new_from_string {
 	$self->{"sigexpiration"}=  $sigexpiration;
 	$self->{"siginception"}= $siginception;
 	$self->{"keytag"}= $keytag;
-	$self->{"signame"}= lc($signame);
+	$self->{"signame"}= Net::DNS::stripdot(lc($signame));
 	$self->{"sig"}= $sig;
 	$self->{"sigbin"}= decode_base64($sig);
 	$self->{"vrfyerrstr"}="";
@@ -192,6 +192,7 @@ sub rr_rdata {
 	$rdata=$self->rr_rdata_without_sigbin;
 
 	if ($self->{"sig"} ne "NOTYETCALCULATED") {
+            $self->{"sigbin"}= decode_base64($self->{"sig"}) unless defined $self->{"sigbin"} ;
             $rdata .= $self->{"sigbin"};
 	}else{
             #do sigzero calculation based on current packet content...

@@ -10,15 +10,13 @@ use strict;
 
 use Net::DNS;
 
-plan tests=>2;
+plan tests=>4;
 my $nsec1=Net::DNS::RR->new(
     "example.com.			300	NSEC	itemA.with.caps.example.com. NS SOA TXT RRSIG NSEC DNSKEY");
 
 
 my $nsec2=Net::DNS::RR->new(
     "itemA.with.caps.example.com. 			300	NSEC	itemb.without.caps.example.com. TXT RRSIG NSEC");
-
-
 
 
 
@@ -67,18 +65,46 @@ my $dnskey=Net::DNS::RR->new('example.com 			3600	DNSKEY	256 3 5 (
 					) ; key id = 6227
 ');
 
-$nsec1->print;
-$sig_nsec1->print;
-$dnskey->print;
+
+my $sig_nsec1_ldns=Net::DNS::RR->new("
+example.com.    300     IN      RRSIG   NSEC RSASHA1 2 300 20380119031407 200703
+09133715 6227 example.com. aXhXGPs5tiGFM4NFmgtsj7jW4p6A/hnY2JOwfD/gK1bFTIF/wHTRh
+na7t1L3auWileX1OymoivDw+HzoRnpL+IStqv4/7P0mMHGwwuyjhpMry8FMf1p3La8IzMV8pmAYsEENb
+3izYio3Hjrvvnw2uv2IWOgf1zPmndlmV0B5gOuSJEkyDFP8Z6Zshaou+oGjmDGwMNt0e6IW7yg2r92+9
+NNJiGk3EcRnC0uzFVs/4/zlcoTjd4bnK4hQIGyPGOFiC6ATdfIZzVybrUL3tYA1enSh1lBqVh4KVuq9q
+LkqaBzpNelbwXcSnd5ohLgC/thqMfuYjHnUT1sVEt5uQRL4XA== 
+");
+
+
+my $sig_nsec2_ldns=Net::DNS::RR->new("
+itema.with.caps.example.com.    300     IN      RRSIG   NSEC RSASHA1 5 300 20380
+119031407 20070309133715 6227 example.com. vvoRDdVtmRhnePyN9Fcm4+vUN7WR4VV6BP68o
+oHwqmYcllKB6dW1blPupRlVknxhpdGuiSt9D6AhBRFxZNKYhC0mPECHhIXD7wdM/ubMw5ebvRX25DdNy
+JmVeA1Dz2/mJDgId7reofns8AlFL0xgx5OytIQdiA8HVJqJqDOr3EQsnkhMZ575icJIuDwws7IHNDDZD
+8QmEAw4RT/+b8bq3VkAKT6XHiFXBvpfMRHw/W3xOfJgYKckZAku2wSt8caWDooneIOUQxrEG5PR+jtHq
+zVSxaZtgZ0t9ZR2BPDjgXg3F4kxDetFzqSfjg1fhs+dD9nIn6mGmvNOL71l8vauIA==
+");
+
 
 
 my $data=[$nsec1];
-ok($sig_nsec1->verify($data, $dnskey),"Data validated") || diag $sig_nsec1->vrfyerrstr;
+ok($sig_nsec1->verify($data, $dnskey),"Data did  validate") || diag $sig_nsec1->vrfyerrstr;
 
 
 my $data2=[$nsec2];
 ok($sig_nsec2->verify($data2, $dnskey),"Data validated") || diag $sig_nsec2->vrfyerrstr;
 
+#diag "PERL VERSION $]";
+#diag "TIME::Local VERSION $Time::Local::VERSION";
+SKIP:{
+    skip "Time::Local seems to check on unix time use beyond 2032", 2 if $Time::Local::VERSION > 1.11;
+    ok(! $sig_nsec1_ldns->verify($data, $dnskey),"Data did not validate (now generated with 'broken signer')") || diag $sig_nsec1_ldns->vrfyerrstr;
+
+
+
+    $data2=[$nsec2];
+    ok($sig_nsec2_ldns->verify($data2, $dnskey),"Data validated") || diag $sig_nsec2_ldns->vrfyerrstr;
+}
 
 
 

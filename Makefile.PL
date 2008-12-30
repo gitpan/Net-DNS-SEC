@@ -1,5 +1,5 @@
 #
-# $Id: Makefile.PL 527 2005-12-09 10:51:06Z olaf $
+# $Id: Makefile.PL 728 2008-10-12 09:02:24Z olaf $
 #
 
 
@@ -25,7 +25,7 @@ WriteMakefile(
       'NAME'	=> 'Net::DNS::SEC',
       'VERSION_FROM'	=> 'SEC.pm',
       'PREREQ_PM'             => {
-	Net::DNS                  => 0.44,
+	Net::DNS                  => 0.64,
 	Test::More                => 0.47,
 	Crypt::OpenSSL::RSA       => 0.19,
 	Crypt::OpenSSL::Bignum    => 0.03,
@@ -33,6 +33,7 @@ WriteMakefile(
 	Digest::SHA               => 5.23,
 	File::Basename            => 0.0,
 	MIME::Base64              => 0.0,
+	MIME::Base32              => 0.0,
 	Math::BigInt              => 0.0,
 	Time::Local               => 0.0,
 	Digest::BubbleBabble      => 0.01,
@@ -45,15 +46,18 @@ WriteMakefile(
 		'SEC.pm'    => '$(INST_LIBDIR)/SEC.pm',
 		'SEC/Private.pm'    => '$(INST_LIBDIR)/SEC/Private.pm',
 		'RR/DS.pm'  => '$(INST_LIBDIR)/RR/DS.pm',
+		'RR/DLV.pm'  => '$(INST_LIBDIR)/RR/DLV.pm',
 		'RR/NXT.pm' => '$(INST_LIBDIR)/RR/NXT.pm',
 		'RR/KEY.pm' => '$(INST_LIBDIR)/RR/KEY.pm',
 		'RR/SIG.pm' =>  '$(INST_LIBDIR)/RR/SIG.pm',
 		'RR/RRSIG.pm' =>  '$(INST_LIBDIR)/RR/RRSIG.pm',
 		'RR/DNSKEY.pm' =>  '$(INST_LIBDIR)/RR/DNSKEY.pm',
 		'RR/NSEC.pm' =>  '$(INST_LIBDIR)/RR/NSEC.pm',
+		'RR/NSEC3.pm' =>  '$(INST_LIBDIR)/RR/NSEC3.pm',
+		'RR/NSEC3PARAM.pm' =>  '$(INST_LIBDIR)/RR/NSEC3PARAM.pm',
 	    },
 
-       clean =>           {FILES => "*~ keyset-*"}
+       clean =>           {FILES => "*~ t/keyset-*"}
 
 );
 

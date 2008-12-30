@@ -1,5 +1,5 @@
 #
-# $Id: SEC.pm 559 2006-02-14 10:12:16Z olaf $
+# $Id: SEC.pm 767 2008-12-24 10:02:25Z olaf $
 #
 
 use strict;
@@ -12,9 +12,16 @@ use bytes;
 use Carp;
 use strict;
 use Exporter;
-use vars qw($VERSION @EXPORT_OK @ISA);
+use vars qw($SVNVERSION $VERSION $HAS_NSEC3 $HAS_DLV @EXPORT_OK @ISA);
 @ISA=qw(Exporter);
-$VERSION = '0.14';
+$VERSION = '0.15';
+
+$HAS_DLV=1;     # Signals availability of DLV to Net::DNS::RR
+$HAS_NSEC3=1;   # Signals availability of NSEC3 to Net::DNS::RR
+
+
+$SVNVERSION = (qw$LastChangedRevision: 767 $)[1];
+
 
 @EXPORT_OK= qw (
               key_difference
@@ -37,7 +44,8 @@ other modules in this suite and a few functions that can be exported.
 =head1 DESCRIPTION
 
 The Net::DSN::SEC suite provides the resource records that are needed
-for DNSSEC (RFC 4033, 4034 and 4035). 
+for DNSSEC (RFC 4033, 4034 and 4035). In addition the DLV RR, a clone
+of the DS RR is supported (RFC 4431)
 
 It also provides support for SIG0. That later is useful for dynamic
 updates using key-pairs.
@@ -45,8 +53,9 @@ updates using key-pairs.
 RSA and DSA crypto routines are supported.
 
 For details see L<Net::DNS::RR::RRSIG>, L<Net::DNS::RR::DNSKEY>,
-L<Net::DNS::RR::NSEC> and L<Net::DNS::RR:DS>.  and see
-L<Net::DNS::RR::SIG> and L<Net::DNS::RR::KEY> for the use with SIG0.
+L<Net::DNS::RR::NSEC>, L<Net::DNS::RR:DS>, L<Net::DNS::RR::DLV>, and
+see L<Net::DNS::RR::SIG> and L<Net::DNS::RR::KEY> for the use with
+SIG0.
 
 Net::DNS contains all needed hooks to load the Net::DNS::SEC
 extensions when they are available.
@@ -72,6 +81,7 @@ Returns 0 on success or an error message on failure.
 
 
 =cut
+
 
 
 sub key_difference {
@@ -122,6 +132,33 @@ when the argument equals the string "mnemonic" the method will return the
 mnemonic of the algorithm.
 
 Can also be called as a class method to do Mnemonic to Value conversion.
+
+=head2 digtype
+
+    $value=$self->digtype("SHA1");
+    $value=$self->digtype(1);
+
+    $algorithm=$self->digtype();
+    $memonic=$self->digtype("mnemonic");
+
+
+The algorithm method is used to set or read the value of the digest or
+hash algorithm field in Net::DNS::RR::DS and Net::DNS::RR::NSEC3
+objects.
+
+If supplied with an argument it will set the digetstype/hash algorithm
+accordingly, except when the argument equals the string "mnemonic" the
+method will return the mnemonic of the digetstype/hash algorithm.
+
+Can also be called as a class method to do Mnemonic to Value
+conversion, note however that it will then use the "Delegation Signer
+(DS) Resource Record (RR) Type Digest Algorithms" and not the "DNSSEC
+NSEC3 Hash Algorithms" IANA registry. If you want to specifically get
+access to the NSEC3  digest types then use a construct like:
+
+ bless $self, Net::DNS::RR::NSEC3;
+ $self->digtype("SHA1");
+
 
 
 
@@ -176,15 +213,17 @@ RFC4033, 4034 and 4035.
     $classmethod=1 unless  ref ($self);
  
     my %algbyname = (
-		     "RSAMD5"		   => 1,		
-		     "DH"                  => 2,           # Not implemented
-		     "DSA"                 => 3,
-		     "ECC"                 => 4,           # Not implemented
-		     "RSASHA1"             => 5,
-		     "INDIRECT"            => 252,         # Not implemented
-		     "PRIVATEDNS"          => 253,          # Not implemented
-		     "PRIVATEOID"          => 254,          # Not implemented
-		     );      
+	"RSAMD5"		   => 1,		
+	"DH"                  => 2,           # Not implemented
+	"DSA"                 => 3,
+	"ECC"                 => 4,           # Not implemented
+	"RSASHA1"             => 5,
+	"DSA-NSEC3-SHA1"      => 6,
+	"RSA-NSEC3-SHA1"      => 7,
+	"INDIRECT"            => 252,         # Not implemented
+	"PRIVATEDNS"          => 253,          # Not implemented
+	"PRIVATEOID"          => 254,          # Not implemented
+	);      
     my %algbyval = reverse %algbyname;
 
     # If the argument is undefined...
@@ -231,19 +270,28 @@ RFC4033, 4034 and 4035.
 
 
 
-
-
 sub digtype {
+    _digtype(@_);
+}
+
+sub _digtype {
     my $self=shift;
     my $argument=shift;
     # classmethod is true if called as class method.
     my $classmethod=0;
     $classmethod=1 unless  ref ($self);
 
-    my %digestbyname = (
+    my %digestbyname= (
 			"SHA1"		   => 1,		
 			"SHA256"	   => 2,		
 			);      
+
+    
+    if (! $classmethod && defined ($self->{'digestbyname'}) ){
+	%digestbyname= %{$self->{"digestbyname"}};
+    }
+
+
     my %digestbyval = reverse %digestbyname;
     
     # If the argument is undefined...

@@ -1,6 +1,6 @@
 package Net::DNS::RR::NSEC;
 
-# $Id: NSEC.pm 510 2005-11-05 01:01:45Z olaf $
+# $Id: NSEC.pm 728 2008-10-12 09:02:24Z olaf $
 
 use strict;
 use vars qw(@ISA $VERSION);
@@ -13,7 +13,7 @@ use Data::Dumper;
 use Carp;
 
 @ISA = qw(Net::DNS::RR);
-$VERSION = do { my @r=(q$Revision: 510 $=~/\d+/g); sprintf "%d."."%03d"x$#r,@r };
+$VERSION = do { my @r=(q$Revision: 728 $=~/\d+/g); sprintf "%d."."%03d"x$#r,@r };
 
 sub new {
     my ($class, $self, $data, $offset) = @_;
@@ -22,7 +22,7 @@ sub new {
 	my($nxtdname,$nxtoffset) = 
 	  Net::DNS::Packet::dn_expand($data, $offset);
 
-	$self->{"nxtdname"} = "$nxtdname";
+	$self->{"nxtdname"} =  $nxtdname;
 
 	my $typebm =substr($$data,$nxtoffset,
 				 $self->{"rdlength"}-
@@ -46,7 +46,7 @@ sub new_from_string {
 	    $string =~ /^\s*(\S+)\s+(.*)/;
 	my @nxttypes = split ' ' , $nxtstr;  # everything after last match...
 	
-	$self->{"nxtdname"}= $nxtdname;
+	$self->{"nxtdname"}=  Net::DNS::stripdot($nxtdname);
 	$self->{"typelist"}= join " " , sort @nxttypes ;
 	$self->{"typebm"}=_typearray2typebm(@nxttypes);
 	
@@ -75,7 +75,7 @@ sub rdatastr {
 
 	
 	if (exists $self->{"nxtdname"}) {
-	    $rdatastr  = $self->{nxtdname};
+	    $rdatastr  = $self->{nxtdname}.".";
 	    $rdatastr .= "  "  . $self->typelist();
 	    }
 	else {
@@ -92,13 +92,24 @@ sub rr_rdata {
     my $rdata = "" ;
     if (exists $self->{"nxtdname"}) {
 	# Compression used here... 
-	$rdata = $packet->dn_comp($self->{"nxtdname"},$offset);
+	$rdata = $packet->dn_comp(($self->{"nxtdname"}),$offset);
 	$rdata .= $self->typebm();
     }
     
     return $rdata;
     
 }
+
+
+
+
+sub _normalize_dnames {
+	my $self=shift;
+	$self->_normalize_ownername();
+	$self->{'nxtdname'}=lc(Net::DNS::stripdot($self->{'nxtdname'})) if defined $self->{'nxtdname'};
+}
+
+
 
 
 
@@ -132,7 +143,8 @@ sub typelist {
 
 
 sub _canonicalRdata {
-    # rdata contains a compressed domainname... we should not have that.
+    # rdata contains a compressed domainname... that should not have
+    # been done @specification time :-) 
 	my ($self) = @_;
 	my $rdata;
 	$rdata=$self->_name2wire($self->{"nxtdname"});
@@ -170,7 +182,6 @@ sub _typearray2typebm {
     
     # Turn the array of arrays referenced through $bm into the bitmap
     # as used in the RDATA
-
 
     for (my $i=0; $i < @{$bm}; $i++){
 	if (defined ($bm->[$i])){

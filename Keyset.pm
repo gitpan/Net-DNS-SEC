@@ -1,5 +1,5 @@
 
-# $Id: Keyset.pm 269 2005-04-13 13:12:04Z olaf $
+# $Id: Keyset.pm 728 2008-10-12 09:02:24Z olaf $
 
 
 package Net::DNS::Keyset;
@@ -37,7 +37,7 @@ use Carp;
 
 use vars qw ( $VERSION @EXPORT $keyset_err );
 
-( $VERSION ) = '$Revision: 269 $ ' =~ /\$Revision:\s+([^\s]+)/;
+( $VERSION ) = '$Revision: 728 $ ' =~ /\$Revision:\s+([^\s]+)/;
 
 my $debug=0;
 
@@ -538,7 +538,7 @@ sub verify {
 	      $sig->signame .":". $sig->keytag .  "\n" if $debug;
 	  
 	  if ($key->keytag == $sig->keytag &&
-	      $key->name."." eq $sig->signame ){
+	      $key->name."." eq $sig->signame."." ){
 	      print "...\n" if $debug;
 		my @keys=$self->keys ;
 		if (! $sig->verify( \@keys , $key)){

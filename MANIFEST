@@ -11,9 +11,12 @@ RR/DNSKEY.pm
 RR/DS.pm
 RR/KEY.pm
 RR/NSEC.pm
+RR/NSEC3.pm
+RR/NSEC3PARAM.pm
 RR/NXT.pm
 RR/RRSIG.pm
 RR/SIG.pm
+RR/DLV.pm
 SEC.pm
 SEC/Private.pm
 t/00-load.t
@@ -28,6 +31,8 @@ t/11-sigstress.t
 t/12-nsec++.t
 t/13-utilities.t
 t/14-misc.t
+t/15-ds.t
+t/16-dlv.t
 t/getpacket.pl
 t/Kexample.com.+001+28551.private
 t/Kexample.com.+001+28551.key

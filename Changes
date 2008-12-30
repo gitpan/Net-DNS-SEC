@@ -1,5 +1,40 @@
 Revision history for Perl extension Net::DNS::SEC.
 
+***0.15 December 31, 2008
+
+
+   Fix: digestbin not set when an empty value passed to hash.
+
+   Feature: Added DLV (rfcc 4431). The RR object is simply a clone of
+   the DS RR and inherits ... everything
+
+   Feature: Added NSEC3 and NSEC3PARAM support (RFC5155). 
+   This adds Mime::Base32 to the module dependency list. 
+   The RR type was still experimental at that time and is maintained
+   in Net::DNS::RR.
+
+   Fix: Test script recognizes change in Time::Local. Note that
+   Time::Local does not deal with dates beyond 03:14:07 UTC on
+   Tuesday, 19 January 2038. Therefore this code has a year 2038 
+   problem.
+
+   Fix: DS create_from_hash now produces objects that can create
+   wireformat.
+
+   Other: minor changes to the debug statements
+          added t/05-rr.t (and identified a couple of bugs using it)
+
+   Fix: a few inconsistencies with respect to parsing of trailing dots.
+
+
+   During development the test signatures generated with the BIND tools
+   were re-generated in order to troubleshoot a bug that (most
+   probably) was caused by a version incompatibility between Net::DNS
+   and Net::DNS::SEC.  Before release the original test from the 0.14
+   release were ran against this version too.
+   
+
+ 
 
 0.14 February 14, 2005
 
@@ -342,7 +377,7 @@ Net::DNS. The history of those is documented below.
 
 0.19-DNSSEC-0.3: 
   Solved patch problems that where due to the 
-  $Id: Changes 557 2006-02-14 10:07:46Z olaf $ in headers not 
+  $Id: Changes 769 2008-12-30 16:42:20Z olaf $ in headers not 
   being from the original distribution.
 
   Added DSA signature creation
@@ -374,4 +409,4 @@ Net::DNS. The history of those is documented below.
 
 
 ---------------------------------------------------------------------------
-$Id: Changes 557 2006-02-14 10:07:46Z olaf $
+$Id: Changes 769 2008-12-30 16:42:20Z olaf $
