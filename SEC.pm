@@ -1,5 +1,5 @@
 #
-# $Id: SEC.pm 767 2008-12-24 10:02:25Z olaf $
+# $Id: SEC.pm 850 2010-03-12 13:14:33Z olaf $
 #
 
 use strict;
@@ -14,13 +14,13 @@ use strict;
 use Exporter;
 use vars qw($SVNVERSION $VERSION $HAS_NSEC3 $HAS_DLV @EXPORT_OK @ISA);
 @ISA=qw(Exporter);
-$VERSION = '0.15';
+$VERSION = '0.16';
 
 $HAS_DLV=1;     # Signals availability of DLV to Net::DNS::RR
 $HAS_NSEC3=1;   # Signals availability of NSEC3 to Net::DNS::RR
 
 
-$SVNVERSION = (qw$LastChangedRevision: 767 $)[1];
+$SVNVERSION = (qw$LastChangedRevision: 850 $)[1];
 
 
 @EXPORT_OK= qw (
@@ -213,16 +213,18 @@ RFC4033, 4034 and 4035.
     $classmethod=1 unless  ref ($self);
  
     my %algbyname = (
-	"RSAMD5"		   => 1,		
+	"RSAMD5"              => 1,
 	"DH"                  => 2,           # Not implemented
 	"DSA"                 => 3,
 	"ECC"                 => 4,           # Not implemented
 	"RSASHA1"             => 5,
 	"DSA-NSEC3-SHA1"      => 6,
 	"RSA-NSEC3-SHA1"      => 7,
+	"RSASHA256"           => 8,
+	"RSASHA512"           => 10,
 	"INDIRECT"            => 252,         # Not implemented
-	"PRIVATEDNS"          => 253,          # Not implemented
-	"PRIVATEOID"          => 254,          # Not implemented
+	"PRIVATEDNS"          => 253,         # Not implemented
+	"PRIVATEOID"          => 254,         # Not implemented
 	);      
     my %algbyval = reverse %algbyname;
 

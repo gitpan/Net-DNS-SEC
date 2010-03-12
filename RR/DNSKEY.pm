@@ -1,6 +1,6 @@
 package Net::DNS::RR::DNSKEY;
 
-# $Id: DNSKEY.pm 318 2005-05-30 16:36:52Z olaf $
+# $Id: DNSKEY.pm 847 2010-03-12 13:04:13Z olaf $
 
 use strict;
 use vars qw(@ISA $VERSION);
@@ -13,7 +13,7 @@ use Carp;
 @ISA = qw(Net::DNS::RR Net::DNS::SEC);
 
 
-$VERSION = do { my @r=(q$Revision: 318 $=~/\d+/g); sprintf "%d."."%03d"x$#r,@r };
+$VERSION = do { my @r=(q$Revision: 847 $=~/\d+/g); sprintf "%d."."%03d"x$#r,@r };
 
 sub new {
     my ($class, $self, $data, $offset) = @_;
@@ -32,19 +32,20 @@ sub new {
 	$self->{"keybin"}=($keymaterial);
 	$self->{"key"}= encode_base64($keymaterial);
 	
-	$self->setkeytag
     }
-
+    bless $self, $class;
+    $self->setkeytag;
     return $self;
+
+    
 }
-
-
 
 
 
 sub new_from_string {
 	my ($class, $self, $string) = @_;
-	bless $self, $class;
+
+
 	if ($string) {
 		$string =~ tr/()//d;
 		$string =~ s/;.*$//mg;
@@ -58,11 +59,11 @@ sub new_from_string {
 		my $keymaterial=decode_base64($key);
 		$self->{"keybin"}=($keymaterial);
 		$self->{"key"}=$key;
-		$self->setkeytag;
-	    }
+	}
+	bless $self, $class;
 	
+	$self->setkeytag();
 	return $self;
-
 
 }
 
@@ -191,6 +192,49 @@ sub privatekeyname {
 
 
 
+# Return the length in bits of a RSA key and DSA key (crypto speaking)
+#        -1 if it's not a know algorithm
+# RSA part contributed by Hugo Salgado <hsalgado@nic.cl>
+sub keylength {
+    my $self = shift;
+
+    if ( $self->algorithm("mnemonic") =~ /RSA/ ){
+	    # Modulus length, see RFC 2537
+	    
+	    # First we need the total length in the wire rdata
+	    my $total = length(unpack("B*",$self->{"keybin"}));
+	    
+	    # Now we obtain the first octet (exponent length)
+	    my $octet = unpack("B8", $self->{"keybin"});
+	    
+	    my $expo_length;
+	    # If the first octet is zero, we need the next two
+	    if ($octet == 0) {
+		    # This part is untested. I couldn't create a real key test case :(
+		    $octet = unpack("B24", $self->{"keybin"});
+		    $expo_length = unpack("N", pack("B32", substr("0" x 8 . $octet, -24)));
+		    $expo_length += 3; # we add the 3 octets with the length
+	    }
+	    else {
+		    $expo_length = unpack("N", pack("B32", substr("0" x 32 . $octet, -32)));
+		    $expo_length++; # we add the first octet
+	    }
+	    
+	    # The modulus is the remaining, in bits
+	    return $total - ($expo_length*8);
+
+    }elsif (  $self->algorithm("mnemonic") =~ /DSA/ ) {
+	    # T parameter see RFC 2536
+	    return  unpack("C", $self->{"keybin"});
+
+    }else {
+	    return -1;
+    }
+}
+
+
+
+
 1;
 
 
@@ -227,11 +271,15 @@ Returns the RR's protocol field in decimal representation
 
 Returns the RR's algorithm field in decimal representation
 
-    1 = MD5 RSA
+    1 = RSA/MD5
     2 = DH
-    3 = DSA
-    4 = Elliptic curve
-    5 = SHA1 RSA
+    3 = DSA/SHA-1
+    4 = Elliptic Curve
+    5 = RSA/SHA-1
+    6 - DSA/SHA-1 (NSEC3)
+    7 - RSA/SHA-1 (NSEC3)
+    8 - RSA/SHA-256 
+    10 - RSA/SHA-512
 
 Note that only algorithm 1 and 3 are supported by the methods provided
 through Net::DNS::RR::SIG.pm.
@@ -270,9 +318,16 @@ is_sep() returns 1 if the secure entry point flag field is set,
 set_sep() sets secure entry point flag field is set and clear_sep()
 clears the value. 
 
+=head2 keylength
 
+Return the length of a key. 
 
-    
+For RSA this method returns the length (in bits) of the modulus.
+
+For DSA this method returnse the value of the T parameter (See RFC2536)
+
+Returns -1 if the keysize cannot be determined (e.g. for unknown algorithms
+algorithm).
 
 =head1 COPYRIGHT
 

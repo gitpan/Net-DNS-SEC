@@ -19,7 +19,7 @@ use Time::Local;
 
 require Exporter;
 
-$VERSION = do { my @r=(q$Revision: 543 $=~/\d+/g); sprintf "%d."."%03d"x$#r,@r };
+$VERSION = do { my @r=(q$Revision: 816 $=~/\d+/g); sprintf "%d."."%03d"x$#r,@r };
 
 sub new {
     my ($class,  $key_file) = @_;
@@ -55,7 +55,7 @@ sub new {
 		croak "Private Key Format not regognized";
 	    }
 	}elsif	    (/^Algorithm:\s*(\d*)/) {
-	    if ($1 != 1 && $1 != 3 && $1 != 5) {
+	    if ($1 != 1 && $1 != 3 && $1 != 5 && $1 !=6 && $1 != 7 && $1 != 8 && $1 != 10 ) {
 		croak "Key $key_file algorithm is not RSA or DSA (those are the only implemented algorithms) ";
 	    }
 	    
@@ -91,7 +91,11 @@ sub new {
     }
     close(KEYFH);
 
-    if ($self->{"algorithm"} == 1 || $self->{"algorithm"} == 5) {  #RSA
+    if ($self->{"algorithm"} == 1
+     || $self->{"algorithm"} == 5
+     || $self->{"algorithm"} == 7
+     || $self->{"algorithm"} == 8
+     || $self->{"algorithm"} == 10) {  #RSA
       $self->{'privatekey'}=Crypt::OpenSSL::RSA-> 
 	  new_key_from_parameters(
 	      $Modulus,
@@ -116,7 +120,8 @@ sub new {
 	  return(0);
       }
       
-    }elsif ($self->{"algorithm"} == 3){  #DSA
+    }elsif ($self->{"algorithm"} == 3
+	|| $self->{"algorithm"} == 6 ){  #DSA
 	my $private_dsa = Crypt::OpenSSL::DSA->new();
 	$private_dsa->set_p($prime_p);
 	$private_dsa->set_q($subprime_q);
@@ -263,7 +268,7 @@ sub dump_rsa_keytag{
     # _not_ set the flag.
     $self->{"flags"}=$flags unless shift; 
     my $alg=$self->{"algorithm"};
-    return () unless ($alg ==1 || $alg ==5);
+    return () unless ($alg ==1 || $alg ==5 || $alg == 7 || $alg ==8 || $alg ==10);
     my $key=$self->dump_rsa_pub;
     return ()  unless $key;
     my $tmprr=Net::DNS::RR->new("tmp  IN DNSKEY $flags 3 $alg  $key");

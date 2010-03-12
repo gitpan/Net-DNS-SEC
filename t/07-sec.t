@@ -1,5 +1,5 @@
 # Test script for dnssec functionalty   -*-perl-*-
-# $Id: 07-sec.t 556 2006-02-14 09:51:57Z olaf $
+# $Id: 07-sec.t 847 2010-03-12 13:04:13Z olaf $
 # 
 # Called in a fashion simmilar to:
 # /usr/bin/perl -Iblib/arch -Iblib/lib -I/usr/lib/perl5/5.6.1/i386-freebsd \
@@ -9,6 +9,8 @@
 use Test::More tests=>23;
 use strict;
 use MIME::Base64;
+
+use Data::Dumper;
 
 
 BEGIN {
@@ -36,10 +38,7 @@ ok (my $keyrr2=Net::DNS::RR->new("test.tld. IN DNSKEY 256 3 RSAMD5 AQPoBLAXetIEW
 
 is( $keyrr2->algorithm,1,"DNSKEY with string specification of the RR read from string");
 
-
 is ($keyrr2->algorithm("mnemonic"),"RSAMD5","mnemonic works as argument");
-
-use Data::Dumper;
 
 
 # This keyblob represents t/Kexample.com.+005+34247.private;

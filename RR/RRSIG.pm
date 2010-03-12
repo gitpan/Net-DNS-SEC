@@ -1,6 +1,6 @@
 # perldoc RRSIG.pm for documentation.
 # Specs: RFC 2535 section 4
-# $Id: RRSIG.pm 777 2008-12-30 17:18:54Z olaf $
+# $Id: RRSIG.pm 814 2009-11-27 09:28:30Z olaf $
 
 package Net::DNS::RR::RRSIG;
 
@@ -20,7 +20,7 @@ use File::Basename;
 use MIME::Base64;
 use Math::BigInt;
 use Time::Local;
-use Digest::SHA qw (sha1);
+use Digest::SHA qw (sha1 sha256 sha512);
 
 
 
@@ -34,7 +34,7 @@ use Digest::SHA qw (sha1);
 
 require Exporter;
 
-$VERSION = do { my @r=(q$Revision: 777 $=~/\d+/g); sprintf "%d."."%03d"x$#r,@r };
+$VERSION = do { my @r=(q$Revision: 814 $=~/\d+/g); sprintf "%d."."%03d"x$#r,@r };
 @ISA = qw (
 	   Exporter
   	 Net::DNS::RR
@@ -350,10 +350,14 @@ sub create {
     # Enjoy the crypto
     if ($self->algorithm == 1 
 	|| $self->algorithm == 5
-	|| $self->algorithm == 7) {  #RSA
+	|| $self->algorithm == 7
+	|| $self->algorithm == 8
+	|| $self->algorithm == 10) {  #RSA
 	if (! ($Private->algorithm == 1 
 	       || $Private->algorithm == 5 
-	       || $Private->algorithm == 7  )) {
+	       || $Private->algorithm == 7 
+	       || $Private->algorithm == 8 
+	       || $Private->algorithm == 10  )) {
 	    die "Private key mismatch, not RSAMD5 or RSASHA.";
 	    
 	}
@@ -364,6 +368,10 @@ sub create {
 	    $rsa_priv->use_pkcs1_oaep_padding;
 	    if ($self->algorithm == 1) {
 		$rsa_priv->use_md5_hash;
+	    } elsif ($self->algorithm == 8) {
+    	$rsa_priv->use_sha256_hash;
+	    } elsif ($self->algorithm == 10) {
+    	$rsa_priv->use_sha512_hash;
 	    } else {
 		$rsa_priv->use_sha1_hash;
 	    }
@@ -589,6 +597,14 @@ sub verify {
     {
 	$verified=$self->_verifyRSA($sigdata,$signature,$keyrr,1) || return 0;
     }
+    elsif ( $self->algorithm == 8 )  # Verifying for RSASHA256
+    {
+	$verified=$self->_verifyRSA($sigdata,$signature,$keyrr,256) || return 0;
+    }
+    elsif ( $self->algorithm == 10 )  # Verifying for RSASHA512
+    {
+	$verified=$self->_verifyRSA($sigdata,$signature,$keyrr,512) || return 0;
+    }
     else                                  # Verifying other algorithms
     { 
 	$self->{"vrfyerrstr"}= "Algoritm ". $self->algorithm . " has not yet been implemented";
@@ -806,8 +822,12 @@ sub _verifyRSA {
 
     die "Could not load public key" unless $rsa_pub;
     $rsa_pub->use_pkcs1_oaep_padding;
-    if ($isSHA) {
+    if ($isSHA == 1) {
 	$rsa_pub->use_sha1_hash;
+    } elsif ($isSHA == 256) {
+	$rsa_pub->use_sha256_hash;
+    } elsif ($isSHA == 512) {
+	$rsa_pub->use_sha512_hash;
     } else {
 	$rsa_pub->use_md5_hash;
     }

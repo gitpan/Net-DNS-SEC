@@ -1,5 +1,28 @@
 Revision history for Perl extension Net::DNS::SEC.
 
+***0.16 March 12, 2010
+
+   Feature: KEY inherits DNSKEY
+   This helps maintenance in one part of the code.
+	
+
+   Feature: keylength methode rt.cpan.org #53468
+   Added keylength method for RSA and DSA
+   Acknowledgements Hugo Salgado
+
+   Fix: rt.cpan.org #51778
+   Empty bitmap would cause error about undefined ARRAY in NSEC/NSEC3.
+   Now the code will allow empty bitmaps gracefully    
+
+   Feature: New Algorithm Support (rt.cpan.org #51092) 
+   SHA2 algorithm support, including NSEC3 algorithm parameters updated
+   Acknowledgement Jakob Shlyter
+
+   Fix: rt.cpan.org #42089
+   NSEC3 Algorithm support in NSEC3 broken
+   patch by Wes Hardaker
+
+
 ***0.15 December 31, 2008
 
 
@@ -377,7 +400,7 @@ Net::DNS. The history of those is documented below.
 
 0.19-DNSSEC-0.3: 
   Solved patch problems that where due to the 
-  $Id: Changes 769 2008-12-30 16:42:20Z olaf $ in headers not 
+  $Id: Changes 848 2010-03-12 13:12:16Z olaf $ in headers not 
   being from the original distribution.
 
   Added DSA signature creation
@@ -409,4 +432,4 @@ Net::DNS. The history of those is documented below.
 
 
 ---------------------------------------------------------------------------
-$Id: Changes 769 2008-12-30 16:42:20Z olaf $
+$Id: Changes 848 2010-03-12 13:12:16Z olaf $

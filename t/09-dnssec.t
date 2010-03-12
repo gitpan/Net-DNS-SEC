@@ -1,6 +1,6 @@
 #!/usr/bin/perl  -sw 
 # Test script for dnssec functionalty
-# $Id: 09-dnssec.t 717 2008-02-25 14:52:54Z olaf $
+# $Id: 09-dnssec.t 847 2010-03-12 13:04:13Z olaf $
 # 
 # Called in a fashion simmilar to:
 # /usr/bin/perl -Iblib/arch -Iblib/lib -I/usr/lib/perl5/5.6.1/i386-freebsd \
@@ -10,7 +10,7 @@
 
 use Net::DNS::RR::RRSIG;
 
-use Test::More tests=>72;
+use Test::More tests=>83;
 use strict;
 
 
@@ -67,7 +67,7 @@ $otherrrset = [ $otherrr1, $otherrr2 , $otherrr3  ] ;
 
 
 #
-# RSA keypair 
+# RSA/SHA-1 keypair 
 #
 my $keypathrsa="Ktest.tld.+001+11567.private";
 my $privrsakey= << 'ENDRSA' ;
@@ -94,7 +94,69 @@ my $rsakeyrr=new Net::DNS::RR ("test.tld. IN KEY 256 3 1 AQPoBLAXetIEWcEFDs+Z1Ym
 
 
 
-ok( $rsakeyrr, 'RSA public key created');     
+ok( $rsakeyrr, 'RSA/SHA-1 public key created');     
+
+
+
+
+#
+# RSA/SHA-256 keypair 
+#
+my $keypathrsa256="Ktest.tld.+008+31374.private";
+my $privrsakey256= << 'ENDRSA' ;
+Private-key-format: v1.2
+Algorithm: 8 (RSASHA256)
+Modulus: qMM+u+1QBzYCm6PteHMyPhLBLwagdf3SfkPwWUcjdfpFHKssWWKIVHNOhaYJy/YqyTeVpG+Ij6SdSeh/QN9G/p8k4UYsvlr9G6aofgcHrVOS3xVMXK4iH6P4UTvoNBuX48wHWC9426MyODf3DcK2NxDSdnOfhpUBBvC3z3mTSrM=
+PublicExponent: AQAB
+PrivateExponent: YN0v9M2RUZI+jPbaJnh4Lgi1uTgkgZTebHqySYv7Xov3fy0Al41mkpJcT3mtxdPVWwj8axVZXJkvbmx0HdgJ9sx9SoF5HmF078O5y7yit78gbbOEKyGRlU7kfEQrQ6uHBO99LJVtr89KplW3qVKwgH2FBiAyI9dNkevebJ4R8AE=
+Prime1: 3GiJfuE1kaPIH6TH+b0nmH+bCQ0a7egDVrPcLVh9ybENy3KbvkRy3MYgBXBt/Zv8QgtQA+esGIwSWzxurzp1Mw==
+Prime2: xAO6HUsZibwUv3aX9F2oPH1YmeZpdOXIdBMN4RpibbRqs5TfKQy8281nW5dKcFG97K9jKVGv9HGgPSuBC7DUgQ==
+Exponent1: iZrqXMCWBTtPshHal9y0X80rKdd4vJdhnjvkdpsMzWMwzZfcDEoHvDYlv7+VrAQ61bDiX82/8ANjYnq0T8obaQ==
+Exponent2: htg9h/trFSrTZyfRv2VS4FImyrEM6UNOlDOrf6kj/253XRVUNCw0HE4BBaxdpElHi/TYFcvBbTthzdMI0p8SgQ==
+Coefficient: pXn2+3pGnSRX9fDliY1msoLu8dLzzZaYzxKl8NDCaBfj8XJEs0Ix7iovG886LLoZ2bLAZkS+1ZbRfFr+1wbmqA==
+ENDRSA
+
+
+open (RSA,">$keypathrsa256") or die "Could not open $keypathrsa256";
+print RSA $privrsakey256;
+close(RSA);
+
+
+my $rsakeyrr256=new Net::DNS::RR ("test.tld. IN KEY 256 3 1 AQPoBLAXetIEWcEFDs+Z1Ymc2RPZeRtk/kF7bxLJOiGye5PVHDs6Vs1U 2JP7hLTglRLSK1Vu+C1iYNkYxTed9k/56vbS4lGj+a7qFKQlbcxfkRLy j8ac5JPXNIIfX5oDVjoCWF8t5sL7KxUp+0ticRyjqgc2Khg6ZgejNivl 3S0v+w==
+");
+
+ok( $rsakeyrr256, 'RSA/SHA-256 public key created');     
+
+
+
+
+#
+# RSA/SHA-512 keypair 
+#
+my $keypathrsa512="Ktest.tld.+010+04625.private";
+my $privrsakey512= << 'ENDRSA' ;
+Private-key-format: v1.2
+Algorithm: 10 (RSASHA512)
+Modulus: 8feFRviN7LXET8rIBgoePE1Aj4Rml4bIEe24UiqOKsf5rsYy+F3T2HEYszKhhVpXFje3cjbtLOCnKsrg2iT+QQn8PBrc9y/AZ6sdR+qdYICx4V/QoCrzaBWIE6CUB3m1ZeoMDwnadkMGpYKuMIyi+oO8qfdYhIiElTY9/ctR7gE=
+PublicExponent: AQAB
+PrivateExponent: 6wlwYNwXoJN/ubJUUemKLTEtQTtvHElEFoY/wTCtIElX87l60V7y5RAW2hqYYxy5807z1vIbuLgQKbUgbUX54ffwans1E5jcXetTAUxYmAZbJMHJNk48ssbp8Kipr58O4BC0Fdg8iiJuUu+t4qnDp6Vxy+L4I07U1sjiUd7SpQE=
+Prime1: +6O0SL5Wg32Gd/oQOJchH0xojeltBVVeyayadY6dM14ygTk4kwm3+6V+lRMPHyzxzEyXDY7jV62yqxLY+0NumQ==
+Prime2: 9ijoalqp0VafFvv7jfQFceMmszAlnwzoxekuCdwO7CfRDHG4OOB3HvR1B/Ndr2LShS5X5pIHd1uAxPFrCYcjqQ==
+Exponent1: x74hG+DiIUuhUljPSWxFIWfwUj0oiaRDMkhs7sV+aMjrxAFcs/Jx9TFfcguH5FIzuNxOxrdWJEG/YeX7EC9teQ==
+Exponent2: ea1Q7Tlxlcu2ifr2pn2Hr3rz50EWZ59O9H1Fx5PiQHOSDw+rW1oBJ+j4bHysw4QawcBdrNhkHmi5pyAao7QMOQ==
+Coefficient: oEwXjm4z0dVIkNS08yDSgAj9QTZLoKjDfoO/bpLLUYh9WnwPu2Jc+1eMreVfbC0RHTohxEntUuZXsPR7Du+zEQ==
+ENDRSA
+
+
+open (RSA,">$keypathrsa512") or die "Could not open $keypathrsa512";
+print RSA $privrsakey512;
+close(RSA);
+
+
+my $rsakeyrr512=new Net::DNS::RR ("test.tld. IN KEY 256 3 1 AQPoBLAXetIEWcEFDs+Z1Ymc2RPZeRtk/kF7bxLJOiGye5PVHDs6Vs1U 2JP7hLTglRLSK1Vu+C1iYNkYxTed9k/56vbS4lGj+a7qFKQlbcxfkRLy j8ac5JPXNIIfX5oDVjoCWF8t5sL7KxUp+0ticRyjqgc2Khg6ZgejNivl 3S0v+w==
+");
+
+ok( $rsakeyrr512, 'RSA/SHA-512 public key created');     
 
 
 
@@ -126,7 +188,7 @@ v2z/FTRSMTdkBz550C+9nLVKbzC3vpFl+3xl7l1jyFAllZ2wHj9kp8aY
 
 ");
 
-ok( $dsakeyrr, 'RSA public key created');      
+ok( $dsakeyrr, 'DSA public key created');      
 
 
 
@@ -142,8 +204,23 @@ my $sigrsa= create Net::DNS::RR::RRSIG($datarrset,$keypathrsa,
 #				     sigval => 100,
 				     ));
 
-
 ok ( $sigrsa, 'RSA signature created');                               
+
+my $sigrsa256= create Net::DNS::RR::RRSIG($datarrset,$keypathrsa256, 
+				    (
+				     ttl => 360, 
+#				     sigval => 100,
+				     ));
+
+ok ( $sigrsa256, 'RSA signature created');                               
+
+my $sigrsa512= create Net::DNS::RR::RRSIG($datarrset,$keypathrsa512, 
+				    (
+				     ttl => 360, 
+#				     sigval => 100,
+				     ));
+
+ok ( $sigrsa512, 'RSA signature created');                               
 
 is ( $sigrsa->ttl, 360, "TTL from argument");
 
@@ -153,7 +230,11 @@ ok ( $sigdsa, 'DSA signature created');
 is ( $sigdsa->ttl, 7000, "TTL from RRset");
 
 # Verify the just created signatures
-ok ($sigrsa->verify($datarrset,$rsakeyrr),'RSA sig verifies');        
+ok ($sigrsa->verify($datarrset,$rsakeyrr),'RSA/SHA-1 sig verifies');        
+# Verify the just created signatures
+ok ($sigrsa->verify($datarrset,$rsakeyrr256),'RSA/SHA-256 sig verifies');        
+# Verify the just created signatures
+ok ($sigrsa->verify($datarrset,$rsakeyrr512),'RSA/SHA-512 sig verifies');        
 # Verify the just created signatures
 ok ($sigdsa->verify($datarrset,$dsakeyrr), 'DSA sig verifies');       
 
@@ -248,8 +329,19 @@ ok( $dsasigrr, 'DSA signature with bind generated key');
 my $rsasigrr=Net::DNS::RR::RRSIG->create($nldatarrset,
 				    $keypathrsa
 				    );
-ok( $rsasigrr, 'RSA signature with bind generated key');            
+ok( $rsasigrr, 'RSA/SHA-1 signature with bind generated key');            
 
+
+my $rsasigrr256=Net::DNS::RR::RRSIG->create($nldatarrset,
+				    $keypathrsa256
+				    );
+ok( $rsasigrr256, 'RSA/SHA-256 signature with bind generated key');            
+
+
+my $rsasigrr512=Net::DNS::RR::RRSIG->create($nldatarrset,
+				    $keypathrsa512
+				    );
+ok( $rsasigrr512, 'RSA/SHA-512 signature with bind generated key');            
 
 
 ok( $dsasigrr->verify($nldatarrset,$dsakeyrr),'DSA sig (test 2) verifies');       
@@ -579,6 +671,10 @@ unlink($keypathrsasha1);
 
 
 
+
+is ($dsakeyrr->keylength, 8, "DSA (KEY) Keysize ");
+is ($rsakeyrr->keylength, 1024, "RSA (KEY) Keysize ");
+is ($bindkey1->keylength, 2048, "RSA (DNSKEY) Keysize ");
 
 
 

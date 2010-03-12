@@ -1,4 +1,4 @@
-# $Id: 00-pod.t 222 2005-03-04 09:03:31Z olaf $
+# $Id: 00-pod.t 813 2009-11-27 09:10:10Z olaf $
 
 use Test::More;
 use File::Spec;

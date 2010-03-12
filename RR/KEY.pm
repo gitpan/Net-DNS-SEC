@@ -1,6 +1,6 @@
 package Net::DNS::RR::KEY;
 
-# $Id: KEY.pm 318 2005-05-30 16:36:52Z olaf $
+# $Id: KEY.pm 847 2010-03-12 13:04:13Z olaf $
 
 use strict;
 use vars qw(@ISA $VERSION);
@@ -9,147 +9,17 @@ use Net::DNS;
 use MIME::Base64;
 use Carp;
 
-@ISA = qw(Net::DNS::RR);
-$VERSION = do { my @r=(q$Revision: 318 $=~/\d+/g); sprintf "%d."."%03d"x$#r,@r };
+@ISA = qw(Net::DNS::RR Net::DNS::RR::DNSKEY);
+$VERSION = do { my @r=(q$Revision: 847 $=~/\d+/g); sprintf "%d."."%03d"x$#r,@r };
+
 sub new {
-    my ($class, $self, $data, $offset) = @_;
-    if ($self->{"rdlength"} > 0) {
-	
-	my $offsettoprot=$offset+2;
-	my $offsettoalg=$offset+3;
-	my $offsettokey=$offset+4;
-	
-	$self->{"flags"}=unpack("n",substr($$data,$offset,2));
-	$self->{"protocol"}=unpack("C",substr($$data,$offsettoprot,1));
-	$self->{"algorithm"}=unpack("C",substr($$data,$offsettoalg,1));
-	my $keymaterial=substr($$data,$offsettokey,$self->{"rdlength"}-4);
-	$self->{"keybin"}=($keymaterial);
-	$self->{"key"}= encode_base64($keymaterial);
-	
-	setkeytag($self);	
-    }
-    return bless $self, $class;
+	return Net::DNS::RR::DNSKEY::new(@_);
 }
-
-
-
-
 
 sub new_from_string {
-	my ($class, $self, $string) = @_;
-
-
-	if ($string) {
-		$string =~ tr/()//d;
-		$string =~ s/;.*$//mg;
-		$string =~ s/\n//mg;
-		my ($flags, $protocol, $algorithm,$key) = 
-		    $string =~ /^\s*(\S+)\s+(\S+)\s+(\S+)\s+(.*)/;
-		$key =~ s/\s*//g;
-		$self->{"flags"}=$flags;
-		$self->{"algorithm"}=$algorithm;
-		$self->{"protocol"}=$protocol;
-		my $keymaterial=decode_base64($key);
-		$self->{"keybin"}=($keymaterial);
-		$self->{"key"}=$key;
-		
-		setkeytag($self);
-	    }
-	return bless $self, $class;
+	return Net::DNS::RR::DNSKEY::new_from_string(@_);
 }
 
-
-
-sub rdatastr {
-	my $self = shift;
-	my $rdatastr;
-	if (exists $self->{"flags"}) {
-	    $rdatastr  = $self->{flags};
-	    $rdatastr .= "  "  . "$self->{protocol}";
-	    $rdatastr .= "  "  . "$self->{algorithm}";
-	    $rdatastr .= " ( \n" ;
-	    # do some nice formatting
-	    my $keystring=$self->{key};
-	    $keystring =~ s/\n//g;
-	    $keystring =~ s/(\S{36})/$1\n\t\t\t/g;
-	    $rdatastr .=  "\t\t\t".$keystring;
-	    $rdatastr .= " \n\t\t\t) ; Key ID = "  . "$self->{keytag}";
-	    }
-	else {
-	    $rdatastr = "; no data";
-	}
-
-	return $rdatastr;
-}
-
-sub rr_rdata {
-    my $self = shift;
-    
-    my $rdata;
-    if (exists $self->{"flags"}) {
-	$rdata= pack("n",$self->{"flags"}) ;
-	$rdata.=
-	    pack("C2",$self->{"protocol"} 
-		     , $self->{"algorithm"}) ;
-	$rdata.= $self->{"keybin"}
-    }
-    return $rdata;
-}
-
-sub setkeytag
-{
-    my $self=shift;
-    if (($self->{"flags"} & hex("0xc000") ) == hex("0xc000") ){
-	# NULL KEY
-	$self->{"keytag"} = 0;
-    }elsif ($self->{"algorithm"} == '1'){
-	# RFC 2535 4.1.6  most significant 16 bits of the least
-	#                 significant 24 bits
-	
-	my @keystr=split //, $self->{"keybin"};
-	my $keysize= $#keystr+1;
-	$self->{"keytag"} = (unpack("C",$keystr[$keysize - 3]) << 8) 
-	    + unpack("C",$keystr[$keysize - 2]);
-	0;
-    }else{
-	# All others
-	# RFC 2535  Appendix C
-	my ($ac, $i);
-	
-
-	# $self->{"rr_data"} cannot be 
-	# used if the object has not been constructed ?!?
-
-	my $rdata= pack("n",$self->{"flags"}) ;   
-	$rdata.=
-	    pack("C2",$self->{"protocol"} 
-		 , $self->{"algorithm"}) ;
-	$rdata.= $self->{"keybin"};
-	my @keyrr=split //, $rdata;
-
-	for ( $ac=0 , $i=0; $i <= $#keyrr ; $i++ ){
-	    $ac += ($i & 1) ? 
-		unpack("C",$keyrr[$i]) :
-		    unpack("C", $keyrr[$i])<<8;
-	}
-	$ac += ($ac>>16) & 0xFFFF;
-	$self->{"keytag"} =($ac & 0xFFFF);
-	0;
-    }
-    
-}
-
-
-
-
-sub privatekeyname {
-    my $self=shift;
-    return sprintf("K%s.+%03d+%05d.private",
-		   $self->name,
-		   $self->{"algorithm"},
-		   $self->keytag);
-    
-}
 
 
 
@@ -169,6 +39,9 @@ C<use Net::DNS::RR;>
 Class for DNS Address (KEY) resource records.
 
 =head1 METHODS
+
+This class inherits most of its methods from DNSKEY. See DNSKEY for a
+complete list of available methods.
 
 =head2 flags
 

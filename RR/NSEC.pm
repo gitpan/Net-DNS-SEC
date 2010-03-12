@@ -1,6 +1,6 @@
 package Net::DNS::RR::NSEC;
 
-# $Id: NSEC.pm 728 2008-10-12 09:02:24Z olaf $
+# $Id: NSEC.pm 813 2009-11-27 09:10:10Z olaf $
 
 use strict;
 use vars qw(@ISA $VERSION);
@@ -13,7 +13,7 @@ use Data::Dumper;
 use Carp;
 
 @ISA = qw(Net::DNS::RR);
-$VERSION = do { my @r=(q$Revision: 728 $=~/\d+/g); sprintf "%d."."%03d"x$#r,@r };
+$VERSION = do { my @r=(q$Revision: 813 $=~/\d+/g); sprintf "%d."."%03d"x$#r,@r };
 
 sub new {
     my ($class, $self, $data, $offset) = @_;
@@ -159,6 +159,7 @@ sub _typearray2typebm {
     # typebm= (WindowBlockNumber |BitmapLength|Bitmap)+
 
     my @typelist= @_;
+    return "" unless @typelist;
 
     my $typebm="";
     my $CurrentWindowNumber=0;
