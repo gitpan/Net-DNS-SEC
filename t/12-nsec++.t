@@ -1,6 +1,6 @@
 #!/usr/bin/perl  -sw 
 # Test script for dnssec functionalty
-# $Id: 12-nsec++.t 778 2008-12-30 17:19:35Z olaf $
+# $Id: 12-nsec++.t 1112 2013-09-20 08:57:49Z willem $
 # 
 
 
@@ -65,11 +65,11 @@ is( join(" ", sort split(' ',$rr2->typelist())),  join(" ", sort split(' ',$rr->
 my $newbitmap="00060008000000031606000000000002";
 my $newtypelist="NSEC PTR RRSIG TYPE5678";
 $rr->typelist($newtypelist);
-is (unpack("H*",$rr->typebm()),$newbitmap,"typebm appropritatly changed after invoking typelist method");
+is (unpack("H*",$rr->typebm()),$newbitmap,"typebm changed appropriately after invoking typelist method");
 
 
 $rr2->typebm(pack("H*",$newbitmap));
-is ($rr2->typelist,$newtypelist,"typelist appropritatly changed after invoking typelist method");
+is ($rr2->typelist,$newtypelist,"typelist changed appropriately after invoking typelist method");
 
 
 ########################
@@ -100,15 +100,12 @@ is ("92pqneegtaue7pjatc3l3qnk738c6v5m",lc Net::DNS::RR::NSEC3::name2hash(1,"*.x.
 
 
 
-my $nsec3param=Net::DNS::RR->new(
- "alfa.example.com 86400 NSEC3PARAM 2 0 12 aabbccdd",
-		      );
+my $nsec3param = eval{ Net::DNS::RR->new("alfa.example.com 86400 NSEC3PARAM 2 0 12 aabbccdd") };
+print $@ if $@;
 ok ($nsec3param, "NSEC3PARAM created");
 
-undef $nsec3param;
-$nsec3param=Net::DNS::RR->new(
- "alfa.example.com 86400 NSEC3PARAM 2 0 12 aabbccfs",
-		      );
+$nsec3param = eval{ Net::DNS::RR->new("alfa.example.com 86400 NSEC3PARAM 2 0 12 aabbccfs") };
+print $@ if $@;
 ok (!$nsec3param, "NSEC3PARAM not created with corrupt hex data");
 
 

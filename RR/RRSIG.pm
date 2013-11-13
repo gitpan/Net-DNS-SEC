@@ -1,6 +1,6 @@
 # perldoc RRSIG.pm for documentation.
 # Specs: RFC 2535 section 4
-# $Id: RRSIG.pm 814 2009-11-27 09:28:30Z olaf $
+# $Id: RRSIG.pm 1105 2013-08-23 09:03:10Z willem $
 
 package Net::DNS::RR::RRSIG;
 
@@ -15,6 +15,7 @@ use Crypt::OpenSSL::DSA;
 use Crypt::OpenSSL::RSA;
 use Crypt::OpenSSL::Bignum;
 use Net::DNS::SEC::Private;
+
 
 use File::Basename;
 use MIME::Base64;
@@ -34,7 +35,7 @@ use Digest::SHA qw (sha1 sha256 sha512);
 
 require Exporter;
 
-$VERSION = do { my @r=(q$Revision: 814 $=~/\d+/g); sprintf "%d."."%03d"x$#r,@r };
+$VERSION = do { my @r=(q$Revision: 1105 $=~/\d+/g); sprintf "%d."."%03d"x$#r,@r };
 @ISA = qw (
 	   Exporter
   	 Net::DNS::RR
@@ -607,7 +608,7 @@ sub verify {
     }
     else                                  # Verifying other algorithms
     { 
-	$self->{"vrfyerrstr"}= "Algoritm ". $self->algorithm . " has not yet been implemented";
+	$self->{"vrfyerrstr"}= "Algorithm ". $self->algorithm . " has not yet been implemented";
 	return 0;
     }	
     
@@ -881,6 +882,12 @@ sub _CreateSigData {
     my $sigdata;
     # construction of message 
 
+    # A hack to make a local copy of $rawdata in case we need to
+    # modify an RR name for wildcard validation
+    for (my $i=0; $i<@{$rawdata}; $i++){
+	$rawdata->[$i] = Net::DNS::RR->new($rawdata->[$i]->string);
+    }
+
     print "_CreatSigData\n" if $debug;
     my $rdatawithoutsig=$self->rr_rdata_without_sigbin;
     print "raw RRsig:\t",  unpack("H*", $rdatawithoutsig) if $debug;
@@ -892,6 +899,16 @@ sub _CreateSigData {
 	if (@{$rawdata}>1) {
 	    my @canonicaldataarray;
 	    for (my $i=0; $i<@{$rawdata}; $i++){
+
+	        # check for wildcards
+	        my @components = Net::DNS::name2labels($rawdata->[$i]->{"name"});
+	        if (int(@components) > $self->{"labels"}) {
+		    print "\n fabricating wildcard RR name: " if $debug;
+		    shift @components while int(@components) > $self->{"labels"};
+		    $rawdata->[$i]->name(join('.', map(Net::DNS::wire2presentation($_),('*', @components))));
+		    print  $rawdata->[$i]->{"name"} . "\n" if $debug;
+	        }
+
 		if ($debug){
 		    print "Setting TTL to from ". $rawdata->[$i]->{"ttl"} . " to " .
 			$self->orgttl . "\n" 
@@ -970,6 +987,17 @@ sub _CreateSigData {
 	      unpack("H*",$rawdata->[0]->_canonicalRdata) ."\n" if $debug;
 	    
 	    $rawdata->[0]->{"ttl"}=$self->orgttl;	    
+
+	    #
+	    # check for wildcards
+	    #
+	    my @components = Net::DNS::name2labels($rawdata->[0]->{"name"});
+	    if (int(@components) > $self->{"labels"}) {
+		print "\n fabricating wildcard RR name:" if $debug;
+		shift @components while int(@components) > $self->{"labels"};
+		$rawdata->[0]->name(join('.', map(Net::DNS::wire2presentation($_),('*', @components))));
+		print  $rawdata->[0]->{"name"} . "\n" if $debug;
+	    }
 	    $sigdata .= $rawdata->[0]->_canonicaldata;
 	    
 	}
@@ -1181,7 +1209,7 @@ Read "KeyID Bug in bind." below.
 
     print "signame =", $rr->signame, "\n"
 
-Returns the name of the public KEY RRs  this sig was made with.
+Returns the name of the public DNSKEY RRs  this sig was made with.
 
 =head2 sig
 

@@ -1,5 +1,5 @@
 #
-# $Id: SEC.pm 850 2010-03-12 13:14:33Z olaf $
+# $Id: SEC.pm 1106 2013-08-23 09:17:11Z willem $
 #
 
 use strict;
@@ -14,13 +14,13 @@ use strict;
 use Exporter;
 use vars qw($SVNVERSION $VERSION $HAS_NSEC3 $HAS_DLV @EXPORT_OK @ISA);
 @ISA=qw(Exporter);
-$VERSION = '0.16';
+$VERSION = '0.16_01';
 
 $HAS_DLV=1;     # Signals availability of DLV to Net::DNS::RR
 $HAS_NSEC3=1;   # Signals availability of NSEC3 to Net::DNS::RR
 
 
-$SVNVERSION = (qw$LastChangedRevision: 850 $)[1];
+$SVNVERSION = (qw$LastChangedRevision: 1106 $)[1];
 
 
 @EXPORT_OK= qw (
@@ -142,7 +142,7 @@ Can also be called as a class method to do Mnemonic to Value conversion.
     $memonic=$self->digtype("mnemonic");
 
 
-The algorithm method is used to set or read the value of the digest or
+The digtype method is used to set or read the value of the digestype or
 hash algorithm field in Net::DNS::RR::DS and Net::DNS::RR::NSEC3
 objects.
 
@@ -300,39 +300,39 @@ sub _digtype {
     
     if (!defined $argument){
 	return if $classmethod;
-	return $self->{"digest"};
+	return $self->{"digtype"};
     }
 
     # Argument has some value...
     $argument =~ s/\s//g; # Remove strings to be kind
 
     if ($argument =~ /^\d+$/ ){    #Numeric argument.
-	carp "$argument does not map to a valid digest" unless 
+	carp "$argument does not map to a valid digest type" unless 
 	    exists $digestbyval{$argument};
 	if ($classmethod){
 	    return $argument ;
 	}else{
-	    return $self->{"digest"}=$argument ;
+	    return $self->{"digtype"}=$argument ;
 	}
     }else{  # argument is not numeric
 	if ($classmethod){
-	    carp "$argument does not map to a valid digest" unless
+	    carp "$argument does not map to a valid digest type" unless
 		exists $digestbyname{uc($argument)};
 	    return $digestbyname{uc($argument)};
 	    
 	}else{ # Not a class method..
 	    if (lc($argument) eq "mnemonic"){
-		return $digestbyval{$self->{"digest"}};
+		return $digestbyval{$self->{"digtype"}};
 	    }else{
-		carp "$argument does not map to a valid digest" unless
+		carp "$argument does not map to a valid digest type" unless
 		    exists $digestbyname{uc($argument)};
-		return $self->{"digest"}=$digestbyname{uc($argument)};
+		return $self->{"digtype"}=$digestbyname{uc($argument)};
 	    }	    
 	}
 
 	
     }	
-    die "digest method should never end here";
+    die "digtype method should never end here";
 
 	
 }

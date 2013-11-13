@@ -1,5 +1,5 @@
 
-# $Id: Keyset.pm 728 2008-10-12 09:02:24Z olaf $
+# $Id: Keyset.pm 962 2011-11-23 15:24:04Z willem $
 
 
 package Net::DNS::Keyset;
@@ -37,7 +37,7 @@ use Carp;
 
 use vars qw ( $VERSION @EXPORT $keyset_err );
 
-( $VERSION ) = '$Revision: 728 $ ' =~ /\$Revision:\s+([^\s]+)/;
+( $VERSION ) = '$Revision: 962 $ ' =~ /\$Revision:\s+([^\s]+)/;
 
 my $debug=0;
 
@@ -519,65 +519,62 @@ sub verify {
     my $key;
     my $sig;
     
-
-
-
     my $one_sep_key_found=0;
     my $one_sep_key_validated=0;
     my $one_key_validated=0;
     my $key_id_found=0;
     my @tags_verified=();
-
     
-  KEY:    foreach $key ($self->keys) {
-      $one_sep_key_found=1 if $key->is_sep;
-      foreach $sig ($self->sigs) {
-	  print "Checking: " . $key->name .":". $key->keytag . 
-	      ($key->is_sep?"(SEP)":"") .
-	      "---" .
-	      $sig->signame .":". $sig->keytag .  "\n" if $debug;
-	  
-	  if ($key->keytag == $sig->keytag &&
-	      $key->name."." eq $sig->signame."." ){
-	      print "...\n" if $debug;
-		my @keys=$self->keys ;
-		if (! $sig->verify( \@keys , $key)){
-		    $keyset_err="" if ($keyset_err eq "No Error");
-		    $keyset_err .= $sig->vrfyerrstr. " on key ". $key->name.			" ".$key->keytag ." ";
+    KEY: foreach $key ($self->keys) {
+             $one_sep_key_found=1 if $key->is_sep;
+             foreach $sig ($self->sigs) {
+                 print "Checking: "  .     $key->name   . ":"   
+                     . $key->keytag  .    ($key->is_sep ? "(SEP)":"") . "---" 
+                     . $sig->signame .":". $sig->keytag . "\n" if $debug;
+      
+                if ($key->keytag == $sig->keytag
+                                 && $key->name."." eq $sig->signame."." ){
+                    print "...\n" if $debug;
+                    my @keys=$self->keys ;
+                    if (! $sig->verify( \@keys , $key)){
 
-		    # If we did supply an argument we want to fail if
-		    # the signature made with that keytag failed.
+                        if (defined $keyid) {
+                            # Maybe there is another one with the same id
+                            #
+                            next KEY; 
 
-		    if (defined $keyid && $sig->keytag == $keyid ){
-			$keyset_err= "Signature made with $keyid did not validate";
-			return 0;
-		    }
-		    # If we did not supply an argument we want to fail if any 
-		    # of the signatures failed
-		    return 0 if (! defined $keyid);
-		    
-		    next KEY;
-		}
-	      push @tags_verified, $key->keytag;
-	      # past verification
-		$one_key_validated=1;
-		$one_sep_key_validated=1 if $key->is_sep;    
-		$key_id_found=1 if (defined $keyid && $key->keytag == $keyid );
-		print "verified " .$key->keytag."\n" if $debug;
+                        } else {
+                            # If we did not supply an argument we want to
+                            # fail if any of the signatures failed
 
-	    }
-      }
+                            $keyset_err  = "" if ($keyset_err eq "No Error");
+                            $keyset_err .= $sig->vrfyerrstr . " on key "
+                                        .  $key->name . " " . $key->keytag 
+                                        .  " ";
+                            return 0 
+                        };
+                    } else { # verification succeeded!
+                        push @tags_verified, $key->keytag;
+                        $one_key_validated=1;
+                        $one_sep_key_validated=1 if $key->is_sep;    
+                        $key_id_found=1 if (defined $keyid 
+                                            && $key->keytag == $keyid );
+                        print "verified " .$key->keytag."\n" if $debug;
+                    }
+                } # if keytag's and key->name/sig->signame matched
+            } # foreach $sig ($self->sigs)
+        } # foreach $key ($self->keys)
+    # unindent KEY label
 
-  }
     if ($one_sep_key_found && ! $one_sep_key_validated){
-	$keyset_err= "One key had the SEP flag set but non of the keys had a signature";
-	return 0;
+        $keyset_err= "One key had the SEP flag set but non of the keys had a signature";
+        return 0;
     }elsif(  ! $one_key_validated ){
-	$keyset_err= "None of the keys in the keyset had a signature";
-	return 0;
+        $keyset_err= "None of the keys in the keyset had a signature";
+        return 0;
     }elsif ( defined($keyid) && ! $key_id_found ){
-	$keyset_err= "No signature made with $keyid found";
-	return 0;
+        $keyset_err= "No signature made with $keyid found";
+        return 0;
     }
     @tags_verified = ($keyid) if defined ($keyid);
     return @tags_verified;

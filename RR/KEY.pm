@@ -1,6 +1,6 @@
 package Net::DNS::RR::KEY;
 
-# $Id: KEY.pm 847 2010-03-12 13:04:13Z olaf $
+# $Id: KEY.pm 865 2011-01-05 22:15:24Z willem $
 
 use strict;
 use vars qw(@ISA $VERSION);
@@ -9,8 +9,8 @@ use Net::DNS;
 use MIME::Base64;
 use Carp;
 
-@ISA = qw(Net::DNS::RR Net::DNS::RR::DNSKEY);
-$VERSION = do { my @r=(q$Revision: 847 $=~/\d+/g); sprintf "%d."."%03d"x$#r,@r };
+@ISA = qw(Net::DNS::RR::DNSKEY);
+$VERSION = do { my @r=(q$Revision: 865 $=~/\d+/g); sprintf "%d."."%03d"x$#r,@r };
 
 sub new {
 	return Net::DNS::RR::DNSKEY::new(@_);
@@ -58,7 +58,7 @@ Returns the RR's protocol field in decimal representation
 
 =head2 algorithm
 
-    print "algoritm" = ", $rr->algorithm, "\n";
+    print "algorithm" = ", $rr->algorithm, "\n";
 
 Returns the RR's algorithm field in decimal representation
 

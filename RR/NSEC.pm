@@ -1,6 +1,6 @@
 package Net::DNS::RR::NSEC;
 
-# $Id: NSEC.pm 813 2009-11-27 09:10:10Z olaf $
+# $Id: NSEC.pm 1000 2012-06-28 10:44:42Z willem $
 
 use strict;
 use vars qw(@ISA $VERSION);
@@ -13,7 +13,7 @@ use Data::Dumper;
 use Carp;
 
 @ISA = qw(Net::DNS::RR);
-$VERSION = do { my @r=(q$Revision: 813 $=~/\d+/g); sprintf "%d."."%03d"x$#r,@r };
+$VERSION = do { my @r=(q$Revision: 1000 $=~/\d+/g); sprintf "%d."."%03d"x$#r,@r };
 
 sub new {
     my ($class, $self, $data, $offset) = @_;
@@ -91,8 +91,14 @@ sub rr_rdata {
 
     my $rdata = "" ;
     if (exists $self->{"nxtdname"}) {
-	# Compression used here... 
-	$rdata = $packet->dn_comp(($self->{"nxtdname"}),$offset);
+	# RFC 3845 2.1.1
+	# A sender MUST NOT use DNS name compression on the Next Domain Name
+	# field when transmitting an NSEC RR.
+	my @labels = Net::DNS::name2labels($self->{"nxtdname"});
+	foreach my $l (@labels) {
+	    $rdata .= pack('CA*', length($l), $l);
+	}
+	$rdata .= pack('C', 0);
 	$rdata .= $self->typebm();
     }
     
@@ -106,7 +112,7 @@ sub rr_rdata {
 sub _normalize_dnames {
 	my $self=shift;
 	$self->_normalize_ownername();
-	$self->{'nxtdname'}=lc(Net::DNS::stripdot($self->{'nxtdname'})) if defined $self->{'nxtdname'};
+	$self->{'nxtdname'}=Net::DNS::stripdot($self->{'nxtdname'}) if defined $self->{'nxtdname'};
 }
 
 

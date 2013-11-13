@@ -1,10 +1,48 @@
 Revision history for Perl extension Net::DNS::SEC.
+***0.17 NOT RELEASED
+   Allow to specify algorithms with ::Private->new_rsa_private and
+   ::Private->generate_rsa in stead of assuming RSASHA1.
+
+   Fix: rt.cpan.org #55621
+   Specify license type (mit) in META.yml
+
+   Fix: rt.cpan.org #60269
+   Remove Digest::SHA1 prerequirement
+
+   Fix: rt.cpan.org #62387 & #63273
+   Typo fixes
+
+   Fix: rt.cpan.org #62386
+   Make Net::DNS::RR::DS::digtype method work
+
+   Fix: rt.cpan.org #62385
+   Do not compress Next Domain Name in NSEC rdata.
+
+   Fix: rt.cpan.org #61104
+   Spelling correction in DS.pm and fix of key2ds demo program
+
+   Fix: rt.cpan.org #60185
+   Make sure %main::SIG hash keeps its values when compiling Net::DNS::RR::SIG
+   in perl versions before 5.14.  See also: rt.perl.org #76138
+
+   Fix: rt.cpan.org #64552
+   Support for private-key-format v1.3
+
+   Fix: rt.cpan.org #75892
+   Do not canonicalize the "Next Domain Name" rdata field of a NSEC RR
+   for draft-ietf-dnsext-dnssec-bis-updates-17 compliency.
+
+   BUG FIX/FEATURE: validation of wildcard RRs now available. Duanne
+   Wessels is acknowledged for submitting the initial code on which
+   this fix is based.
+
+   FIX: case sensitivity of ownername during DS generation (Acknowledgements Jens Wagner)
+
 
 ***0.16 March 12, 2010
 
    Feature: KEY inherits DNSKEY
    This helps maintenance in one part of the code.
-	
 
    Feature: keylength methode rt.cpan.org #53468
    Added keylength method for RSA and DSA
@@ -400,7 +438,7 @@ Net::DNS. The history of those is documented below.
 
 0.19-DNSSEC-0.3: 
   Solved patch problems that where due to the 
-  $Id: Changes 848 2010-03-12 13:12:16Z olaf $ in headers not 
+  $Id: Changes 1011 2012-09-14 12:59:27Z willem $ in headers not 
   being from the original distribution.
 
   Added DSA signature creation
@@ -432,4 +470,4 @@ Net::DNS. The history of those is documented below.
 
 
 ---------------------------------------------------------------------------
-$Id: Changes 848 2010-03-12 13:12:16Z olaf $
+$Id: Changes 1011 2012-09-14 12:59:27Z willem $

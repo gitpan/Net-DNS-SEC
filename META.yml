@@ -1,12 +1,14 @@
 --- #YAML:1.0
 name:               Net-DNS-SEC
-version:            0.16
+version:            0.16_01
 abstract:           DNSSEC extensions to Net::DNS
 author:
     - Olaf M. Kolkman <olaf@net-dns.org>
-license:            unknown
+license:            mit
 distribution_type:  module
 configure_requires:
+    ExtUtils::MakeMaker:  0
+build_requires:
     ExtUtils::MakeMaker:  0
 requires:
     Crypt::OpenSSL::Bignum:  0.03
@@ -14,7 +16,6 @@ requires:
     Crypt::OpenSSL::RSA:  0.19
     Digest::BubbleBabble:  0.01
     Digest::SHA:          5.23
-    Digest::SHA1:         0
     File::Basename:       0
     Math::BigInt:         0
     MIME::Base32:         0
@@ -26,7 +27,7 @@ no_index:
     directory:
         - t
         - inc
-generated_by:       ExtUtils::MakeMaker version 6.48
+generated_by:       ExtUtils::MakeMaker version 6.57_05
 meta-spec:
     url:      http://module-build.sourceforge.net/META-spec-v1.4.html
     version:  1.4

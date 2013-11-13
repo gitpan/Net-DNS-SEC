@@ -1,5 +1,5 @@
 #!/usr/bin/perl
-#$Id: key2ds 169 2004-03-09 14:28:00Z olaf $
+#$Id: key2ds 999 2012-06-28 09:38:55Z willem $
 
 
  use strict;
@@ -13,11 +13,13 @@
  # Author: Miek Gieben, NLnetLabs
 
  my $key;
- while (<>) { chomp; $key .= $_ };
+ while (<>) { $key .= $_ };
 
  my $keyrr = new Net::DNS::RR($key);
- my $dsrr = create Net::DNS::RR::DS($keyrr);
- print $dsrr->string,"\n";
+ my $dssha256 = Net::DNS::RR::DS->create($keyrr, digtype => "SHA256");
+ my $dssha1 = create Net::DNS::RR::DS($keyrr, digtype => "SHA1");
+ print $dssha1->string,"\n";
+ print $dssha256->string,"\n";
  exit 0;
 
 =head1 NAME

@@ -1,6 +1,6 @@
 package Net::DNS::RR::DNSKEY;
 
-# $Id: DNSKEY.pm 847 2010-03-12 13:04:13Z olaf $
+# $Id: DNSKEY.pm 1113 2013-09-20 09:10:06Z willem $
 
 use strict;
 use vars qw(@ISA $VERSION);
@@ -13,7 +13,7 @@ use Carp;
 @ISA = qw(Net::DNS::RR Net::DNS::SEC);
 
 
-$VERSION = do { my @r=(q$Revision: 847 $=~/\d+/g); sprintf "%d."."%03d"x$#r,@r };
+$VERSION = do { my @r=(q$Revision: 1113 $=~/\d+/g); sprintf "%d."."%03d"x$#r,@r };
 
 sub new {
     my ($class, $self, $data, $offset) = @_;
@@ -224,8 +224,10 @@ sub keylength {
 	    return $total - ($expo_length*8);
 
     }elsif (  $self->algorithm("mnemonic") =~ /DSA/ ) {
-	    # T parameter see RFC 2536
-	    return  unpack("C", $self->{"keybin"});
+	    # Modulus length, see RFC 2536
+
+ 	    my $T = unpack 'C', $self->keybin;
+	    return ( $T << 6 ) + 512;
 
     }else {
 	    return -1;
@@ -267,7 +269,7 @@ Returns the RR's protocol field in decimal representation
 
 =head2 algorithm
 
-    print "algoritm" = ", $rr->algorithm, "\n";
+    print "algorithm" = ", $rr->algorithm, "\n";
 
 Returns the RR's algorithm field in decimal representation
 
@@ -324,7 +326,7 @@ Return the length of a key.
 
 For RSA this method returns the length (in bits) of the modulus.
 
-For DSA this method returnse the value of the T parameter (See RFC2536)
+For DSA this method returns the value of the T parameter (See RFC2536)
 
 Returns -1 if the keysize cannot be determined (e.g. for unknown algorithms
 algorithm).

@@ -1,6 +1,6 @@
 #!/usr/bin/perl  -sw 
 # Test script for dnssec functionalty
-# $Id: 09-dnssec.t 847 2010-03-12 13:04:13Z olaf $
+# $Id: 09-dnssec.t 1113 2013-09-20 09:10:06Z willem $
 # 
 # Called in a fashion simmilar to:
 # /usr/bin/perl -Iblib/arch -Iblib/lib -I/usr/lib/perl5/5.6.1/i386-freebsd \
@@ -10,7 +10,7 @@
 
 use Net::DNS::RR::RRSIG;
 
-use Test::More tests=>83;
+use Test::More tests=>93;
 use strict;
 
 
@@ -669,12 +669,66 @@ unlink($keypathdsa);
 unlink($keypathrsasha1);
 
 
-
-
-
-is ($dsakeyrr->keylength, 8, "DSA (KEY) Keysize ");
+is ($dsakeyrr->keylength, 1024, "DSA (KEY) Keysize ");
 is ($rsakeyrr->keylength, 1024, "RSA (KEY) Keysize ");
 is ($bindkey1->keylength, 2048, "RSA (DNSKEY) Keysize ");
 
+
+
+
+
+foreach my $i (qw(a a.b a\.b.c a.b.c a\..\.b))  {
+	my $name=$i.".foo.example.com.";
+	my $wildcardrr=Net::DNS::RR->new("$name  	3600    IN A    10.6.6.6");
+	my @wildcarddata=($wildcardrr);
+	my $wildcardsig=Net::DNS::RR->new("$name            3600    RRSIG   A 5 3 3600 20380101000000 (
+                                        20080225134340 6227 example.com.
+                                        sL22DRsra7DXdkIVmxOdJsvdAthwnqZ4i6ai
+                                        SK1y4npyyeZ/nrFVlGizHwyNlRgiDZGtq7+d
+                                        AC0BAKaMJsNnlJDGfWzZzh5X9so2wzR9dBDQ
+                                        Gq2Ijrdmo8+uLyMF1XxY+VHe2/KOZeWQperE
+                                        RgS9Lo3xeluonp4zP6qJtRQpmS27ForPre1K
+                                        8bULfPIL3nsKxqRhqZwp9Zw4b36lb1/g3D7c
+                                        hmvZGkyMyHCJTUWSQgSyoTmJd6n/zm8PMjn8
+                                        B2EjrCl/7V06pb/oCAvEkA2ZfIH8WuP1iBJV
+                                        0HG5B1iuaddTU2PnZCymAFKduS0e+TvEGTrH
+                                        Rt1Of5Ji8GoPEJeGTA== )");
+	
+	
+	
+	ok( $wildcardsig->verify(\@wildcarddata,$bindkey2),
+	    "RRSIG over wildcard record *.foo.example.com verifies ($name)") || 
+	      diag ($wildcardsig->vrfyerrstr);        
+}
+
+
+
+
+
+
+
+
+foreach my $i (qw(a a.b a\.b.c a.b.c a\..\.b))  {
+	my $name=$i.'.bla\.foo.example.com.';
+	my $wildcardrr=Net::DNS::RR->new("$name  	3600    IN A    10.6.6.6");
+	my @wildcarddata=($wildcardrr);
+	my $wildcardsig=Net::DNS::RR->new("$name 3600	RRSIG	A 5 3 3600 20380101000000 (
+					20080225134340 6227 example.com.
+					EQHVOCh81atcWt5ecH29PBwXvIWo6XY6YTqI
+					cFmFYez919fEfSe7jdsnIJYOXZ8CoExvIPkP
+					g2MVYPGWZ80+CS62Q0euUr9yGGx17sbd+S6t
+					P/TbilLZPoNzjdtW4rQKYdtTmdfzWNEyR09p
+					gjattWO+dDlS1ucgZgnovGPuIyHI6t2Q2P0u
+					gQoF/hlt0/r9n4Nlsk7LoeknG5ksqIQNWNep
+					C5YYD+3B9ZZyPPcW5TaGa9v+vwVKj0YC+v0G
+					yS4tl2n/WlZb/7PgJ56xQKMeTK7iBAv6stih
+					YBIphzZmYwUfQpAmzGI5UwCmxARM4WMQhzi4
+					y+liut26SfFrdU0ecw== )");
+	
+	
+	ok( $wildcardsig->verify(\@wildcarddata,$bindkey2), 
+	    "RRSIG over wildcard record *.foo.example.com verifies ($name)") || 
+	      diag ($wildcardsig->vrfyerrstr);        
+}
 
 

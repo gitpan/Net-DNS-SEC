@@ -1,6 +1,6 @@
 package Net::DNS::RR::DS;
 
-# $Id: DS.pm 728 2008-10-12 09:02:24Z olaf $
+# $Id: DS.pm 1001 2012-06-28 12:06:23Z willem $
 
 
 use strict;
@@ -22,10 +22,10 @@ BEGIN {
 
 
 
-$VERSION = do { my @r=(q$Revision: 728 $=~/\d+/g); sprintf "%d."."%03d"x$#r,@r };
+$VERSION = do { my @r=(q$Revision: 1001 $=~/\d+/g); sprintf "%d."."%03d"x$#r,@r };
 my $debug=0;
 
-@ISA = qw(Net::DNS::RR);
+@ISA = qw(Net::DNS::RR Net::DNS::SEC);
 
 sub new {
     my ($class, $self, $data, $offset) = @_;
@@ -117,15 +117,17 @@ sub rr_rdata {
 
 sub verify {
     my ($self, $key) = @_;
-    my $tstds=create Net::DNS::RR::DS($key,(
+
+    if (defined($key)) {
+    	my $tstds=create Net::DNS::RR::DS($key,(
 					  digtype => $self->digtype,
 				      )
 	);
-    if ($tstds->digestbin eq $self->digestbin){
-	return 1;
-    }else{
-	return 0;
+	if ($tstds->digestbin eq $self->digestbin){
+	    return 1;
+	}
     }
+    return 0;
 }
 
 
@@ -209,7 +211,7 @@ sub create {
     $self->{"keytag"}=$keyrr->keytag;
     $self->{"algorithm"}=$keyrr->algorithm;
 
-    my $data = $keyrr->_name2wire ($keyrr->name) . $keyrr->_canonicalRdata;
+    my $data = $keyrr->_name2wire (lc $keyrr->name) . $keyrr->_canonicalRdata;
 
     if ($self->{"digtype"}==1){
 	$self->{"digestbin"}=  sha1($data);
@@ -251,9 +253,7 @@ In addition to the regular methods
 This constructor takes a key object as argument and will return a DS
 RR object.
 
-$dsrr=create Net::DNS::RR::DS($keyrr, (
-                  digtype => "SHA256"
-);
+$dsrr=create Net::DNS::RR::DS($keyrr, digtype => "SHA256");
 $keyrr->print;
 $dsrr->print;
 
@@ -271,7 +271,7 @@ $dsrr->($keyrr);
 
 =head2 algorithm
 
-    print "algoritm" = ", $rr->algorithm, "\n";
+    print "algorithm" = ", $rr->algorithm, "\n";
 
 Returns the RR's algorithm field in decimal representation
 

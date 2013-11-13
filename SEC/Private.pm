@@ -16,17 +16,19 @@ use MIME::Base64;
 use Math::BigInt;
 use Time::Local;
 
+@ISA = qw(Net::DNS::SEC);
 
 require Exporter;
 
-$VERSION = do { my @r=(q$Revision: 816 $=~/\d+/g); sprintf "%d."."%03d"x$#r,@r };
+$VERSION = do { my @r=(q$Revision: 1011 $=~/\d+/g); sprintf "%d."."%03d"x$#r,@r };
 
 sub new {
     my ($class,  $key_file) = @_;
     my $self={};
     my    ($Modulus,$PublicExponent,$PrivateExponent,$Prime1,
 	   $Prime2,$Exponent1,$Exponent2,$Coefficient,
-	   $prime_p,$subprime_q,$base_g,$private_val_x,$public_val_y);
+	   $prime_p,$subprime_q,$base_g,$private_val_x,$public_val_y,
+	   $Created, $Publish, $Activate);
     
 
     bless ($self,$class);
@@ -51,8 +53,8 @@ sub new {
     
     while (<KEYFH>) {
 	if (/Private-key-format: (v\d*\.\d*)/) {
-	    if ($1 ne "v1.2") {
-		croak "Private Key Format not regognized";
+	    if ($1 ne "v1.2" && $1 ne "v1.3") {
+		croak "Private Key Format not recognized";
 	    }
 	}elsif	    (/^Algorithm:\s*(\d*)/) {
 	    if ($1 != 1 && $1 != 3 && $1 != 5 && $1 !=6 && $1 != 7 && $1 != 8 && $1 != 10 ) {
@@ -87,7 +89,14 @@ sub new {
 	    $private_val_x=decode_base64($1);
 	} elsif (/^Public_value\(y\):\s*(\S+)/) { 
 	    $public_val_y=decode_base64($1);
-	}
+	} elsif (/^Created\(y\):\s*(\S+)/) { 
+	    $Created=$1;
+	} elsif (/^Publish\(y\):\s*(\S+)/) { 
+	    $Publish=$1;
+	} elsif (/^Activate\(y\):\s*(\S+)/) { 
+	    $Activate=$1;
+	} 
+	
     }
     close(KEYFH);
 
@@ -130,17 +139,19 @@ sub new {
 	$private_dsa->set_pub_key($public_val_y);
 	$self->{"privatekey"}=$private_dsa;
     }
+
+    if (defined($Created)) {
+	# new fields in v1.3
+	$self->{'created'} = $Created;
+	$self->{'publish'} = $Publish;
+	$self->{'activate'} = $Activate;
+    }
+
     return $self;
 
 }
 
 
-
-
-sub algorithm {
-    my $self=shift;
-    return $self->{'algorithm'};
-}
 
 
 sub privatekey {
@@ -159,6 +170,24 @@ sub keytag {
 sub signame {
     my $self=shift;
     return $self->{'signame'};
+}
+
+
+sub created {
+    my $self=shift;
+    return $self->{'created'} if (exists($self->{'created'}));
+}
+
+
+sub publish {
+    my $self=shift;
+    return $self->{'publish'} if (exists($self->{'publish'}));
+}
+
+
+sub activate {
+    my $self=shift;
+    return $self->{'activate'} if (exists($self->{'activate'}));
 }
 
 
@@ -190,11 +219,15 @@ sub signame {
 
 
 sub new_rsa_priv {
-    my ($class,  $keyblob,$signame,$flags) = @_;
+    my ($class,  $keyblob,$signame,$flags,$algorithm) = @_;
     my $self={};
     bless ($self,$class);
     $self->{"signame"}=$signame;
-    $self->{"algorithm"}=5;
+    if (defined($algorithm)) {
+    	$self->{"algorithm"} = $self->algorithm($algorithm);
+    } else {
+    	$self->{"algorithm"} = 5;
+    }
     $self->{"flags"}=$flags;
     $self->{'privatekey'}=Crypt::OpenSSL::RSA->  
 	new_private_key($keyblob);
@@ -209,7 +242,7 @@ sub  dump_rsa_priv {
     my ( $Modulus,$PublicExponent, $PrivateExponent, $Prime1, $Prime2, $Exponent1,
 	 $Exponent2,$Coefficient )=$self->{"privatekey"}->get_key_parameters;
     my $string="Private-key-format: v1.2\n";
-    $string .= "Algorithm: 5 (RSASHA1)\n";
+    $string .= "Algorithm: " . $self->{"algorithm"} . " (" . $self->algorithm("mnemonic") . ")\n";
     
     if (defined $Modulus 
 	&& defined $PublicExponent 
@@ -291,11 +324,17 @@ sub generate_rsa {
     my $size=shift;
     $size=1024 if !defined ($size);
     my $good_entropy=shift;
+    my $algorithm=shift;
+    if (defined($algorithm)) {
+	$algorithm = $class->algorithm($algorithm);
+    } else {
+    	$algorithm = 5;
+    }
     my $self={};
     bless ($self,$class);
 
     $self->{"signame"}=$name;  
-    $self->{"algorithm"}= 5; #  Force non-string 
+    $self->{"algorithm"}= $algorithm; #  Force non-string 
     if (defined($good_entropy)){
 	Crypt::OpenSSL::Random::random_seed($good_entropy);
 	  Crypt::OpenSSL::RSA->import_random_seed();
@@ -356,14 +395,19 @@ or Crypt::OpenSSL::DSA object. This is really only relevant to the
 Net::DNS::RR::SIG class.
 
 
-=head2  algorithm, keytag, signame
+=head2  algorithm, keytag, signame, created, publish, activate
  
  $private->algorithm
  $private->keytag
  $private->signame
+ $private->created
+ $private->publish
+ $private->activate
 
 Returns components as determined from the filename and needed by
-Net::DNS::RR::RRSIG.
+Net::DNS::RR::RRSIG.  The 'created', 'publish' and 'activate'
+components are only available in version 1.3 or higher formatted
+files.
 
 
 =head1 RSASHA1 specific helper functions
@@ -375,7 +419,7 @@ from X509 format.
 
 Constructor method.
 
- my $private=Net::DNS::SEC::Private->new_rsa_private($keyblob,$domain,$flag);
+ my $private=Net::DNS::SEC::Private->new_rsa_private($keyblob,$domain,$flag,$algorithm);
 
 Creates a Net::DNS::SEC::Private object from the supplied string.  For
 the object to be useful you will have to provide the "domain" name for
@@ -430,7 +474,7 @@ can be read with the read_rsa_private method.)
 
 =head2 generate_rsa
 
-    my $keypair=Net::DNS::SEC::Private->generate_rsa("example.com",$flag,1024,$random);
+    my $keypair=Net::DNS::SEC::Private->generate_rsa("example.com",$flag,1024,$random, $algorithm);
 prin $newkey->dump_rsa_priv;
 print $newkey->dump_rsa_pub();
 

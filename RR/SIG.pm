@@ -1,6 +1,13 @@
 # perldoc SIG.pm for documentation.
 # Specs: RFC 2535 section 4
-# $Id: SIG.pm 777 2008-12-30 17:18:54Z olaf $
+# $Id: SIG.pm 998 2012-06-28 08:52:42Z willem $
+
+BEGIN {
+	%NET_DNS_SEC_SIG_BACKUP = %main::SIG if $^V lt v5.14;
+}
+UNITCHECK {
+	%main::SIG = %NET_DNS_SEC_SIG_BACKUP if $^V lt v5.14;
+}
 
 package Net::DNS::RR::SIG;
 
@@ -33,7 +40,7 @@ use Digest::SHA qw (sha1);
 
 require Exporter;
 
-$VERSION = do { my @r=(q$Revision: 777 $=~/\d+/g); sprintf "%d."."%03d"x$#r,@r };
+$VERSION = do { my @r=(q$Revision: 998 $=~/\d+/g); sprintf "%d."."%03d"x$#r,@r };
 @ISA = qw (
 	   Exporter
 	 Net::DNS::RR
@@ -654,7 +661,7 @@ sub verify {
     }
     else                                  # Verifying other algorithms
     { 
-	$self->{"vrfyerrstr"}= "Algoritm ". $self->algorithm . " has not yet been implemented";
+	$self->{"vrfyerrstr"}= "Algorithm ". $self->algorithm . " has not yet been implemented";
 	return 0;
     }	
     

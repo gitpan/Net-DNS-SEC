@@ -1,5 +1,5 @@
 #
-# $Id: Makefile.PL 728 2008-10-12 09:02:24Z olaf $
+# $Id: Makefile.PL 1004 2012-07-06 09:08:59Z willem $
 #
 
 
@@ -36,11 +36,11 @@ WriteMakefile(
 	MIME::Base32              => 0.0,
 	Math::BigInt              => 0.0,
 	Time::Local               => 0.0,
-	Digest::BubbleBabble      => 0.01,
-	Digest::SHA1              => 0.0,
+	Digest::BubbleBabble      => 0.01
       },
       'ABSTRACT'                  => 'DNSSEC extensions to Net::DNS',
       'AUTHOR'                    => 'Olaf M. Kolkman <olaf@net-dns.org>',
+      'LICENSE'                   => 'mit',
       'PM' => { 
 	        'Keyset.pm' => '$(INST_LIBDIR)/Keyset.pm',
 		'SEC.pm'    => '$(INST_LIBDIR)/SEC.pm',
