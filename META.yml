@@ -1,6 +1,6 @@
 --- #YAML:1.0
 name:               Net-DNS-SEC
-version:            0.16_01
+version:            0.16_02
 abstract:           DNSSEC extensions to Net::DNS
 author:
     - Olaf M. Kolkman <olaf@net-dns.org>

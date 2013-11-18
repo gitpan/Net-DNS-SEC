@@ -1,13 +1,19 @@
 # perldoc SIG.pm for documentation.
 # Specs: RFC 2535 section 4
-# $Id: SIG.pm 998 2012-06-28 08:52:42Z willem $
+# $Id: SIG.pm 1126 2013-11-18 10:03:58Z willem $
 
-BEGIN {
-	%NET_DNS_SEC_SIG_BACKUP = %main::SIG if $^V lt v5.14;
+
+#	pre-5.14.0 perl inadvertently destroys signal handlers
+#	http://rt.perl.org/rt3/Public/Bug/Display.html?id=76138
+#
+BEGIN {					## preserve %SIG before compilation
+ 	%NET_DNS_SEC_SIG_BACKUP = %main::SIG if eval{ $] < 5.014 } || 0;
 }
-UNITCHECK {
-	%main::SIG = %NET_DNS_SEC_SIG_BACKUP if $^V lt v5.14;
+
+UNITCHECK {				## restore %SIG after compilation
+	%main::SIG = %NET_DNS_SEC_SIG_BACKUP if eval{ $] < 5.014 } || 0;
 }
+
 
 package Net::DNS::RR::SIG;
 
@@ -40,7 +46,7 @@ use Digest::SHA qw (sha1);
 
 require Exporter;
 
-$VERSION = do { my @r=(q$Revision: 998 $=~/\d+/g); sprintf "%d."."%03d"x$#r,@r };
+$VERSION = do { my @r=(q$Revision: 1126 $=~/\d+/g); sprintf "%d."."%03d"x$#r,@r };
 @ISA = qw (
 	   Exporter
 	 Net::DNS::RR

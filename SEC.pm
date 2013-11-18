@@ -1,5 +1,5 @@
 #
-# $Id: SEC.pm 1106 2013-08-23 09:17:11Z willem $
+# $Id: SEC.pm 1126 2013-11-18 10:03:58Z willem $
 #
 
 use strict;
@@ -14,13 +14,13 @@ use strict;
 use Exporter;
 use vars qw($SVNVERSION $VERSION $HAS_NSEC3 $HAS_DLV @EXPORT_OK @ISA);
 @ISA=qw(Exporter);
-$VERSION = '0.16_01';
+$VERSION = '0.16_02';
 
 $HAS_DLV=1;     # Signals availability of DLV to Net::DNS::RR
 $HAS_NSEC3=1;   # Signals availability of NSEC3 to Net::DNS::RR
 
 
-$SVNVERSION = (qw$LastChangedRevision: 1106 $)[1];
+$SVNVERSION = (qw$LastChangedRevision: 1126 $)[1];
 
 
 @EXPORT_OK= qw (
