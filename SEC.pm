@@ -14,7 +14,7 @@ use strict;
 use Exporter;
 use vars qw($SVNVERSION $VERSION $HAS_NSEC3 $HAS_DLV @EXPORT_OK @ISA);
 @ISA=qw(Exporter);
-$VERSION = '0.16_02';
+$VERSION = '0.16_03';
 
 $HAS_DLV=1;     # Signals availability of DLV to Net::DNS::RR
 $HAS_NSEC3=1;   # Signals availability of NSEC3 to Net::DNS::RR

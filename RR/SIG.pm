@@ -10,7 +10,7 @@ BEGIN {					## preserve %SIG before compilation
  	%NET_DNS_SEC_SIG_BACKUP = %main::SIG if eval{ $] < 5.014 } || 0;
 }
 
-UNITCHECK {				## restore %SIG after compilation
+sub UNITCHECK {				## restore %SIG after compilation
 	%main::SIG = %NET_DNS_SEC_SIG_BACKUP if eval{ $] < 5.014 } || 0;
 }
 
