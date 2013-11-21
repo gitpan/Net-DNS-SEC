@@ -1,5 +1,14 @@
 Revision history for Perl extension Net::DNS::SEC.
 ***0.17 NOT RELEASED
+   Fix: rt.cpan.org #81289
+   Failure to handle GOST DS records
+
+   Fix: rt.cpan.org #90270
+   NSEC3->covered() should use case-insensitive comparisons
+
+   Fix: rt.cpan.org #79606
+   Lower case zone-name part with DNSKEY::privatename
+
    Allow to specify algorithms with ::Private->new_rsa_private and
    ::Private->generate_rsa in stead of assuming RSASHA1.
 
@@ -25,7 +34,7 @@ Revision history for Perl extension Net::DNS::SEC.
    Make sure %main::SIG hash keeps its values when compiling Net::DNS::RR::SIG
    in perl versions before 5.14.  See also: rt.perl.org #76138
 
-   Fix: rt.cpan.org #64552
+   Fix: rt.cpan.org #64552 and rt.cpan.org #79606
    Support for private-key-format v1.3
 
    Fix: rt.cpan.org #75892
@@ -36,7 +45,8 @@ Revision history for Perl extension Net::DNS::SEC.
    Wessels is acknowledged for submitting the initial code on which
    this fix is based.
 
-   FIX: case sensitivity of ownername during DS generation (Acknowledgements Jens Wagner)
+   FIX: case sensitivity of ownername during DS generation
+        (Acknowledgements Jens Wagner)
 
 
 ***0.16 March 12, 2010
@@ -438,7 +448,7 @@ Net::DNS. The history of those is documented below.
 
 0.19-DNSSEC-0.3: 
   Solved patch problems that where due to the 
-  $Id: Changes 1011 2012-09-14 12:59:27Z willem $ in headers not 
+  $Id: Changes 1131 2013-11-21 15:54:55Z willem $ in headers not 
   being from the original distribution.
 
   Added DSA signature creation
@@ -470,4 +480,4 @@ Net::DNS. The history of those is documented below.
 
 
 ---------------------------------------------------------------------------
-$Id: Changes 1011 2012-09-14 12:59:27Z willem $
+$Id: Changes 1131 2013-11-21 15:54:55Z willem $

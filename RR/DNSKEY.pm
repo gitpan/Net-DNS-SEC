@@ -1,6 +1,6 @@
 package Net::DNS::RR::DNSKEY;
 
-# $Id: DNSKEY.pm 1113 2013-09-20 09:10:06Z willem $
+# $Id: DNSKEY.pm 1129 2013-11-21 15:18:16Z willem $
 
 use strict;
 use vars qw(@ISA $VERSION);
@@ -13,7 +13,7 @@ use Carp;
 @ISA = qw(Net::DNS::RR Net::DNS::SEC);
 
 
-$VERSION = do { my @r=(q$Revision: 1113 $=~/\d+/g); sprintf "%d."."%03d"x$#r,@r };
+$VERSION = do { my @r=(q$Revision: 1129 $=~/\d+/g); sprintf "%d."."%03d"x$#r,@r };
 
 sub new {
     my ($class, $self, $data, $offset) = @_;
@@ -184,7 +184,7 @@ sub is_sep {
 sub privatekeyname {
     my $self=shift;
     return sprintf("K%s.+%03d+%05d.private",
-		   $self->name,
+		   lc $self->name,
 		   $self->algorithm,
 		   $self->keytag);
     

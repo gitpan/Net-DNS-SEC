@@ -1,6 +1,6 @@
 # perldoc SIG.pm for documentation.
 # Specs: RFC 2535 section 4
-# $Id: SIG.pm 1126 2013-11-18 10:03:58Z willem $
+# $Id: SIG.pm 1128 2013-11-19 21:49:43Z willem $
 
 
 #	pre-5.14.0 perl inadvertently destroys signal handlers
@@ -46,7 +46,7 @@ use Digest::SHA qw (sha1);
 
 require Exporter;
 
-$VERSION = do { my @r=(q$Revision: 1126 $=~/\d+/g); sprintf "%d."."%03d"x$#r,@r };
+$VERSION = do { my @r=(q$Revision: 1128 $=~/\d+/g); sprintf "%d."."%03d"x$#r,@r };
 @ISA = qw (
 	   Exporter
 	 Net::DNS::RR

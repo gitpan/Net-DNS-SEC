@@ -1,6 +1,6 @@
 package Net::DNS::RR::NSEC3;
 # 
-# $Id: NSEC3.pm 767 2008-12-24 10:02:25Z olaf $
+# $Id: NSEC3.pm 1130 2013-11-21 15:50:43Z willem $
 
 use strict;
 require Exporter;
@@ -318,18 +318,18 @@ sub covered {
 	$self->saltbin,
 	);
 
-    if ( ($self->ownername() cmp $self->hnxtname() )== 1 ) {
+    if ( (lc $self->ownername() cmp lc $self->hnxtname() )== 1 ) {
 	# last name in the zone.
-	return 1 if ( ( $hashedname cmp $self->hnxtname() ) == 1 );
-	return 1 if ( ( $hashedname cmp $self->ownername() ) == -1  );
+	return 1 if ( ( lc $hashedname cmp lc $self->hnxtname() ) == 1 );
+	return 1 if ( ( lc $hashedname cmp lc $self->ownername() ) == -1  );
     }
-    elsif ( ($self->ownername() cmp $self->hnxtname() )== 0 ) {
+    elsif ( (lc $self->ownername() cmp lc $self->hnxtname() )== 0 ) {
 	# One entry in the zone.
 	return 1;
     }else{
-	return 1 if ( ($self->ownername() cmp $hashedname) == -1  )
+	return 1 if ( (lc $self->ownername() cmp lc $hashedname) == -1  )
 	    &&
-	    ( ( $hashedname cmp $self->hnxtname() ) == -1 );
+	    ( ( lc $hashedname cmp lc $self->hnxtname() ) == -1 );
     }
     return 0;
     

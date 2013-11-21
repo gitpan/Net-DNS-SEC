@@ -1,6 +1,6 @@
 package Net::DNS::RR::DS;
 
-# $Id: DS.pm 1001 2012-06-28 12:06:23Z willem $
+# $Id: DS.pm 1131 2013-11-21 15:54:55Z willem $
 
 
 use strict;
@@ -22,7 +22,7 @@ BEGIN {
 
 
 
-$VERSION = do { my @r=(q$Revision: 1001 $=~/\d+/g); sprintf "%d."."%03d"x$#r,@r };
+$VERSION = do { my @r=(q$Revision: 1131 $=~/\d+/g); sprintf "%d."."%03d"x$#r,@r };
 my $debug=0;
 
 @ISA = qw(Net::DNS::RR Net::DNS::SEC);
@@ -44,7 +44,12 @@ sub new {
 	    $digestlength=20; # SHA1 digest 20 bytes long
 	}elsif($self->{"digtype"}==2){
 	    $digestlength=32; # SHA256 digest 32 bytes long
+	}elsif($self->{"digtype"}==3){
+	    $digestlength=32; # GOST digest 32 bytes long [RFC5933]
+	}elsif($self->{"digtype"}==4){
+	    $digestlength=32; # SHA-384 digest 32 bytes long [RFC6605]
 	}else{
+	    confess("Unsupported digest type " .$self->{"digtype"});
 	    $digestlength=0;
 	}
 	

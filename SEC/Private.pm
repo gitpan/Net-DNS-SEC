@@ -20,7 +20,7 @@ use Time::Local;
 
 require Exporter;
 
-$VERSION = do { my @r=(q$Revision: 1011 $=~/\d+/g); sprintf "%d."."%03d"x$#r,@r };
+$VERSION = do { my @r=(q$Revision: 1129 $=~/\d+/g); sprintf "%d."."%03d"x$#r,@r };
 
 sub new {
     my ($class,  $key_file) = @_;
@@ -28,7 +28,7 @@ sub new {
     my    ($Modulus,$PublicExponent,$PrivateExponent,$Prime1,
 	   $Prime2,$Exponent1,$Exponent2,$Coefficient,
 	   $prime_p,$subprime_q,$base_g,$private_val_x,$public_val_y,
-	   $Created, $Publish, $Activate);
+	   $Created, $Publish, $Activate, $Revoke, $Unpublish, $Delete);
     
 
     bless ($self,$class);
@@ -95,8 +95,13 @@ sub new {
 	    $Publish=$1;
 	} elsif (/^Activate\(y\):\s*(\S+)/) { 
 	    $Activate=$1;
-	} 
-	
+	} elsif (/^Revoke\(y\):\s*(\S+)/) { 
+	    $Revoke=$1;
+	} elsif (/^Unpublish\(y\):\s*(\S+)/) { 
+	    $Unpublish=$1;
+	} elsif (/^Delete\(y\):\s*(\S+)/) { 
+	    $Delete=$1;
+	}
     }
     close(KEYFH);
 
@@ -144,7 +149,10 @@ sub new {
 	# new fields in v1.3
 	$self->{'created'} = $Created;
 	$self->{'publish'} = $Publish;
-	$self->{'activate'} = $Activate;
+	$self->{'activate'}  = $Activate;
+	$self->{'revoke'}    = $Revoke;
+	$self->{'unpublish'} = $Unpublish;
+	$self->{'delete'}    = $Delete;
     }
 
     return $self;
