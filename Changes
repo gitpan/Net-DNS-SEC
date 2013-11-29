@@ -1,5 +1,5 @@
 Revision history for Perl extension Net::DNS::SEC.
-***0.17 NOT RELEASED
+***0.17 November 29, 2013
    Fix: rt.cpan.org #81289
    Failure to handle GOST DS records
 
@@ -448,7 +448,7 @@ Net::DNS. The history of those is documented below.
 
 0.19-DNSSEC-0.3: 
   Solved patch problems that where due to the 
-  $Id: Changes 1131 2013-11-21 15:54:55Z willem $ in headers not 
+  $Id: Changes 1134 2013-11-29 13:23:19Z willem $ in headers not 
   being from the original distribution.
 
   Added DSA signature creation
@@ -480,4 +480,4 @@ Net::DNS. The history of those is documented below.
 
 
 ---------------------------------------------------------------------------
-$Id: Changes 1131 2013-11-21 15:54:55Z willem $
+$Id: Changes 1134 2013-11-29 13:23:19Z willem $
