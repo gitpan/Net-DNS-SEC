@@ -96,8 +96,3 @@ PERFORMANCE OF THIS SOFTWARE.
 
 =cut
 
-
-
-
-=cut
-

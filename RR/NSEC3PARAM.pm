@@ -1,210 +1,183 @@
 package Net::DNS::RR::NSEC3PARAM;
 
-# $Id: NSEC3.pm 602 2006-07-24 14:23:15Z olaf $
+#
+# $Id: NSEC3PARAM.pm 1167 2014-02-03 09:55:08Z willem $
+#
+use vars qw($VERSION);
+$VERSION = (qw$LastChangedRevision: 1167 $)[1];
+
 
 use strict;
-use vars qw(@ISA $VERSION);
-use Carp;
-use bytes;
-
-use Net::DNS;
-use Net::DNS::SEC;
-use Net::DNS::Packet;
-use Net::DNS::RR::NSEC;
-use Data::Dumper;
-
-use Carp qw(cluck);
-
-
-# To be removed when finalized
-
-
-@ISA     = qw(Net::DNS::RR Net::DNS::RR::NSEC3);
-
-
-
-$VERSION = do { my @r=(q$Revision: 510 $=~/\d+/g); sprintf "%d."."%03d"x$#r,@r };
-
-sub new {
-    my ($class, $self, $data, $offset) = @_;
-
-
-    if ($self->{"rdlength"} > 0) {
-
-
-	#                        1 1 1 1 1 1 1 1 1 1 2 2 2 2 2 2 2 2 2 2 3 3
-	#    0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
-	#   +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-	#   | Hash Alg.     |  Flags Field  |         Iterations            |
-	#   +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-	#   |  Salt Length  |                     Salt                      /
-	#   +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-	#
-	#   Hash Algorithm is a single octet.
-	#
-	#   Flags Field is a single octet.
-	#
-	#   Iterations is represented as a 16-bit integer, with the most
-	#   significant bit first.
-	#
-	#   Salt Length represents the length of the following Salt field in
-	#   octets.  If the value is zero, the Salt field is omitted.
-
-
-      my $offsettoflag=$offset+1;
-      my $offsettoits=$offset+2;
-      my $offesttosaltlength=$offset+4;
-      my $offsettosalt=$offset+5;
-
-      $self->{"hashalgo"}=unpack("C",substr($$data,$offset,1));
-      $self->{"flags"}=unpack("C",substr($$data,$offsettoflag,1));
-      $self->{"iterations"}= unpack("n",substr($$data,$offsettoits,2));
-      $self->{"saltlength"}=unpack("C",substr($$data,$offesttosaltlength,1));
-
-
-      $self->{"saltbin"}=substr($$data,$offsettosalt,$self->{"saltlength"});
-      $self->{"salt"}= unpack("H*",$self->{"saltbin"});
-
-    }
-
-
-    
-    bless $self, $class;
-    return $self;
-}
-
-
-
-
-sub new_from_string {
-    my ($class, $self, $string) = @_;
-    bless $self, $class;
-
-    if ($string) {
-      $string =~ tr/()//d;
-      $string =~ s/;.*$//mg;
-      $string =~ s/\n//mg;
-
-      my ($hashalgo,$flags,$iterations,$salt)= 
-	$string =~ /^\s*(\d+)\s+(\d+)\s+(\d+)\s+(\S*)\s*$/;
-
-
-      # This assumes that the digest type allocations follow the assignments as used for DS...
-      defined($self->{'hashalgo'}=Net::DNS::SEC->digtype($hashalgo)) || 
-		    return undef;
-      defined($self->{'iterations'}=$iterations) || return undef;
-
-      defined($self->{'flags'}=$flags) || return undef;
-      
-      defined($self->{"salt"}=$self->salt($salt)) || return undef;
-      $self->{"saltbin"}=pack("H*",$salt) || return undef;
-      $self->{saltlength}=length $self->{saltbin}; 
-
-      
-    }
-    return $self;
-}
-
-
-sub rdatastr 
-{
-   my $self = shift;
-   my $rdatastr;
-   if (exists $self->{hashalgo}) 
-   {
-      $rdatastr .= $self->{hashalgo} ." ";
-      $rdatastr .= $self->{flags}." ";
-      $rdatastr .= $self->{iterations}. " ";
-      $rdatastr .=   $self->salt()." \n";
-
-   }
-   else 
-   {
-      $rdatastr = "; no data"
-   }
-   $rdatastr
-}
-
-sub rr_rdata {
-    my ($self, $packet, $offset) = @_;
-
-
-
-    my $rdata = "" ;
-
-    if (exists $self->{'hashalgo'}) {
-
-      $rdata = pack("C",$self->{'hashalgo'});
-      $rdata .= pack("C",$self->{'flags'});
-      $rdata .= pack("n",$self->{'iterations'});
-      unless( exists  $self->{"saltbin"}) {      
-	if ($self->{"salt"} eq "-"){
-	  $self->{"saltbin"}="";
-	}else{
-	  $self->{"saltbin"}=pack("H*",$self->{"salt"}) 
-
-	}
-      }
-      $rdata .= pack("C",length($self->{'saltbin'}));
-      $rdata .= $self->{'saltbin'};
-
-    }
-    
-    return $rdata;
-}
-
-
-
-
-
-1;
-
+use base qw(Net::DNS::RR);
 
 =head1 NAME
 
 Net::DNS::RR::NSEC3PARAM - DNS NSEC3PARAM resource record
 
+=cut
+
+
+use integer;
+
+
+sub decode_rdata {			## decode rdata from wire-format octet string
+	my $self = shift;
+	my ( $data, $offset ) = @_;
+
+	my $size = unpack "\@$offset x4 C", $$data;
+	@{$self}{qw(algorithm flags iterations saltbin)} = unpack "\@$offset CCnx a$size", $$data;
+}
+
+
+sub encode_rdata {			## encode rdata as wire-format octet string
+	my $self = shift;
+
+	return '' unless $self->{algorithm};
+	my $salt = $self->{saltbin};
+	pack 'CCnCa*', @{$self}{qw(algorithm flags iterations)}, length($salt), $salt;
+}
+
+
+sub format_rdata {			## format rdata portion of RR string.
+	my $self = shift;
+
+	return '' unless $self->{algorithm};
+	join ' ', $self->algorithm, $self->flags, $self->iterations, $self->salt || '-';
+}
+
+
+sub parse_rdata {			## populate RR from rdata in argument list
+	my $self = shift;
+
+	$self->algorithm(shift);
+	$self->flags(shift);
+	$self->iterations(shift);
+	$self->salt(shift);
+}
+
+
+sub algorithm {
+	my $self = shift;
+
+	$self->{algorithm} = 0 + shift if scalar @_;
+	return $self->{algorithm} || 0;
+}
+
+
+sub flags {
+	my $self = shift;
+
+	$self->{flags} = 0 + shift if scalar @_;
+	return $self->{flags} || 0;
+}
+
+
+sub iterations {
+	my $self = shift;
+
+	$self->{iterations} = 0 + shift if scalar @_;
+	return $self->{iterations} || 0;
+}
+
+
+sub salt {
+	my $self = shift;
+
+	$self->saltbin( pack "H*", map { die "!hex!" if m/[^0-9A-Fa-f]/; $_ } join "", @_ ) if scalar @_;
+	unpack "H*", $self->saltbin() if defined wantarray;
+}
+
+
+sub saltbin {
+	my $self = shift;
+
+	$self->{saltbin} = shift if scalar @_;
+	$self->{saltbin} || "";
+}
+
+
+########################################
+
+
+sub hashalgo {&algorithm}		## historical
+
+
+1;
+__END__
+
+
 =head1 SYNOPSIS
 
-C<use Net::DNS::RR;>
+    use Net::DNS;
+    $rr = new Net::DNS::RR('name NSEC3PARAM algorithm flags iterations salt');
 
 =head1 DESCRIPTION
 
-Class for DNS Address (NSEC3PARAM) resource records. 
-
+Class for DNSSEC NSEC3PARAM resource records.
 
 The NSEC3PARAM RR contains the NSEC3 parameters (hash algorithm,
 flags, iterations and salt) needed to calculate hashed ownernames.
+
 The presence of an NSEC3PARAM RR at a zone apex indicates that the
-specified parameters may be used by authoritative servers to choose an
-appropriate set of NSEC3 records for negative responses.
+specified parameters may be used by authoritative servers to choose
+an appropriate set of NSEC3 records for negative responses.
 
-
+The NSEC3PARAM RR is not used by validators or resolvers.
 
 =head1 METHODS
 
-=head2 hashalgo
+The available methods are those inherited from the base class augmented
+by the type-specific methods defined in this package.
 
-Reads and sets the hashalgo (hash algorithm) attribute. 
+Use of undocumented package features or direct access to internal data
+structures is discouraged and could result in program termination or
+other unpredictable behaviour.
+
+
+=head2 algorithm
+
+    $algorithm = $rr->algorithm;
+    $rr->algorithm( $algorithm );
+
+The Hash Algorithm field is represented as an unsigned decimal
+integer.  The value has a maximum of 255. 
 
 =head2 flags
 
-Reads and sets the flag field. Check the IANA registry for valid values.
-At the time of code release the only defined value was 0x00
+    $flags = $rr->flags;
+    $rr->flags( $flags );
+
+The Flags field is represented as an unsigned decimal integer.
+The value has a maximum of 255. 
 
 =head2 iterations
 
-Reads and sets the iterations field
+    $iterations = $rr->iterations;
+    $rr->iterations( $iterations );
+
+The Iterations field is represented as an unsigned decimal
+integer.  The value is between 0 and 65535, inclusive. 
 
 =head2 salt
 
-Reads and sets the salt value. Accepts and returns a string with a
-number in hexadecimal notation.
+    $salt = $rr->salt;
+    $rr->salt( $salt );
+
+The Salt field is represented as a sequence of hexadecimal digits.
+No whitespace is allowed within the sequence.  A "-" (unquoted) is
+used in string format to indicate that the salt field is absent. 
+
+=head2 saltbin
+
+    $saltbin = $rr->saltbin;
+    $rr->saltbin( $saltbin );
+
+The Salt field as a sequence of octets. 
 
 
 =head1 COPYRIGHT
 
-Copyright (c) 2007,2008  NLnet Labs.  Author Olaf M. Kolkman <olaf@net-dns.org>
+Copyright (c)2007,2008 NLnet Labs.  Author Olaf M. Kolkman
 
 All Rights Reserved
 
@@ -212,31 +185,23 @@ Permission to use, copy, modify, and distribute this software and its
 documentation for any purpose and without fee is hereby granted,
 provided that the above copyright notice appear in all copies and that
 both that copyright notice and this permission notice appear in
-supporting documentation, and that the name of the author not be
-used in advertising or publicity pertaining to distribution of the
-software without specific, written prior permission.
+supporting documentation, and that the name of the author not be used
+in advertising or publicity pertaining to distribution of the software
+without specific prior written permission.
 
-THE AUTHOR DISCLAIMS ALL WARRANTIES WITH REGARD TO THIS SOFTWARE, INCLUDING
-ALL IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS; IN NO EVENT SHALL
-AUTHOR BE LIABLE FOR ANY SPECIAL, INDIRECT OR CONSEQUENTIAL DAMAGES OR ANY
-DAMAGES WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN
-AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
-OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
+THE AUTHOR DISCLAIMS ALL WARRANTIES WITH REGARD TO THIS SOFTWARE,
+INCLUDING ALL IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS; IN NO
+EVENT SHALL AUTHOR BE LIABLE FOR ANY SPECIAL, INDIRECT OR CONSEQUENTIAL
+DAMAGES OR ANY DAMAGES WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR
+PROFITS, WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS
+ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR PERFORMANCE OF
+THIS SOFTWARE.
 
+Package template (c)2009,2012 O.M.Kolkman and R.W.Franks.
 
-Based on, and contains, code by Copyright (c) 1997 Michael Fuhr.
-
-Acknowledgements to Roy Arends who made a test version for this class
-and whose code I've looked at before writing this module.
 
 =head1 SEE ALSO
 
-L<http://www.net-dns.org/> 
-L<http://tools.ietf.org/wg/dnsext/draft-ietf-dnsext-nsec3>
-L<Net::DNS::RR::NSEC3>,
-
-L<perl(1)>, L<Net::DNS>, L<Net::DNS::Resolver>, L<Net::DNS::Packet>,
-L<Net::DNS::Header>, L<Net::DNS::Question>, L<Net::DNS::RR>,
-RFC4033, RFC4034, RFC4035, RFC 5155
+L<perl>, L<Net::DNS>, L<Net::DNS::RR>, RFC5155
 
 =cut

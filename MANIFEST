@@ -13,7 +13,6 @@ RR/KEY.pm
 RR/NSEC.pm
 RR/NSEC3.pm
 RR/NSEC3PARAM.pm
-RR/NXT.pm
 RR/RRSIG.pm
 RR/SIG.pm
 RR/DLV.pm
@@ -21,6 +20,15 @@ SEC.pm
 SEC/Private.pm
 t/00-load.t
 t/00-pod.t
+t/05-DLV.t
+t/05-DNSKEY.t
+t/05-DS.t
+t/05-KEY.t
+t/05-NSEC.t
+t/05-NSEC3.t
+t/05-NSEC3PARAM.t
+t/05-RRSIG.t
+t/05-SIG.t
 t/07-sec.t
 t/09-dnssec.t
 t/10-keyset.t
@@ -33,6 +41,8 @@ t/14-misc.t
 t/16-dlv.t
 t/51-DS-SHA1.t
 t/52-DS-SHA256.t
+t/53-DS-GOST.t
+t/54-DS-SHA384.t
 t/getpacket.pl
 t/Kexample.com.+001+28551.private
 t/Kexample.com.+001+28551.key

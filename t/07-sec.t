@@ -1,5 +1,5 @@
 # Test script for dnssec functionalty   -*-perl-*-
-# $Id: 07-sec.t 847 2010-03-12 13:04:13Z olaf $
+# $Id: 07-sec.t 1170 2014-02-10 10:42:45Z willem $
 # 
 # Called in a fashion simmilar to:
 # /usr/bin/perl -Iblib/arch -Iblib/lib -I/usr/lib/perl5/5.6.1/i386-freebsd \
@@ -14,26 +14,25 @@ use Data::Dumper;
 
 
 BEGIN {
-  use_ok('Net::DNS::SEC::Private'); 
+  use_ok('Net::DNS::SEC'); 
 }                                 # test 1
 
-diag ("Testing the algorithm method");
+#diag ("Testing the algorithm method");
 
 is (Net::DNS::SEC->algorithm("DSA"),3,"Class method parses DSA");
 is (Net::DNS::SEC->algorithm("DsA"),3,"Class method parses DsA");
 is (Net::DNS::SEC->algorithm("RSASHA1"),5,"Class method parses RSASHA1");
 is (Net::DNS::SEC->algorithm("RSAMD5"),1,"Class method parses RSAMD5");
-diag ("Do not worry about the warning");
-is (Net::DNS::SEC->algorithm("CRYPTSAM"),undef,"Class method returns undef with CRYPTSAM");
+is ( eval{ Net::DNS::SEC->algorithm("CRYPTSAM") }, undef, "Class method detects unknown mnemonic");
 
 
-ok (my $keyrr=Net::DNS::RR->new("test.tld. IN DNSKEY 256 3 1 AQPoBLAXetIEWcEFDs+Z1Ymc2RPZeRtk/kF7bxLJOiGye5PVHDs6Vs1U 2JP7hLTglRLSK1Vu+C1iYNkYxTed9k/56vbS4lGj+a7qFKQlbcxfkRLy j8ac5JPXNIIfX5oDVjoCWF8t5sL7KxUp+0ticRyjqgc2Khg6ZgejNivl 3S0v+w=="),"Key succesfully created");
-
+my $keyrr = Net::DNS::RR->new("test.tld. IN DNSKEY 256 3 1 AQPoBLAXetIEWcEFDs+Z1Ymc2RPZeRtk/kF7bxLJOiGye5PVHDs6Vs1U 2JP7hLTglRLSK1Vu+C1iYNkYxTed9k/56vbS4lGj+a7qFKQlbcxfkRLy j8ac5JPXNIIfX5oDVjoCWF8t5sL7KxUp+0ticRyjqgc2Khg6ZgejNivl 3S0v+w==");
+ok( $keyrr, "Key successfully created" );
 
 
 is( $keyrr->algorithm,1,"DNSKEY with numeric specification of the RR read from string");
 
-ok (my $keyrr2=Net::DNS::RR->new("test.tld. IN DNSKEY 256 3 RSAMD5 AQPoBLAXetIEWcEFDs+Z1Ymc2RPZeRtk/kF7bxLJOiGye5PVHDs6Vs1U 2JP7hLTglRLSK1Vu+C1iYNkYxTed9k/56vbS4lGj+a7qFKQlbcxfkRLy j8ac5JPXNIIfX5oDVjoCWF8t5sL7KxUp+0ticRyjqgc2Khg6ZgejNivl 3S0v+w=="),"Key succesfully created");
+ok (my $keyrr2=Net::DNS::RR->new("test.tld. IN DNSKEY 256 3 RSAMD5 AQPoBLAXetIEWcEFDs+Z1Ymc2RPZeRtk/kF7bxLJOiGye5PVHDs6Vs1U 2JP7hLTglRLSK1Vu+C1iYNkYxTed9k/56vbS4lGj+a7qFKQlbcxfkRLy j8ac5JPXNIIfX5oDVjoCWF8t5sL7KxUp+0ticRyjqgc2Khg6ZgejNivl 3S0v+w=="),"Key successfully created");
 
 
 is( $keyrr2->algorithm,1,"DNSKEY with string specification of the RR read from string");

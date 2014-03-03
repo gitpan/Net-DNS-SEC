@@ -1,6 +1,6 @@
 #!/usr/bin/perl  -sw 
 # Test script for dnssec functionalty
-# $Id: 13-utilities.t 813 2009-11-27 09:10:10Z olaf $
+# $Id: 13-utilities.t 1170 2014-02-10 10:42:45Z willem $
 # 
 # Called in a fashion simmilar to:
 # /usr/bin/perl -Iblib/arch -Iblib/lib -I/usr/lib/perl5/5.6.1/i386-freebsd \
@@ -109,7 +109,7 @@ push(@sigrr,$rr);
 #
 
 # @keyrr and @keyrr2 contain exactly the same data, we'll now add two different
-# keys to @keyrr2 and to an array to compare the results agains.
+# keys to @keyrr2 and to an array to compare the results against.
 
 my @result;
 my @testresult;
@@ -129,16 +129,18 @@ ok( eq_array(\@result,\@testresult),"key_difference fills the return array with 
 # test 2
 
 
-my $dummy=Net::DNS::RR->new("example.com IN A 10.0.0.1");
-push(@keyrr2,$dummy);
-is(key_difference(\@keyrr2,\@keyrr,\@result),"First array contains something different than a Net::DNS::RR::DNSKEY objects (Net::DNS::RR::A)", "key_difference returns proper error with non DNSKEY objects in 1st array");
+my $unexpected = Net::DNS::RR->new("example.com IN A 10.0.0.1");
+my $erroneous = ref $unexpected;
+my @keyrrx = ( @keyrr2, $unexpected );
+
+my $error1 = key_difference( \@keyrrx, \@keyrr, \@result );
+ok( $error1 =~ /$erroneous/, "key_difference() detects $erroneous object in argument 1" );
 # test 3
 
-
-is(key_difference(\@keyrr,\@keyrr2,\@result),"Second array contains something different than a Net::DNS::RR::DNSKEY objects (Net::DNS::RR::A)", "key_difference returns proper error with non DNSKEY objects in 2nd array");
+my $error2 = key_difference( \@keyrr, \@keyrrx, \@result );
+ok( $error2 =~ /$erroneous/, "key_difference() detects $erroneous object in argument 2" );
 #test 4
-# Remove that dummy again.
-pop (@keyrr2);
+
 
 @result=();
 ok( !key_difference(\@keyrr,\@keyrr2,\@result), "key_difference returns 0 as return code"); # test 5

@@ -1,6 +1,6 @@
 #!/usr/bin/perl  -sw 
 # Test script for dnssec functionalty
-# $Id: 11-sep.t 813 2009-11-27 09:10:10Z olaf $
+# $Id: 11-sep.t 1166 2014-01-22 10:49:35Z willem $
 # 
 # Called in a fashion simmilar to:
 # /usr/bin/perl -Iblib/arch -Iblib/lib -I/usr/lib/perl5/5.6.1/i386-freebsd \
@@ -22,10 +22,10 @@ ok (my $key=Net::DNS::RR->new("test.foo       3600         IN DNSKEY  256 3 RSAS
 
 my $keytag=$key->keytag;
 
-$key->set_sep;
-ok ($key->is_sep,"Sep bit set");
+$key->sep(1);
+ok ($key->sep, "Sep bit set");
 ok ($keytag != $key->keytag, "keytag modified after toggle");
-$key->clear_sep;
+$key->sep(0);
 
-ok (!$key->is_sep,"Sep bit unset");
+ok (!$key->sep, "Sep bit unset");
 ok ($keytag == $key->keytag, "keytag modified back to original after toggle");

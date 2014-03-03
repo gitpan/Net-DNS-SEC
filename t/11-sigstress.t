@@ -1,6 +1,6 @@
 #!/usr/bin/perl  -sw 
 # Test script for dnssec functionalty
-# $Id: 11-sigstress.t 813 2009-11-27 09:10:10Z olaf $
+# $Id: 11-sigstress.t 1171 2014-02-26 08:56:52Z willem $
 # 
 # Called in a fashion simmilar to:
 # /usr/bin/perl -Iblib/arch -Iblib/lib -I/usr/lib/perl5/5.6.1/i386-freebsd \
@@ -12,8 +12,7 @@ use constant LOOPS=>50;
 use Test::More tests=> (LOOPS * 9 + 3 ); # 3 tests befor the loop, 9 inside.
 use strict;
 
-use Net::DNS;
-use Net::DNS::RR::SIG;
+use Net::DNS::SEC;
 
 ########
 ####   Couple of SIG0 and RRSIG tests

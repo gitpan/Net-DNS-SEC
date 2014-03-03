@@ -1,11 +1,13 @@
-# $Id: 51-DS-SHA1.t 1121 2013-10-23 14:04:32Z willem $
+# $Id: 51-DS-SHA1.t 1137 2013-12-10 14:48:08Z willem $
+
+use strict;
 
 BEGIN {
 	use Test::More;
 
 	plan tests => 5;
 
-	use_ok('Net::DNS');
+	use_ok('Net::DNS::SEC');
 	use_ok('Digest::SHA');
 }
 

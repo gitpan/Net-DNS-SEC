@@ -1,32 +1,11 @@
-#
-# $Id: SEC.pm 1133 2013-11-29 13:03:43Z willem $
-#
-
-use strict;
-
-
-
 package Net::DNS::SEC;
-use Net::DNS;
-use bytes;
-use Carp;
-use strict;
-use Exporter;
-use vars qw($SVNVERSION $VERSION $HAS_NSEC3 $HAS_DLV @EXPORT_OK @ISA);
-@ISA=qw(Exporter);
-$VERSION = '0.17';
 
-$HAS_DLV=1;     # Signals availability of DLV to Net::DNS::RR
-$HAS_NSEC3=1;   # Signals availability of NSEC3 to Net::DNS::RR
-
-
-$SVNVERSION = (qw$LastChangedRevision: 1133 $)[1];
-
-
-@EXPORT_OK= qw (
-              key_difference
-              verify_selfsig
-               );
+#
+# $Id: SEC.pm 1176 2014-03-03 21:31:13Z willem $
+#
+use vars qw($VERSION $SVNVERSION);
+$VERSION    = '0.17_1';
+$SVNVERSION = (qw$LastChangedRevision: 1176 $)[1];
 
 
 =head1 NAME
@@ -35,136 +14,112 @@ Net::DNS::SEC - DNSSEC extensions to Net::DNS
 
 =head1 SYNOPSIS
 
-C<use Net::DNS;>
-
-The Net::DNS::SEC module implements a few class methods used by the
-other modules in this suite and a few functions that can be exported.
-
+    use Net::DNS::SEC;
 
 =head1 DESCRIPTION
 
-The Net::DSN::SEC suite provides the resource records that are needed
-for DNSSEC (RFC 4033, 4034 and 4035). In addition the DLV RR, a clone
-of the DS RR is supported (RFC 4431)
+The Net::DNS::SEC suite provides the additional DNS resource records
+required to support DNSSEC as described in RFC4033, 4034, 4035 and
+subsequent related documents.
 
-It also provides support for SIG0. That later is useful for dynamic
-updates using key-pairs.
+Net::DNS::SEC is installed as an extension to an existing Net::DNS
+installation.
 
-RSA and DSA crypto routines are supported.
-
-For details see L<Net::DNS::RR::RRSIG>, L<Net::DNS::RR::DNSKEY>,
-L<Net::DNS::RR::NSEC>, L<Net::DNS::RR:DS>, L<Net::DNS::RR::DLV>, and
-see L<Net::DNS::RR::SIG> and L<Net::DNS::RR::KEY> for the use with
-SIG0.
-
-Net::DNS contains all needed hooks to load the Net::DNS::SEC
-extensions when they are available.
-
-See L<Net::DNS> for general help.
-
-=head1 Utility function
-
-Use the following construct if you want to use thos function in your code.
-
-   use Net::DNS::SEC qw( key_difference );
-
-
-=head2 key_difference
-
-    $result=key_differnece(\@a,\@b,\@result);
-
-
-Fills @result with all keys in the array "@a" that are not in the
-array "@b".
-
-Returns 0 on success or an error message on failure.
-
+The extended package features are made visible by substituting
+Net::DNS::SEC for Net::DNS in the use declaration.
 
 =cut
 
 
+use strict;
+use base qw(Exporter);
 
-sub key_difference {
-    my $a=shift;
-    my $b=shift;
-    my $r=shift;
+use Net::DNS 0.69 qw(:DEFAULT);
 
-    my %b_index;
-    foreach my $b_key (@$b){
-	return "Second array contains something different than a ".
-	    "Net::DNS::RR::DNSKEY objects (".ref($b_key).")" if
-	    ref($b_key) ne "Net::DNS::RR::DNSKEY";
-	    
-	$b_index{$b_key->name."+".$b_key->algorithm."+".$b_key->keytag}++;
-    }
-    foreach my $a_key (@$a){
-	return "First array contains something different than a ".
-	    "Net::DNS::RR::DNSKEY objects (".ref($a_key).")" if
-	    ref($a_key) ne "Net::DNS::RR::DNSKEY";
-
-	push @$r,$a_key  unless 
-	    defined ($b_index{$a_key->name."+".$a_key->algorithm."+".$a_key->keytag});
-    }
-    return (0);
-}
+use vars qw(@EXPORT);
+@EXPORT = ( @Net::DNS::EXPORT, qw(algorithm digtype key_difference) );
 
 
-=head1 Class methods
+use integer;
+use Carp;
 
-These functions are inherited by relevant Net::DNS::RR classes. They
-are not exported.
+require Net::DNS::RR::DS;
+
+new Net::DNS::RR( type => $_ ) for qw(SIG RRSIG DLV);		# pre-load RR with create() constructor
+
+
+=head1 UTILITY FUNCTIONS
 
 =head2 algorithm
 
-    $value=Net::DNS::SEC->algorithm("RSASHA1");
-    $value=$self->algorithm("RSASHA1");
-    $value=$self->algorithm(5);
+    $mnemonic = algorithm( 5 );
+    $numeric  = algorithm( 'RSA-SHA1' );
+    print "algorithm mnemonic\t", $mnemonic, "\n";
+    print "algorithm number:\t",  $numeric,  "\n";
 
-    $algorithm=$self->algorithm();
-    $memonic=$self->algorithm("mnemonic");
+algorithm() provides conversions between an algorithm code number and
+the corresponding mnemonic.
 
+=cut
 
-The algorithm method is used to set or read the value of the algorithm
-field in Net::DNS::RR::DNSKEY and Net::DNS::RR::RRSIG.
+sub algorithm { &Net::DNS::RR::DS::algorithm; }
 
-If supplied with an argument it will set the algorithm accordingly, except
-when the argument equals the string "mnemonic" the method will return the
-mnemonic of the algorithm.
-
-Can also be called as a class method to do Mnemonic to Value conversion.
 
 =head2 digtype
 
-    $value=$self->digtype("SHA1");
-    $value=$self->digtype(1);
+    $mnemonic = digtype( 2 );
+    $numeric  = digtype( 'SHA-256' );
+    print "digest type mnemonic\t", $mnemonic, "\n";
+    print "digest type number:\t",  $numeric,  "\n";
 
-    $algorithm=$self->digtype();
-    $memonic=$self->digtype("mnemonic");
+digtype() provides conversions between a digest type number and the
+corresponding mnemonic.
 
+=cut
 
-The digtype method is used to set or read the value of the digestype or
-hash algorithm field in Net::DNS::RR::DS and Net::DNS::RR::NSEC3
-objects.
-
-If supplied with an argument it will set the digetstype/hash algorithm
-accordingly, except when the argument equals the string "mnemonic" the
-method will return the mnemonic of the digetstype/hash algorithm.
-
-Can also be called as a class method to do Mnemonic to Value
-conversion, note however that it will then use the "Delegation Signer
-(DS) Resource Record (RR) Type Digest Algorithms" and not the "DNSSEC
-NSEC3 Hash Algorithms" IANA registry. If you want to specifically get
-access to the NSEC3  digest types then use a construct like:
-
- bless $self, Net::DNS::RR::NSEC3;
- $self->digtype("SHA1");
+sub digtype { &Net::DNS::RR::DS::digtype; }
 
 
+=head2 key_difference
+
+    @result = key_difference( \@a, \@b );
+
+Fills @result with all keys in array @a that are not in array @b.
+
+=cut
+
+my $errmsg = 'array argument contains unexpected %s object';
+
+sub key_difference {
+	my $a = shift;
+	my $b = shift;
+	my $r = shift;			## 0.17 interface
+
+	my ($x) = grep !$_->isa('Net::DNS::RR::DNSKEY'), @$a, @$b;
+
+	if ($r) {			## 0.17 interface
+		return sprintf $errmsg, ref($x) if $x;
+
+		my %index = map { ( $_->privatekeyname, 1 ) } @$b;
+		@$r = grep { !$index{$_->privatekeyname} } @$a;
+		return (0);
+	}
+
+	croak sprintf $errmsg, ref($x) if $x;
+
+	my %index = map { ( $_->privatekeyname, 1 ) } @$b;
+	my @r = grep { !$index{$_->privatekeyname} } @$a;
+	return @r;
+}
+
+
+1;
+__END__
 
 
 =head1 COPYRIGHT
 
-Copyright (c) 2001-2005  RIPE NCC.  Author Olaf M. Kolkman <olaf@net-dns.org>
+Copyright (c)2001-2005 RIPE NCC.  Author Olaf M. Kolkman
 
 All Rights Reserved
 
@@ -172,175 +127,27 @@ Permission to use, copy, modify, and distribute this software and its
 documentation for any purpose and without fee is hereby granted,
 provided that the above copyright notice appear in all copies and that
 both that copyright notice and this permission notice appear in
-supporting documentation, and that the name of the author not be
-used in advertising or publicity pertaining to distribution of the
-software without specific, written prior permission.
+supporting documentation, and that the name of the author not be used
+in advertising or publicity pertaining to distribution of the software
+without specific prior written permission.
+
+THE AUTHOR DISCLAIMS ALL WARRANTIES WITH REGARD TO THIS SOFTWARE,
+INCLUDING ALL IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS; IN NO
+EVENT SHALL AUTHOR BE LIABLE FOR ANY SPECIAL, INDIRECT OR CONSEQUENTIAL
+DAMAGES OR ANY DAMAGES WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR
+PROFITS, WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS
+ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR PERFORMANCE OF
+THIS SOFTWARE.
 
 
-THE AUTHOR DISCLAIMS ALL WARRANTIES WITH REGARD TO THIS SOFTWARE, INCLUDING
-ALL IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS; IN NO EVENT SHALL
-AUTHOR BE LIABLE FOR ANY SPECIAL, INDIRECT OR CONSEQUENTIAL DAMAGES OR ANY
-DAMAGES WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN
-AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
-OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
-
-
- 
 =head1 SEE ALSO
 
-L<http://www.net-dns.org/> 
-
-
-L<perl(1)>, L<Net::DNS>, L<Net::DNS::RR::KEY>, L<Net::DNS::RR::SIG>,
-L<Net::DNS::RR::DNSKEY>, L<Net::DNS::RR::RRSIG>,
-L<Net::DNS::RR::NSEC>, L<Net::DNS::RR::DS>, L<Net::DNS::SEC::Private>.
-
-RFC4033, 4034 and 4035.
+L<perl>, L<Net::DNS>,
+L<Net::DNS::RR::DLV>, L<Net::DNS::RR::DNSKEY>, L<Net::DNS::RR::DS>,
+L<Net::DNS::RR::NSEC>, L<Net::DNS::RR::NSEC3>, L<Net::DNS::RR::NSEC3PARAM>,
+L<Net::DNS::RR::RRSIG>,
+L<Net::DNS::RR::KEY>, L<Net::DNS::RR::SIG>,
+RFC4033, RFC4034, RFC4035
 
 =cut
-
-
-
-
-
-
- sub algorithm {
-    my $self=shift;
-    my $argument=shift;
-
-   # classmethod is true if called as class method.
-    my $classmethod=0;
-    $classmethod=1 unless  ref ($self);
- 
-    my %algbyname = (
-	"RSAMD5"              => 1,
-	"DH"                  => 2,           # Not implemented
-	"DSA"                 => 3,
-	"ECC"                 => 4,           # Not implemented
-	"RSASHA1"             => 5,
-	"DSA-NSEC3-SHA1"      => 6,
-	"RSA-NSEC3-SHA1"      => 7,
-	"RSASHA256"           => 8,
-	"RSASHA512"           => 10,
-	"INDIRECT"            => 252,         # Not implemented
-	"PRIVATEDNS"          => 253,         # Not implemented
-	"PRIVATEOID"          => 254,         # Not implemented
-	);      
-    my %algbyval = reverse %algbyname;
-
-    # If the argument is undefined...
-    
-    if (!defined $argument){
-	return if $classmethod;
-	return $self->{"algorithm"};
-    }
-
-    # Argument has some value...
-    $argument =~ s/\s//g; # Remove strings to be kind
-    $argument =~ s!RSA/!RSA!;  # Be kind for those who use RSA/SHA1
-    if ($argument =~ /^\d+$/ ){    #Numeric argument.
-
-	if ($classmethod){
-	    return $argument ;
-	}else{
-	    return $self->{"algorithm"}=$argument ;
-	}
-    }else{  # argument is not numeric
-	if ($classmethod){
-	    # This will return undefined if the argument does not exist
-	    return $algbyname{uc($argument)};
-	    
-	}else{ # Not a class method..
-	    if (lc($argument) eq "mnemonic"){
-		return $algbyval{$self->{"algorithm"}};
-	    }else{
-		# This will return undefined if the argument does not exist
-		return $self->{"algorithm"}=$algbyname{uc($argument)};
-	    }	    
-	}
-
-	
-    }	
-    die "algorithm method should never end here";
-
-	
-}
-
-
-
-
-
-
-
-sub digtype {
-    _digtype(@_);
-}
-
-sub _digtype {
-    my $self=shift;
-    my $argument=shift;
-    # classmethod is true if called as class method.
-    my $classmethod=0;
-    $classmethod=1 unless  ref ($self);
-
-    my %digestbyname= (
-			"SHA1"		   => 1,		
-			"SHA256"	   => 2,		
-			"GOST"		   => 3,		
-			"SHA384"	   => 4,		
-			);      
-
-    
-    if (! $classmethod && defined ($self->{'digestbyname'}) ){
-	%digestbyname= %{$self->{"digestbyname"}};
-    }
-
-
-    my %digestbyval = reverse %digestbyname;
-    
-    # If the argument is undefined...
-    
-    if (!defined $argument){
-	return if $classmethod;
-	return $self->{"digtype"};
-    }
-
-    # Argument has some value...
-    $argument =~ s/\s//g; # Remove strings to be kind
-
-    if ($argument =~ /^\d+$/ ){    #Numeric argument.
-	carp "$argument does not map to a valid digest type" unless 
-	    exists $digestbyval{$argument};
-	if ($classmethod){
-	    return $argument ;
-	}else{
-	    return $self->{"digtype"}=$argument ;
-	}
-    }else{  # argument is not numeric
-	if ($classmethod){
-	    carp "$argument does not map to a valid digest type" unless
-		exists $digestbyname{uc($argument)};
-	    return $digestbyname{uc($argument)};
-	    
-	}else{ # Not a class method..
-	    if (lc($argument) eq "mnemonic"){
-		return $digestbyval{$self->{"digtype"}};
-	    }else{
-		carp "$argument does not map to a valid digest type" unless
-		    exists $digestbyname{uc($argument)};
-		return $self->{"digtype"}=$digestbyname{uc($argument)};
-	    }	    
-	}
-
-	
-    }	
-    die "digtype method should never end here";
-
-	
-}
-
-
-
-
-
 

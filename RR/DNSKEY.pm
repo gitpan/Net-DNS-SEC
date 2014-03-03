@@ -1,310 +1,330 @@
 package Net::DNS::RR::DNSKEY;
 
-# $Id: DNSKEY.pm 1129 2013-11-21 15:18:16Z willem $
+#
+# $Id: DNSKEY.pm 1167 2014-02-03 09:55:08Z willem $
+#
+use vars qw($VERSION);
+$VERSION = (qw$LastChangedRevision: 1167 $)[1];
+
 
 use strict;
-use vars qw(@ISA $VERSION);
-use bytes;
-
-use Net::DNS::SEC;
-use MIME::Base64;
-use Carp;
-
-@ISA = qw(Net::DNS::RR Net::DNS::SEC);
-
-
-$VERSION = do { my @r=(q$Revision: 1129 $=~/\d+/g); sprintf "%d."."%03d"x$#r,@r };
-
-sub new {
-    my ($class, $self, $data, $offset) = @_;
-
-    bless $self, $class;
-    if ($self->{"rdlength"} > 0) {
-	
-	my $offsettoprot=$offset+2;
-	my $offsettoalg=$offset+3;
-	my $offsettokey=$offset+4;
-	
-	$self->{"flags"}=unpack("n",substr($$data,$offset,2));
-	$self->{"protocol"}=unpack("C",substr($$data,$offsettoprot,1));
-	$self->{"algorithm"}=unpack("C",substr($$data,$offsettoalg,1));
-	my $keymaterial=substr($$data,$offsettokey,$self->{"rdlength"}-4);
-	$self->{"keybin"}=($keymaterial);
-	$self->{"key"}= encode_base64($keymaterial);
-	
-    }
-    bless $self, $class;
-    $self->setkeytag;
-    return $self;
-
-    
-}
-
-
-
-sub new_from_string {
-	my ($class, $self, $string) = @_;
-
-
-	if ($string) {
-		$string =~ tr/()//d;
-		$string =~ s/;.*$//mg;
-		$string =~ s/\n//mg;
-		my ($flags, $protocol, $algorithm,$key) = 
-		    $string =~ /^\s*(\S+)\s+(\S+)\s+(\S+)\s+(.*)/;
-		$key =~ s/\s*//g;
-		$self->{"flags"}=$flags;
-		$self->{"algorithm"}=Net::DNS::SEC->algorithm($algorithm);
-		$self->{"protocol"}=$protocol;
-		my $keymaterial=decode_base64($key);
-		$self->{"keybin"}=($keymaterial);
-		$self->{"key"}=$key;
-	}
-	bless $self, $class;
-	
-	$self->setkeytag();
-	return $self;
-
-}
-
-
-
-sub rdatastr {
-	my $self = shift;
-	my $rdatastr;
-	if (exists $self->{"flags"}) {
-	    $rdatastr  = $self->{flags};
-	    $rdatastr .= "  "  . "$self->{protocol}";
-	    $rdatastr .= "  "  . $self->algorithm;
-	    $rdatastr .= " ( \n" ;
-	    # do some nice formatting
-	    my $keystring=$self->{key};
-	    $keystring =~ s/\n//g;
-	    $keystring =~ s/(\S{36})/$1\n\t\t\t/g;
-	    $rdatastr .=  "\t\t\t".$keystring;
-	    $rdatastr .= " \n\t\t\t) ; Key ID = "  . "$self->{keytag}";
-	    }
-	else {
-	    $rdatastr = "; no data";
-	}
-
-	return $rdatastr;
-}
-
-sub rr_rdata {
-    my $self = shift;
-    
-    my $rdata;
-    if (exists $self->{"flags"}) {
-	$rdata= pack("n",$self->{"flags"}) ;
-	$rdata.=
-	    pack("C2",$self->{"protocol"} 
-		     , $self->algorithm) ;
-	$rdata.= $self->{"keybin"}
-    }
-    return $rdata;
-}
-
-
-sub setkeytag
-{
-    my $self=shift;
-    if (($self->{"flags"} & hex("0xc000") ) == hex("0xc000") ){
-	# NULL KEY
-	$self->{"keytag"} = 0;
-    }elsif ($self->algorithm == '1'){
-	# RFC 2535 4.1.6  most significant 16 bits of the least
-	#                 significant 24 bits
-	
-	my @keystr=split //, $self->{"keybin"};
-	my $keysize= $#keystr+1;
-	$self->{"keytag"} = (unpack("C",$keystr[$keysize - 3]) << 8) 
-	    + unpack("C",$keystr[$keysize - 2]);
-	0;
-    }else{
-	# All others
-	# RFC 2535  Appendix C
-	my ($ac, $i);
-	
-	# $self->{"rr_data"} cannot be 
-	# used if the object has not been constructed ?!?
-
-	my $rdata= pack("n",$self->{"flags"}) ;   
-	$rdata.=
-	    pack("C2",$self->{"protocol"} 
-		 , $self->algorithm) ;
-	$rdata.= $self->{"keybin"};
-	my @keyrr=split //, $rdata;
-
-	for ( $ac=0 , $i=0; $i <= $#keyrr ; $i++ ){
-	    $ac += ($i & 1) ? 
-		unpack("C",$keyrr[$i]) :
-		    unpack("C", $keyrr[$i])<<8;
-	}
-	$ac += ($ac>>16) & 0xFFFF;
-	$self->{"keytag"} =($ac & 0xFFFF);
-	0;
-    }
-    
-}
-
-
-sub set_sep {
-    my $self=shift;
-     return $self->is_sep if $self->is_sep;
-    $self->{"flags"}+=1;
-    $self->setkeytag;
-    return if $self->is_sep;
-}
-
-
-
-
-sub unset_sep {
-    my $self=shift;
-    return $self->clear_sep();
-}
-
-sub clear_sep {
-    my $self=shift;
-     return $self->is_sep if ! $self->is_sep;
-    $self->{"flags"}-=1;
-    $self->setkeytag;
-    return $self->is_sep;
-}
-
-
-
-sub is_sep {
-    my $self=shift;
-    return $self->{"flags"} % 2;  # Hey it;s odd.
-}
-
-
-sub privatekeyname {
-    my $self=shift;
-    return sprintf("K%s.+%03d+%05d.private",
-		   lc $self->name,
-		   $self->algorithm,
-		   $self->keytag);
-    
-}
-
-
-
-# Return the length in bits of a RSA key and DSA key (crypto speaking)
-#        -1 if it's not a know algorithm
-# RSA part contributed by Hugo Salgado <hsalgado@nic.cl>
-sub keylength {
-    my $self = shift;
-
-    if ( $self->algorithm("mnemonic") =~ /RSA/ ){
-	    # Modulus length, see RFC 2537
-	    
-	    # First we need the total length in the wire rdata
-	    my $total = length(unpack("B*",$self->{"keybin"}));
-	    
-	    # Now we obtain the first octet (exponent length)
-	    my $octet = unpack("B8", $self->{"keybin"});
-	    
-	    my $expo_length;
-	    # If the first octet is zero, we need the next two
-	    if ($octet == 0) {
-		    # This part is untested. I couldn't create a real key test case :(
-		    $octet = unpack("B24", $self->{"keybin"});
-		    $expo_length = unpack("N", pack("B32", substr("0" x 8 . $octet, -24)));
-		    $expo_length += 3; # we add the 3 octets with the length
-	    }
-	    else {
-		    $expo_length = unpack("N", pack("B32", substr("0" x 32 . $octet, -32)));
-		    $expo_length++; # we add the first octet
-	    }
-	    
-	    # The modulus is the remaining, in bits
-	    return $total - ($expo_length*8);
-
-    }elsif (  $self->algorithm("mnemonic") =~ /DSA/ ) {
-	    # Modulus length, see RFC 2536
-
- 	    my $T = unpack 'C', $self->keybin;
-	    return ( $T << 6 ) + 512;
-
-    }else {
-	    return -1;
-    }
-}
-
-
-
-
-1;
-
+use base qw(Net::DNS::RR);
 
 =head1 NAME
 
 Net::DNS::RR::DNSKEY - DNS DNSKEY resource record
 
+=cut
+
+
+use integer;
+
+use Carp;
+use MIME::Base64;
+
+#
+# source: http://www.iana.org/assignments/dns-sec-alg-numbers
+#
+{
+	my @algbyname = (		## Reserved	=> 0,	# [RFC4034][RFC4398]
+		'RSAMD5'	     => 1,			# [RFC3110][RFC4034]
+		'DH'		     => 2,			# [RFC2539]
+		'DSA'		     => 3,			# [RFC3755][RFC2536]
+					## Reserved	=> 4,	# [RFC6725]
+		'RSASHA1'	     => 5,			# [RFC3110][RFC4034]
+		'DSA-NSEC3-SHA1'     => 6,			# [RFC5155]
+		'RSASHA1-NSEC3-SHA1' => 7,			# [RFC5155]
+		'RSASHA256'	     => 8,			# [RFC5702]
+					## Reserved	=> 9,	# [RFC6725]
+		'RSASHA512'	     => 10,			# [RFC5702]
+					## Reserved	=> 11,	# [RFC6725]
+		'ECC-GOST'	     => 12,			# [RFC5933]
+		'ECDSAP256SHA256'    => 13,			# [RFC6605]
+		'ECDSAP384SHA384'    => 14,			# [RFC6605]
+
+		'INDIRECT'   => 252,				# [RFC4034]
+		'PRIVATEDNS' => 253,				# [RFC4034]
+		'PRIVATEOID' => 254,				# [RFC4034]
+					## Reserved	=> 255,	# [RFC4034]
+		);
+
+	my %algbyval = reverse @algbyname;
+
+	my @algbynum = map { ( $_, 0 + $_ ) } keys %algbyval;	# accept algorithm number
+
+	my %algbyname = map { s /[^A-Za-z0-9]//g; $_ } @algbyname, @algbynum;
+
+
+	sub algbyname {
+		my $name = shift;
+		my $key	 = uc $name;				# synthetic key
+		$key =~ s /[^A-Z0-9]//g;			# strip non-alphanumerics
+		return $algbyname{$key} || croak "unknown algorithm $name";
+	}
+
+	sub algbyval {
+		my $value = shift;
+		return $algbyval{$value} || $value;
+	}
+}
+
+
+sub decode_rdata {			## decode rdata from wire-format octet string
+	my $self = shift;
+	my ( $data, $offset ) = @_;
+
+	my $keylength = $self->{rdlength} - 4;
+	@{$self}{qw(flags protocol algorithm keybin)} = unpack "\@$offset n C2 a$keylength", $$data;
+}
+
+
+sub encode_rdata {			## encode rdata as wire-format octet string
+	my $self = shift;
+
+	return '' unless $self->{algorithm};
+	pack 'n C2 a*', $self->flags, $self->protocol, $self->algorithm, $self->keybin;
+}
+
+
+sub format_rdata {			## format rdata portion of RR string.
+	my $self = shift;
+
+	my $keybin = $self->keybin || return '';
+	my @params = map $self->$_, qw(flags protocol algorithm);
+	my $base64 = MIME::Base64::encode $keybin;
+	chomp $base64;
+	return join ' ', @params, "(\n$base64 ) ; Key ID =", $self->keytag;
+}
+
+
+sub parse_rdata {			## populate RR from rdata in argument list
+	my $self = shift;
+
+	$self->$_(shift) for qw(flags protocol algorithm);
+	$self->publickey(@_);
+}
+
+
+sub defaults() {			## specify RR attribute default values
+	my $self = shift;
+
+	$self->algorithm(1);
+	$self->protocol(3);
+}
+
+
+sub flags {
+	my $self = shift;
+
+	$self->{flags} = 0 + shift if scalar @_;
+	return $self->{flags} || 0;
+}
+
+
+sub protocol {
+	my $self = shift;
+
+	$self->{protocol} = 0 + shift if scalar @_;
+	return $self->{protocol} || 0;
+}
+
+
+sub algorithm {
+	my ( $self, $arg ) = @_;
+
+	unless ( ref($self) ) {		## class method or simple function
+		my $argn = pop || croak 'undefined argument';
+		return $argn =~ /[^0-9]/ ? algbyname($argn) : algbyval($argn);
+	}
+
+	return $self->{algorithm} unless defined $arg;
+	return algbyval( $self->{algorithm} ) if $arg =~ /MNEMONIC/i;
+	return $self->{algorithm} = algbyname($arg);
+}
+
+
+sub key {
+	my $self = shift;
+
+	$self->keybin( MIME::Base64::decode( join "", @_ ) ) if scalar @_;
+	return MIME::Base64::encode( $self->keybin(), "" ) if defined wantarray;
+}
+
+
+sub publickey { &key; }
+
+
+sub keybin {
+	my $self = shift;
+
+	return $self->{keybin} || '' unless scalar @_;
+	delete $self->{keytag};
+	$self->{keybin} = shift;
+}
+
+
+sub privatekeyname {
+	my $self = shift;
+	my $name = lc $self->{owner}->fqdn;
+	sprintf 'K%s+%03d+%05d.private', $name, $self->algorithm, $self->keytag;
+}
+
+
+sub keylength {
+	my $self = shift;
+
+	my $keybin = $self->keybin || return undef;
+
+	local $_ = algbyval( $self->{algorithm} );
+
+	if (/^RSA/) {
+
+		# Modulus length, see RFC 3110
+		if ( my $exp_length = unpack 'C', $keybin ) {
+
+			return ( length($keybin) - $exp_length - 1 ) << 3;
+
+		} else {
+			$exp_length = unpack 'x n', $keybin;
+			return ( length($keybin) - $exp_length - 3 ) << 3;
+		}
+
+	} elsif (/^DSA/) {
+
+		# Modulus length, see RFC 2536
+		my $T = unpack 'C', $keybin;
+		return ( $T << 6 ) + 512;
+
+	} elsif (/^EC/) {
+
+		return length($keybin) << 2;
+
+	} else {
+		return undef;
+	}
+}
+
+
+sub keytag {
+	my $self = shift;
+
+	return 0 if ( $self->{flags} & 0xC000 ) == 0xC000;	# NULL KEY
+
+	# RFC4034 Appendix B.1: most significant 16 bits of least significant 24 bits
+	return unpack 'n', substr $self->keybin(), -3 if $self->{algorithm} == 1;
+
+	# RFC4034 Appendix B
+	return $self->{keytag} = do {
+		my @kp = @{$self}{qw(flags protocol algorithm)};
+		my $kb = $self->{keybin} || return 0;
+		my $od = length($kb) & 1;
+		my $ac = 0;
+		$ac += $_ for unpack 'n*', pack "n C2 a* x$od", @kp, $kb;
+		$ac += ( $ac >> 16 );
+		$ac & 0xFFFF;
+			}
+}
+
+
+sub zone {
+	my $bit = 0x0100;
+	for ( shift->{flags} ||= 0 ) {
+		return $_ & $bit unless scalar @_;
+		my $set = $_ | $bit;
+		$_ = (shift) ? $set : ( $set ^ $bit );
+		return $_ & $bit;
+	}
+}
+
+
+sub revoke {
+	my $bit = 0x0080;
+	for ( shift->{flags} ||= 0 ) {
+		return $_ & $bit unless scalar @_;
+		my $set = $_ | $bit;
+		$_ = (shift) ? $set : ( $set ^ $bit );
+		return $_ & $bit;
+	}
+}
+
+
+sub sep {
+	my $bit = 0x0001;
+	for ( shift->{flags} ||= 0 ) {
+		return $_ & $bit unless scalar @_;
+		my $set = $_ | $bit;
+		$_ = (shift) ? $set : ( $set ^ $bit );
+		return $_ & $bit;
+	}
+}
+
+
+my $warned;
+
+sub is_sep {				## historical
+	my $self = shift;
+	carp "Deprecated method: please use rr->sep(@_)" unless $warned++;
+	return $self->sep(@_) ? 1 : 0;
+}
+
+sub set_sep   { shift->is_sep(1); }	## historical
+sub unset_sep { shift->is_sep(0); }	## historical
+sub clear_sep { shift->is_sep(0); }	## historical
+
+1;
+__END__
+
+
 =head1 SYNOPSIS
 
-C<use Net::DNS::RR;>
+    use Net::DNS;
+    $rr = new Net::DNS::RR('name DNSKEY flags protocol algorithm publickey');
 
 =head1 DESCRIPTION
 
-Class for DNSSEC KEY (DNSKEY) resource records.
+Class for DNSSEC Key (DNSKEY) resource records.
 
 =head1 METHODS
 
+The available methods are those inherited from the base class augmented
+by the type-specific methods defined in this package.
+
+Use of undocumented package features or direct access to internal data
+structures is discouraged and could result in program termination or
+other unpredictable behaviour.
+
+
 =head2 flags
 
-    print "flags" = ", $rr->flags, "\n";
+    $flags = $rr->flags;
+    $rr->flags( $flags );
 
-Returns the RR's flags in decimal representation
-
+Unsigned 16-bit number representing Boolean flags.
 
 =head2 protocol
 
-    print "protocol" = ", $rr->protocol, "\n";
+    $protocol = $rr->protocol;
+    $rr->protocol( $protocol );
 
-Returns the RR's protocol field in decimal representation
+The 8-bit protocol number.  This field MUST have value 3.
 
 =head2 algorithm
 
-    print "algorithm" = ", $rr->algorithm, "\n";
+    $algorithm = $rr->algorithm;
+    $rr->algorithm( $algorithm );
 
-Returns the RR's algorithm field in decimal representation
+The 8-bit algorithm number describes the public key algorithm.
 
-    1 = RSA/MD5
-    2 = DH
-    3 = DSA/SHA-1
-    4 = Elliptic Curve
-    5 = RSA/SHA-1
-    6 - DSA/SHA-1 (NSEC3)
-    7 - RSA/SHA-1 (NSEC3)
-    8 - RSA/SHA-256 
-    10 - RSA/SHA-512
-
-Note that only algorithm 1 and 3 are supported by the methods provided
-through Net::DNS::RR::SIG.pm.
+algorithm() may also be invoked as a class method or simple function
+to perform mnemonic and numeric code translation.
 
 =head2 key
 
-    print "key" = ", $rr->key, "\n";
+    $key = $rr->key;
+    $rr->key( $key );
 
-Returns the key in base64 representation
-
-
-=head2 keybin
-
-    $keybin =  $rr->keybin;
-
-Returns the key binary material
-
-
-=head2 keytag
-
-    print "keytag" = ", $rr->keytag, "\n";
-
-Returns the key tag of the key. (RFC2535 4.1.6)
+The key field holds the public key material.
+The format depends on the algorithm of the key being stored.
 
 =head2 privatekeyname
 
@@ -314,26 +334,53 @@ Returns the name of the privatekey as it would be generated by
 the BIND dnssec-keygen program. The format of that name being
 K\<fqdn\>+\<algorithm\>+\<keyid\>.private
 
-=head2 is_sep, set_sep, clear_sep
-
-is_sep() returns 1 if the secure entry point flag field is set,
-set_sep() sets secure entry point flag field is set and clear_sep()
-clears the value. 
-
 =head2 keylength
 
-Return the length of a key. 
+Returns the length (in bits) of the modulus calculated from the key text.
 
-For RSA this method returns the length (in bits) of the modulus.
+=head2 keytag
 
-For DSA this method returns the value of the T parameter (See RFC2536)
+    print "keytag = ", $rr->keytag, "\n";
 
-Returns -1 if the keysize cannot be determined (e.g. for unknown algorithms
-algorithm).
+Returns the key tag of the key. (RFC2535 4.1.6)
+
+=head2 zone
+
+    $rr->zone(0);
+    $rr->zone(1);
+
+    if ( $rr->zone ) {
+	...
+    }
+
+Boolean Zone key flag.
+
+=head2 revoke
+
+    $rr->revoke(0);
+    $rr->revoke(1);
+
+    if ( $rr->revoke ) {
+	...
+    }
+
+Boolean Revoke flag.
+
+=head2 sep
+
+    $rr->sep(0);
+    $rr->sep(1);
+
+    if ( $rr->sep ) {
+	...
+    }
+
+Boolean Secure Entry Point flag.
+
 
 =head1 COPYRIGHT
 
-Copyright (c) 2003-2005  RIPE NCC.  Author Olaf M. Kolkman <olaf@net-dns.org>
+Copyright (c)2003-2005 RIPE NCC.  Author Olaf M. Kolkman
 
 All Rights Reserved
 
@@ -341,28 +388,25 @@ Permission to use, copy, modify, and distribute this software and its
 documentation for any purpose and without fee is hereby granted,
 provided that the above copyright notice appear in all copies and that
 both that copyright notice and this permission notice appear in
-supporting documentation, and that the name of the author not be
-used in advertising or publicity pertaining to distribution of the
-software without specific, written prior permission.
+supporting documentation, and that the name of the author not be used
+in advertising or publicity pertaining to distribution of the software
+without specific prior written permission.
 
+THE AUTHOR DISCLAIMS ALL WARRANTIES WITH REGARD TO THIS SOFTWARE,
+INCLUDING ALL IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS; IN NO
+EVENT SHALL AUTHOR BE LIABLE FOR ANY SPECIAL, INDIRECT OR CONSEQUENTIAL
+DAMAGES OR ANY DAMAGES WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR
+PROFITS, WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS
+ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR PERFORMANCE OF
+THIS SOFTWARE.
 
-THE AUTHOR DISCLAIMS ALL WARRANTIES WITH REGARD TO THIS SOFTWARE, INCLUDING
-ALL IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS; IN NO EVENT SHALL
-AUTHOR BE LIABLE FOR ANY SPECIAL, INDIRECT OR CONSEQUENTIAL DAMAGES OR ANY
-DAMAGES WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN
-AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
-OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
-
-
-Based on, and contains, code by Copyright (c) 1997 Michael Fuhr.
+Package template (c)2009,2012 O.M.Kolkman and R.W.Franks.
 
 
 =head1 SEE ALSO
 
-L<http://www.net-dns.org/> 
+L<perl>, L<Net::DNS>, L<Net::DNS::RR>, RFC4034, RFC3755
 
-L<perl(1)>, L<Net::DNS>, L<Net::DNS::Resolver>, L<Net::DNS::Packet>,
-L<Net::DNS::Header>, L<Net::DNS::Question>, L<Net::DNS::RR>,
-RFC 4033, RFC 4034, RFC 4035.
+L<Algorithm Numbers|http://www.iana.org/assignments/dns-sec-alg-numbers>
 
 =cut

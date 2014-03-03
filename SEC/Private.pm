@@ -1,26 +1,51 @@
 package Net::DNS::SEC::Private;
 
-use vars qw(@ISA $VERSION @EXPORT );
+#
+# $Id: Private.pm 1170 2014-02-10 10:42:45Z willem $
+#
+use vars qw($VERSION);
+$VERSION = (qw$LastChangedRevision: 1170 $)[1];
 
-use Net::DNS;
+
+=head1 NAME
+
+Net::DNS::SEC::Private - DNS SIG Private key object
+
+
+=head1 SYNOPSIS
+
+    use Net::DNS::SEC::Private;
+
+    $private = Net::DNS::SEC::Private->new($keypath);
+
+
+=head1 DESCRIPTION
+
+Class containing a the private key as read from a dnssec-keygen
+generated keyfile. The class is written to be used only in the
+context of the Net::DNS::RR::RRSIG create method. This class is
+not designed to interact with any other system.
+
+=cut
+
+
+use strict;
+use base qw(Net::DNS::SEC);
+
+use integer;
 use Carp;
-
-use bytes;
-
-use Crypt::OpenSSL::DSA;
-use Crypt::OpenSSL::RSA;
-use Crypt::OpenSSL::Bignum;
-
 use File::Basename;
-use MIME::Base64;
 use Math::BigInt;
+use MIME::Base64;
 use Time::Local;
 
-@ISA = qw(Net::DNS::SEC);
+use Crypt::OpenSSL::Bignum;
+use Crypt::OpenSSL::DSA;
+use Crypt::OpenSSL::RSA;
 
-require Exporter;
 
-$VERSION = do { my @r=(q$Revision: 1129 $=~/\d+/g); sprintf "%d."."%03d"x$#r,@r };
+my $debug = 0;
+
 
 sub new {
     my ($class,  $key_file) = @_;
@@ -347,7 +372,7 @@ sub generate_rsa {
 	Crypt::OpenSSL::Random::random_seed($good_entropy);
 	  Crypt::OpenSSL::RSA->import_random_seed();
       }
-    $rsa = Crypt::OpenSSL::RSA->generate_key($size);
+    my $rsa = Crypt::OpenSSL::RSA->generate_key($size);
     $self->{"privatekey"}=$rsa;
     $self->{"keytag"}=$self->dump_rsa_keytag($flags);
     return $self;
@@ -359,27 +384,10 @@ sub generate_rsa {
 1;
 
 
+__END__
 
 
 
-
-
-
-=head1 NAME
-
-Net::DNS::SEC::Private - DNS SIG Private key object
-
-=head1 SYNOPSIS
-
-use Net::DNS::SEC::Private;
-my $private=Net::DNS::SEC::Private->new($keypath);
-
-=head1 DESCRIPTION
-
-Class containing a the private key as read from a dnssec-keygen
-generate zonefile. The class is written to be used only in the context
-of the Net::DNS::RR::SIG create method. This class is not designed to
-interact with any other system.
 
 
 

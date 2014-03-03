@@ -1,7 +1,13 @@
 Revision history for Perl extension Net::DNS::SEC.
-***0.17 November 29, 2013
+
+***0.18 (unreleased)
+
+   Recode RR implementations to provide Net::DNS 0.69+ interface.
+
    Fix: rt.cpan.org #81289
    Failure to handle GOST DS records
+
+***0.17 November 29, 2013
 
    Fix: rt.cpan.org #90270
    NSEC3->covered() should use case-insensitive comparisons
@@ -10,7 +16,7 @@ Revision history for Perl extension Net::DNS::SEC.
    Lower case zone-name part with DNSKEY::privatename
 
    Allow to specify algorithms with ::Private->new_rsa_private and
-   ::Private->generate_rsa in stead of assuming RSASHA1.
+   ::Private->generate_rsa instead of assuming RSASHA1.
 
    Fix: rt.cpan.org #55621
    Specify license type (mit) in META.yml
@@ -448,7 +454,7 @@ Net::DNS. The history of those is documented below.
 
 0.19-DNSSEC-0.3: 
   Solved patch problems that where due to the 
-  $Id: Changes 1134 2013-11-29 13:23:19Z willem $ in headers not 
+  $Id: Changes 1170 2014-02-10 10:42:45Z willem $ in headers not 
   being from the original distribution.
 
   Added DSA signature creation
@@ -480,4 +486,4 @@ Net::DNS. The history of those is documented below.
 
 
 ---------------------------------------------------------------------------
-$Id: Changes 1134 2013-11-29 13:23:19Z willem $
+$Id: Changes 1170 2014-02-10 10:42:45Z willem $

@@ -1,287 +1,199 @@
 package Net::DNS::RR::NSEC;
 
-# $Id: NSEC.pm 1000 2012-06-28 10:44:42Z willem $
+#
+# $Id: NSEC.pm 1166 2014-01-22 10:49:35Z willem $
+#
+use vars qw($VERSION);
+$VERSION = (qw$LastChangedRevision: 1166 $)[1];
+
 
 use strict;
-use vars qw(@ISA $VERSION);
-use Carp;
-use bytes;
-use Net::DNS;
-use Net::DNS::Packet;
-use Data::Dumper;
-
-use Carp;
-
-@ISA = qw(Net::DNS::RR);
-$VERSION = do { my @r=(q$Revision: 1000 $=~/\d+/g); sprintf "%d."."%03d"x$#r,@r };
-
-sub new {
-    my ($class, $self, $data, $offset) = @_;
-    
-    if ($self->{"rdlength"} > 0) {
-	my($nxtdname,$nxtoffset) = 
-	  Net::DNS::Packet::dn_expand($data, $offset);
-
-	$self->{"nxtdname"} =  $nxtdname;
-
-	my $typebm =substr($$data,$nxtoffset,
-				 $self->{"rdlength"}-
-				 $nxtoffset+$offset);
-
-	$self->{"typebm"}=$typebm;
-	$self->{"typelist"} = join " " 
-	    ,  _typebm2typearray($typebm);
-    }
-    
-    return bless $self, $class;
-}
-
-sub new_from_string {
-    my ($class, $self, $string) = @_;
-    if ($string) {
-	$string =~ tr/()//d;
-	$string =~ s/;.*$//mg;
-	$string =~ s/\n//mg;
-	my ($nxtdname,$nxtstr) = 
-	    $string =~ /^\s*(\S+)\s+(.*)/;
-	my @nxttypes = split ' ' , $nxtstr;  # everything after last match...
-	
-	$self->{"nxtdname"}=  Net::DNS::stripdot($nxtdname);
-	$self->{"typelist"}= join " " , sort @nxttypes ;
-	$self->{"typebm"}=_typearray2typebm(@nxttypes);
-	
-    }
-    return bless $self, $class;
-}
-
-
-
-
-#sub is_optin {
-#    my $self =shift;
-#    return 1 if $self->{"typelist"}!~/NSEC/;
-#    0;
-#}
-
-#sub set_optin {
-#    my $self =shift;
-#    $self->{"typelist"}=~s/NSEC//;
-#    1;
-#}
-
-sub rdatastr {
-	my $self = shift;
-	my $rdatastr;
-
-	
-	if (exists $self->{"nxtdname"}) {
-	    $rdatastr  = $self->{nxtdname}.".";
-	    $rdatastr .= "  "  . $self->typelist();
-	    }
-	else {
-	    $rdatastr = "; no data";
-	}
-
-	return $rdatastr;
-}
-
-sub rr_rdata {
-    my ($self, $packet, $offset) = @_;
-
-
-    my $rdata = "" ;
-    if (exists $self->{"nxtdname"}) {
-	# RFC 3845 2.1.1
-	# A sender MUST NOT use DNS name compression on the Next Domain Name
-	# field when transmitting an NSEC RR.
-	my @labels = Net::DNS::name2labels($self->{"nxtdname"});
-	foreach my $l (@labels) {
-	    $rdata .= pack('CA*', length($l), $l);
-	}
-	$rdata .= pack('C', 0);
-	$rdata .= $self->typebm();
-    }
-    
-    return $rdata;
-    
-}
-
-
-
-
-sub _normalize_dnames {
-	my $self=shift;
-	$self->_normalize_ownername();
-	$self->{'nxtdname'}=Net::DNS::stripdot($self->{'nxtdname'}) if defined $self->{'nxtdname'};
-}
-
-
-
-
-
-sub typebm {
-    my ($self, $new_val) = @_;
-				
-    if (defined $new_val) {
-	$self->{"typebm"} = $new_val;
-	$self->{"typelist"}= join (" ",  _typebm2typearray($self->{"typebm"}));
-    }
-
-    $self->{"typebm"}= _typearray2typebm(split(' ',$self->{"typelist"})) unless $self->{"typebm"};
-    return $self->{"typebm"};
-}
-
-
-sub typelist {
-    my ($self, $new_val) = @_;
-				
-    if (defined $new_val) {
-	$self->{"typelist"} = $new_val;
-	$self->{"typebm"}= _typearray2typebm(split (' ',($self->{"typelist"})));
-    }
-
-    $self->{"typelist"}=  join (" ", 
- _typebm2typearray($self->{"typebm"})) unless $self->{"typelist"};
-
-    return $self->{"typelist"};
-}
-	   
-
-
-sub _canonicalRdata {
-    # rdata contains a compressed domainname... that should not have
-    # been done @specification time :-) 
-	my ($self) = @_;
-	my $rdata;
-	$rdata=$self->_name2wire($self->{"nxtdname"});
-	$rdata .= $self->{"typebm"};	
-	return $rdata;
-}
-
-
-sub _typearray2typebm {
-
-
-    # typebm= (WindowBlockNumber |BitmapLength|Bitmap)+
-
-    my @typelist= @_;
-    return "" unless @typelist;
-
-    my $typebm="";
-    my $CurrentWindowNumber=0;
-
-    # $bm is an array of arrays.
-    
-    # The first index maps onto the CurrentWindowNumber and the array
-    # contained has its index mapped to types. The vallues will be set
-    # if there is data for a paricular type otherwise undef.
-    
-    my $bm;
-  TYPE:   for(my $i=0;$i < @typelist; $i++){
- 	use integer;
-	my $typenumber=Net::DNS::typesbyname(uc($typelist[$i]));
-	next TYPE if exists ($Net::DSN::qtypesbyname{uc($typelist[$i])});
-	next TYPE if  exists ($Net::DSN::metatypesbyname{uc($typelist[$i])});
-	# Do net set the bitmap for meta types or qtypes.
-	    $CurrentWindowNumber= ($typenumber / 256); # use integer must be in scope..	
-	$bm->[$CurrentWindowNumber]->[$typenumber-$CurrentWindowNumber*256] = 1;
-	}
-    
-    # Turn the array of arrays referenced through $bm into the bitmap
-    # as used in the RDATA
-
-    for (my $i=0; $i < @{$bm}; $i++){
-	if (defined ($bm->[$i])){
-	    use integer;
-	    my $BitmapLength=0;
-	    $BitmapLength =  8 * ((@{$bm->[$i]} / 8) );
-	    # Make sure the remaining bits fit...
-	    $BitmapLength += 8 if (@{$bm->[$i]} % 8);
-	    for (my $j=0;$j< $BitmapLength; $j++){
-		$bm->[$i]->[$j]=0 if ! defined $bm->[$i]->[$j];
-	    }
-
-	    $typebm.= pack("CCB$BitmapLength",$i,$BitmapLength/8,
-			   join ("", @{$bm->[$i]} ));
-	}
-    }
-    return $typebm
-
-}
-
-sub _typebm2typearray {
-
-
-    # This implements draft-ietfdnsext-nsec-rdata-01.
-    # typebm= (WindowBlockNumber |BitmapLength|Bitmap)+
-
-    my $typebm=shift;  # bit representation.
-    my@typelist;
-    while ($typebm){
-	my ($WindowBlockNumber,$BitmapLength)=unpack("CC",$typebm);
-	substr($typebm,0,2,"");
-	my $Bitmap=substr($typebm,0,$BitmapLength,"");
-	# Turn the Bitmap in an array...
-	my @bm=split //, unpack("B*", $Bitmap);  # bit representation in arra
-
-	for (my $i=0;$i < @bm; $i++){
-	    @typelist=(@typelist,
-		       Net::DNS::typesbyval($WindowBlockNumber*256+$i))	   
-	      if $bm[$i];
-	}
-    }
-
-    return sort @typelist;
-}
-
-
-
-
-
-1;
-
+use base qw(Net::DNS::RR);
 
 =head1 NAME
 
 Net::DNS::RR::NSEC - DNS NSEC resource record
 
+=cut
+
+
+use integer;
+
+use Carp;
+use Net::DNS::DomainName;
+use Net::DNS::Parameters;
+
+
+sub decode_rdata {			## decode rdata from wire-format octet string
+	my $self = shift;
+	my ( $data, $offset ) = @_;
+
+	my $limit = $offset + $self->{rdlength};
+	( $self->{nxtdname}, $offset ) = decode Net::DNS::DomainName(@_);
+	$self->{typebm} = substr $$data, $offset, $limit - $offset;
+}
+
+
+sub encode_rdata {			## encode rdata as wire-format octet string
+	my $self = shift;
+
+	return '' unless $self->{typebm};
+	join '', $self->{nxtdname}->encode(), $self->{typebm};
+}
+
+
+sub format_rdata {			## format rdata portion of RR string.
+	my $self = shift;
+
+	return '' unless $self->{typebm};
+	join ' ', $self->{nxtdname}->string(), $self->typelist;
+}
+
+
+sub parse_rdata {			## populate RR from rdata in argument list
+	my $self = shift;
+
+	$self->nxtdname(shift);
+	$self->typelist(@_);
+}
+
+
+sub nxtdname {
+	my $self = shift;
+
+	$self->{nxtdname} = new Net::DNS::DomainName(shift) if scalar @_;
+	$self->{nxtdname}->name if defined wantarray;
+}
+
+
+sub typelist {
+	my $self = shift;
+
+	$self->{typebm} = &_type2bm if scalar @_;
+
+	my @type = &_bm2type( $self->{typebm} ) if defined wantarray;
+	return "@type" unless wantarray;
+	return @type;
+}
+
+
+########################################
+
+
+sub _type2bm {
+	my @typearray;
+	foreach my $typename ( map split( /\s+/, $_ ), @_ ) {
+		next unless $typename;
+		my $typenum = typebyname( uc $typename );
+		my $window  = $typenum >> 8;
+		next unless $window or $typenum < 128;		# skip meta type
+		next if $typenum == 41;				# skip meta type
+		my $bitnum = $typenum & 255;
+		my $octet  = $bitnum >> 3;
+		my $bit	   = $bitnum & 7;
+		$typearray[$window][$octet] |= 0x80 >> $bit;
+	}
+
+	my $bitmap;
+	my $window = 0;
+	foreach (@typearray) {
+		if ( my $pane = $typearray[$window] ) {
+			my @content = map $_ || 0, @$pane;
+			$bitmap .= pack 'CC C*', $window, scalar(@content), @content;
+		}
+		$window++;
+	}
+
+	return $bitmap;
+}
+
+
+sub _bm2type {
+	my $bitmap = shift || '';
+	my $index  = 0;
+	my $limit  = length $bitmap;
+	my @typelist;
+
+	while ( $index < $limit ) {
+		my ( $block, $size ) = unpack "\@$index C2", $bitmap;
+		my @octet = unpack "\@$index xxC$size", $bitmap;
+		$index += $size + 2;
+		my $typenum = $block << 8;
+		foreach my $octet (@octet) {
+			$typenum += 8;
+			my $i = $typenum;
+			while ($octet) {
+				--$i;
+				push @typelist, typebyval($i) if $octet & 1;
+				$octet = $octet >> 1;
+			}
+		}
+	}
+
+	return sort @typelist;
+}
+
+
+sub typebm {				## historical
+	my $self = shift;
+	return $self->{typebm} unless scalar @_;
+	$self->{typebm} = shift;
+}
+
+sub _typearray2typebm {			## historical
+	&_type2bm;
+}
+
+sub _typebm2typearray {			## historical
+	&_bm2type;
+}
+
+
+1;
+__END__
+
+
 =head1 SYNOPSIS
 
-C<use Net::DNS::RR;>
+    use Net::DNS;
+    $rr = new Net::DNS::RR('name NSEC nxtdname typelist');
 
 =head1 DESCRIPTION
 
-Class for DNS Address (NSEC) resource records.
+Class for DNSSEC NSEC resource records.
 
 =head1 METHODS
 
+The available methods are those inherited from the base class augmented
+by the type-specific methods defined in this package.
+
+Use of undocumented package features or direct access to internal data
+structures is discouraged and could result in program termination or
+other unpredictable behaviour.
+
+
 =head2 nxtdname
 
-    print "nxtdname" = ", $rr->nxtdname, "\n";
+    $nxtdname = $rr->nxtdname;
+    $rr->nxtdname( $nxtdname );
 
-Returns the RR's next domain name field.
-
+The Next Domain field contains the next owner name (in the
+canonical ordering of the zone) that has authoritative data
+or contains a delegation point NS RRset.
 
 =head2 typelist
 
-    print "typelist" = ", $rr->typelist, "\n";
+    @typelist = $rr->typelist;
+    $typelist = $rr->typelist;
 
-Returns a string with the list of qtypes for which data exists for
-this particular label.
+The Type List identifies the RRset types that exist at the NSEC RR
+owner name.  When called in scalar context, the list is interpolated
+into a string.
 
-
-
-=head2 typebm
-
-    print "typebm" = " unpack("B*", $rr->typebm), "\n";
-
-Same as the typelist but now in a representation  bitmap as in 
-specified in the RFC. This is not the kind of method you will need
-on daily basis.
 
 =head1 COPYRIGHT
 
-Copyright (c) 2001-2005  RIPE NCC.  Author Olaf M. Kolkman <olaf@net-dns.org>
+Copyright (c)2001-2005 RIPE NCC.  Author Olaf M. Kolkman
 
 All Rights Reserved
 
@@ -289,28 +201,23 @@ Permission to use, copy, modify, and distribute this software and its
 documentation for any purpose and without fee is hereby granted,
 provided that the above copyright notice appear in all copies and that
 both that copyright notice and this permission notice appear in
-supporting documentation, and that the name of the author not be
-used in advertising or publicity pertaining to distribution of the
-software without specific, written prior permission.
+supporting documentation, and that the name of the author not be used
+in advertising or publicity pertaining to distribution of the software
+without specific prior written permission.
 
-THE AUTHOR DISCLAIMS ALL WARRANTIES WITH REGARD TO THIS SOFTWARE, INCLUDING
-ALL IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS; IN NO EVENT SHALL
-AUTHOR BE LIABLE FOR ANY SPECIAL, INDIRECT OR CONSEQUENTIAL DAMAGES OR ANY
-DAMAGES WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN
-AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
-OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
+THE AUTHOR DISCLAIMS ALL WARRANTIES WITH REGARD TO THIS SOFTWARE,
+INCLUDING ALL IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS; IN NO
+EVENT SHALL AUTHOR BE LIABLE FOR ANY SPECIAL, INDIRECT OR CONSEQUENTIAL
+DAMAGES OR ANY DAMAGES WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR
+PROFITS, WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS
+ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR PERFORMANCE OF
+THIS SOFTWARE.
 
-
-Based on, and contains, code by Copyright (c) 1997 Michael Fuhr.
-
+Package template (c)2009,2012 O.M.Kolkman and R.W.Franks.
 
 
 =head1 SEE ALSO
 
-L<http://www.net-dns.org/> 
-
-L<perl(1)>, L<Net::DNS>, L<Net::DNS::Resolver>, L<Net::DNS::Packet>,
-L<Net::DNS::Header>, L<Net::DNS::Question>, L<Net::DNS::RR>,
-RFC4033, RFC4034, RFC4035.
+L<perl>, L<Net::DNS>, L<Net::DNS::RR>, RFC4034, RFC3755
 
 =cut

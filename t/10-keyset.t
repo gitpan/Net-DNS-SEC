@@ -1,6 +1,6 @@
 #!/usr/bin/perl	 -sw 
 # Test script for keyset functionality
-# $Id: 10-keyset.t 1117 2013-09-23 10:11:53Z willem $
+# $Id: 10-keyset.t 1171 2014-02-26 08:56:52Z willem $
 #
 # Called in a fashion similar to:
 # /usr/bin/perl -Iblib/arch -Iblib/lib -I/usr/lib/perl5/5.6.1/i386-freebsd \
@@ -8,13 +8,14 @@
 # $verbose=0; runtests @ARGV;' t/10-keyset.t
 
 
-#use Test::More	 qw(no_plan);
-use Test::More tests => 21;
 use strict;
 
+BEGIN {
+	use Test::More tests => 21;
 
-BEGIN { use_ok('Net::DNS'); }					# test 1
-BEGIN { use_ok('Net::DNS::Keyset'); }				# test 2
+	use_ok('Net::DNS::SEC');				# test 1
+	use_ok('Net::DNS::Keyset');				# test 2
+}
 
 
 #

@@ -1,5 +1,5 @@
 #
-# $Id: Makefile.PL 1004 2012-07-06 09:08:59Z willem $
+# $Id: Makefile.PL 1141 2013-12-16 15:10:15Z willem $
 #
 
 
@@ -25,7 +25,7 @@ WriteMakefile(
       'NAME'	=> 'Net::DNS::SEC',
       'VERSION_FROM'	=> 'SEC.pm',
       'PREREQ_PM'             => {
-	Net::DNS                  => 0.64,
+	Net::DNS                  => 0.69,
 	Test::More                => 0.47,
 	Crypt::OpenSSL::RSA       => 0.19,
 	Crypt::OpenSSL::Bignum    => 0.03,
@@ -47,7 +47,6 @@ WriteMakefile(
 		'SEC/Private.pm'    => '$(INST_LIBDIR)/SEC/Private.pm',
 		'RR/DS.pm'  => '$(INST_LIBDIR)/RR/DS.pm',
 		'RR/DLV.pm'  => '$(INST_LIBDIR)/RR/DLV.pm',
-		'RR/NXT.pm' => '$(INST_LIBDIR)/RR/NXT.pm',
 		'RR/KEY.pm' => '$(INST_LIBDIR)/RR/KEY.pm',
 		'RR/SIG.pm' =>  '$(INST_LIBDIR)/RR/SIG.pm',
 		'RR/RRSIG.pm' =>  '$(INST_LIBDIR)/RR/RRSIG.pm',

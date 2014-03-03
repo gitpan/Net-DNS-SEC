@@ -1,331 +1,364 @@
 package Net::DNS::RR::DS;
 
-# $Id: DS.pm 1131 2013-11-21 15:54:55Z willem $
+#
+# $Id: DS.pm 1167 2014-02-03 09:55:08Z willem $
+#
+use vars qw($VERSION);
+$VERSION = (qw$LastChangedRevision: 1167 $)[1];
 
 
 use strict;
-use vars qw(@ISA $VERSION $_Babble);
-
-use Net::DNS;
-use Carp;
-
-use Digest::SHA  qw(sha1 sha1_hex sha256 sha256_hex );
-
-BEGIN {
-
-    $_Babble=0;    
-    $_Babble=1 unless (eval "require Digest::BubbleBabble; import Digest::BubbleBabble qw(bubblebabble)") ;
-
-}
-
-
-
-
-
-$VERSION = do { my @r=(q$Revision: 1131 $=~/\d+/g); sprintf "%d."."%03d"x$#r,@r };
-my $debug=0;
-
-@ISA = qw(Net::DNS::RR Net::DNS::SEC);
-
-sub new {
-    my ($class, $self, $data, $offset) = @_;
-    if ($self->{"rdlength"} > 0) {
-	
-	my $offsettoalg=$offset+2;
-	my $offsettodigtype=$offset+3;
-	my $offsettodigest=$offset+4;
-	my $digestlength;
-
-
-	$self->{"keytag"}=unpack("n",substr($$data,$offset,2));
-	$self->{"algorithm"}=unpack("C",substr($$data,$offsettoalg,1));
-	$self->{"digtype"}=unpack("C",substr($$data,$offsettodigtype,1));
-	if ($self->{"digtype"}==1){
-	    $digestlength=20; # SHA1 digest 20 bytes long
-	}elsif($self->{"digtype"}==2){
-	    $digestlength=32; # SHA256 digest 32 bytes long
-	}elsif($self->{"digtype"}==3){
-	    $digestlength=32; # GOST digest 32 bytes long [RFC5933]
-	}elsif($self->{"digtype"}==4){
-	    $digestlength=32; # SHA-384 digest 32 bytes long [RFC6605]
-	}else{
-	    confess("Unsupported digest type " .$self->{"digtype"});
-	    $digestlength=0;
-	}
-	
-	$self->{"digestbin"}= substr($$data,$offsettodigest,
-				     $digestlength); 
-
-
-	$self->{"digest"}= unpack("H*",$self->{"digestbin"});
-	
-	
-    }
-    return bless $self, $class;
-}
-
-
-
-
-
-sub new_from_string {
-	my ($class, $self, $string) = @_;
-	if ($string) {
-		$string =~ tr/()//d;
-		$string =~ s/;.*$//mg;
-		$string =~ s/\n//g;
-		my ($keytag,  $algorithm, $digtype, $digest) = 
-		    $string =~ /^\s*(\S+)\s+(\S+)\s+(\S+)\s+((\S+\s*)+)/;
-		# We allow spaces in the digest.
-		$digest=~s/\s//g;
-		$self->{"keytag"}=$keytag;
-		$self->{"algorithm"}=Net::DNS::SEC->algorithm($algorithm)|| 
-		    return undef;		
-		$self->{"digtype"}=Net::DNS::SEC->digtype($digtype) || 
-		    return undef;
-		$self->{"digest"}=$digest;
-		$self->{"digestbin"}=pack("H*",$digest);
-	    }
-	return bless $self, $class;
-}
-
-
-
-sub rdatastr {
-	my $self = shift;
-	my $rdatastr;
-	if (exists $self->{"keytag"}) {
-	    $rdatastr  = $self->{keytag};
-	    $rdatastr .= "  "  . "$self->{algorithm}";
-	    $rdatastr .= "  "  . "$self->{digtype}";
-	    $rdatastr .= "  "  . "$self->{digest}";
-	    $rdatastr .= " ; ".$self->babble if $_Babble;   
-	    }
-	else {
-	    $rdatastr = "; no data";
-	}
-
-	return $rdatastr;
-}
-
-sub rr_rdata {
-    my $self = shift;
-    my $rdata;
-    if (exists $self->{"digest"}) {
-      $rdata= pack("n",$self->{"keytag"}) ;
-      $rdata.= pack("C",  $self->{"algorithm"}) ;
-      $rdata.= pack("C",  $self->{"digtype"}) ;
-      $rdata.= $self->digestbin;
-    }
-    return $rdata;
-}
-
-sub verify {
-    my ($self, $key) = @_;
-
-    if (defined($key)) {
-    	my $tstds=create Net::DNS::RR::DS($key,(
-					  digtype => $self->digtype,
-				      )
-	);
-	if ($tstds->digestbin eq $self->digestbin){
-	    return 1;
-	}
-    }
-    return 0;
-}
-
-
-
-
-sub babble {
-    my $self=shift;
-    if ($_Babble){
-        return bubblebabble(Digest=>$self->digestbin);
-    }else{
-	return("");
-    }
-}
-
-
-sub digestbin {
-    my ($self,$new_val)=@_;
-
-    if (defined $new_val) {
-	$self->{"digestbin"} = $new_val;
-	$self->{"digest"} = unpack("H*",$new_val);
-	return  $self->{"digestbin"};
-    }
-    
-
-    $self->{"digestbin"}=pack("H*",$self->{"digest"}) unless(  $self->{"digestbin"} ); 
-    return $self->{"digestbin"};
-
-
-}
-
-sub create {
-    my ($class, $keyrr ,%args) = @_;
-
-    my $self;
-
-    # Default SHA1...
-    $self->{"digtype"}=1;
-   
-    if ($args{"digtype"}){
-	$self->{"digtype"}=2 if Net::DNS::SEC->digtype($args{"digtype"})==2;
-    }
-    
-    $self->{"name"}=$keyrr->name;  # Label is per definition the same as 
-                                   # keylabll
-    $self->{"type"}="DS";
-    $self->{"class"}="IN";
-    
-    if ($args{ttl}){
-	print "\nSetting TTL to ".  $args{"ttl"} if $debug;
-	$self->{"ttl"}= $args{"ttl"};
-    }else{
-	$self->{"ttl"}= $keyrr->ttl;
-    }
-
-
-    # The key must not be a NULL key.
-    if (($keyrr->{"flags"} & hex("0xc000") ) == hex("0xc000") ){
-	croak "\nCreating a DS record for a NULL key is illegal";
-    }
-    
-
-    # Bit 0 must not be set.
-    if (($keyrr->{"flags"}) & hex("0x8000")) {
-	croak "\nCreating a DS record for a key with flag bit 0 set ".
-	    "to 0 is illegal";
-    }
-    
-    # Bit 6 must be set to 0 bit 7 must be set to 1
-    if ( ($keyrr->{"flags"} & hex("0x300")) != hex("0x100")){
-	croak "\nCreating a DS record for a key with flags 6 and 7 not set ".
-	    "0  and 1 respectively is illegal";
-    }
-    
-
-    if ($keyrr->{"protocol"}  != 3 ){
-	croak "\nCreating a DS record for a non DNSSEC (protocol=3) ".
-	    "key is illegal";
-    }
-
-    $self->{"keytag"}=$keyrr->keytag;
-    $self->{"algorithm"}=$keyrr->algorithm;
-
-    my $data = $keyrr->_name2wire (lc $keyrr->name) . $keyrr->_canonicalRdata;
-
-    if ($self->{"digtype"}==1){
-	$self->{"digestbin"}=  sha1($data);
-	$self->{"digest"}= uc(sha1_hex($data));
-    }elsif($self->{"digtype"}==2){
-	$self->{"digestbin"}=  sha256($data);
-	$self->{"digest"}= uc(sha256_hex($data));
-    }else{
-	return undef;
-    }
-
-    return bless $self, $class;
-
-
-}
-
-1;
-
+use base qw(Net::DNS::RR);
 
 =head1 NAME
 
 Net::DNS::RR::DS - DNS DS resource record
 
+=cut
+
+
+use integer;
+
+use Carp;
+
+use constant BABBLE => eval { require Digest::BubbleBabble; };
+
+eval { require Digest::SHA };		## optional for simple Net::DNS RR
+eval { require Digest::GOST };
+eval { require Digest::GOST::CryptoPro };
+
+my %digest = (
+	'1' => ['Digest::SHA', 1],
+	'2' => ['Digest::SHA', 256],
+	'3' => ['Digest::GOST::CryptoPro'],
+	'4' => ['Digest::SHA', 384],
+	);
+
+#
+# source: http://www.iana.org/assignments/dns-sec-alg-numbers
+#
+{
+	my @algbyname = (		## Reserved	=> 0,	# [RFC4034][RFC4398]
+		'RSAMD5'	     => 1,			# [RFC3110][RFC4034]
+		'DH'		     => 2,			# [RFC2539]
+		'DSA'		     => 3,			# [RFC3755][RFC2536]
+					## Reserved	=> 4,	# [RFC6725]
+		'RSASHA1'	     => 5,			# [RFC3110][RFC4034]
+		'DSA-NSEC3-SHA1'     => 6,			# [RFC5155]
+		'RSASHA1-NSEC3-SHA1' => 7,			# [RFC5155]
+		'RSASHA256'	     => 8,			# [RFC5702]
+					## Reserved	=> 9,	# [RFC6725]
+		'RSASHA512'	     => 10,			# [RFC5702]
+					## Reserved	=> 11,	# [RFC6725]
+		'ECC-GOST'	     => 12,			# [RFC5933]
+		'ECDSAP256SHA256'    => 13,			# [RFC6605]
+		'ECDSAP384SHA384'    => 14,			# [RFC6605]
+
+		'INDIRECT'   => 252,				# [RFC4034]
+		'PRIVATEDNS' => 253,				# [RFC4034]
+		'PRIVATEOID' => 254,				# [RFC4034]
+					## Reserved	=> 255,	# [RFC4034]
+		);
+
+	my %algbyval = reverse @algbyname;
+
+	my @algbynum = map { ( $_, 0 + $_ ) } keys %algbyval;	# accept algorithm number
+
+	my %algbyname = map { s /[^A-Za-z0-9]//g; $_ } @algbyname, @algbynum;
+
+
+	sub algbyname {
+		my $name = shift;
+		my $key	 = uc $name;				# synthetic key
+		$key =~ s /[^A-Z0-9]//g;			# strip non-alphanumerics
+		return $algbyname{$key} || croak "unknown algorithm $name";
+	}
+
+	sub algbyval {
+		my $value = shift;
+		return $algbyval{$value} || $value;
+	}
+}
+
+#
+# source: http://www.iana.org/assignments/ds-rr-types
+#
+{
+	my @digestbyname = (
+		'SHA-1'	  => 1,					# RFC3658
+		'SHA-256' => 2,					# RFC4509
+		'GOST'	  => 3,					# RFC5933
+		'SHA-384' => 4,					# RFC6605
+		);
+
+	my @digestbyalias = ( 'SHA' => 1 );
+
+	my %digestbyval = reverse @digestbyname;
+
+	my @digestbynum = map { ( $_, 0 + $_ ) } keys %digestbyval;    # accept algorithm number
+
+	my %digestbyname = map { s /[^A-Za-z0-9]//g; $_ } @digestbyalias, @digestbyname, @digestbynum;
+
+
+	sub digestbyname {
+		my $name = shift;
+		my $key	 = uc $name;				# synthetic key
+		$key =~ s /[^A-Z0-9]//g;			# strip non-alphanumerics
+		return $digestbyname{$key} || croak "unknown digest type $name";
+	}
+
+	sub digestbyval {
+		my $value = shift;
+		return $digestbyval{$value} || $value;
+	}
+}
+
+
+sub decode_rdata {			## decode rdata from wire-format octet string
+	my $self = shift;
+	my ( $data, $offset ) = @_;
+
+	my $length = $self->{rdlength} - 4;
+	@{$self}{qw(keytag algorithm digtype digestbin)} = unpack "\@$offset n C2 a$length", $$data;
+}
+
+
+sub encode_rdata {			## encode rdata as wire-format octet string
+	my $self = shift;
+
+	return '' unless $self->{digtype};
+	pack 'n C2 a*', @{$self}{qw(keytag algorithm digtype digestbin)};
+}
+
+
+sub format_rdata {			## format rdata portion of RR string.
+	my $self = shift;
+
+	return '' unless $self->{digtype};
+	my @babble = ( "\n;", $self->babble ) if BABBLE;
+	my $digest = $self->digest;
+	$digest = join( "\n", '(', split /(\S{64})/, $digest ) . ' )' if length $digest > 40;
+	join ' ', @{$self}{qw(keytag algorithm digtype)}, $digest, @babble;
+}
+
+
+sub parse_rdata {			## populate RR from rdata in argument list
+	my $self = shift;
+
+	$self->$_(shift) for qw(keytag algorithm digtype);
+	$self->digest(@_);
+}
+
+
+sub keytag {
+	my $self = shift;
+
+	$self->{keytag} = 0 + shift if scalar @_;
+	return $self->{keytag} || 0;
+}
+
+
+sub algorithm {
+	my ( $self, $arg ) = @_;
+
+	unless ( ref($self) ) {		## class method or simple function
+		my $argn = pop || croak 'undefined argument';
+		return $argn =~ /[^0-9]/ ? algbyname($argn) : algbyval($argn);
+	}
+
+	return $self->{algorithm} unless defined $arg;
+	return algbyval( $self->{algorithm} ) if $arg =~ /MNEMONIC/i;
+	return $self->{algorithm} = algbyname($arg);
+}
+
+
+sub digtype {
+	my ( $self, $arg ) = @_;
+
+	unless ( ref($self) ) {		## class method or simple function
+		my $argn = pop || croak 'undefined argument';
+		return $argn =~ /[^0-9]/ ? digestbyname($argn) : digestbyval($argn);
+	}
+
+	return $self->{digtype} unless defined $arg;
+	return digestbyval( $self->{digtype} ) if $arg =~ /MNEMONIC/i;
+	return $self->{digtype} = digestbyname($arg);
+}
+
+
+sub digest {
+	my $self = shift;
+
+	$self->digestbin( pack "H*", map { die "!hex!" if m/[^0-9A-Fa-f]/; $_ } join "", @_ ) if scalar @_;
+	unpack "H*", $self->digestbin() if defined wantarray;
+}
+
+
+sub digestbin {
+	my $self = shift;
+
+	$self->{digestbin} = shift if scalar @_;
+	$self->{digestbin} || "";
+}
+
+
+sub babble {
+	return Digest::BubbleBabble::bubblebabble( Digest => shift->digestbin ) if BABBLE;
+	return '';
+}
+
+
+sub create {
+	my $class = shift;
+	my $keyrr = shift;
+	my %args  = @_;
+
+	my ($type) = reverse split '::', $class;
+
+	my $kname = $keyrr->name;
+	my $flags = $keyrr->flags;
+	croak "Unable to create $kname $type record for non-DNSSEC key" unless $keyrr->protocol == 3;
+	croak "Unable to create $kname $type record for NULL key" if ( $flags & 0xc000 ) == 0xc000;
+	croak "Unable to create $kname $type record for key with flag bit7 clear" unless $flags & 0x0100;
+	croak "Unable to create $kname $type record for key with flag bit6 set" if $flags & 0x0200;
+	croak "Unable to create $kname $type record for key with flag bit0 set" if $flags & 0x8000;
+
+	my $self = new Net::DNS::RR(
+		name	  => $kname,				# per definition, same as keyrr
+		type	  => $type,
+		class	  => $keyrr->class,
+		ttl	  => $keyrr->ttl,
+		keytag	  => $keyrr->keytag,
+		algorithm => $keyrr->algorithm,
+		digtype	  => 1,					# SHA1 by default
+		%args
+		);
+
+	my $owner = $self->{owner}->encode();
+	my $data = pack 'a* a*', $owner, $keyrr->_canonicalRdata;
+
+	my $arglist = $digest{$self->digtype} || croak 'unsupported digest type';
+	my ( $object, @argument ) = @$arglist;
+	my $hash = $object->new(@argument);
+	$hash->add($data);
+	$self->digestbin( $hash->digest );
+
+	return $self;
+}
+
+
+sub verify {
+	my ( $self, $key ) = @_;
+	my $verify = create Net::DNS::RR::DS( $key, ( digtype => $self->digtype ) );
+	return $verify->digestbin eq $self->digestbin;
+}
+
+1;
+__END__
+
+
 =head1 SYNOPSIS
 
-C<use Net::DNS::RR;>
+    use Net::DNS;
+    $rr = new Net::DNS::RR('name DS keytag algorithm digtype digest');
 
 =head1 DESCRIPTION
 
-Class for Delegation signer (DS) resource records.
+Class for DNS Delegation Signer (DS) resource record.
 
 =head1 METHODS
 
-In addition to the regular methods 
+The available methods are those inherited from the base class augmented
+by the type-specific methods defined in this package.
 
+Use of undocumented package features or direct access to internal data
+structures is discouraged and could result in program termination or
+other unpredictable behaviour.
 
-=head2 create
-
-This constructor takes a key object as argument and will return a DS
-RR object.
-
-$dsrr=create Net::DNS::RR::DS($keyrr, digtype => "SHA256");
-$keyrr->print;
-$dsrr->print;
-
-The digest type defaults to SHA1.
-
-=head2 verify
-
-The verify method will return 1 if the hash over the key provided in
-the argument matches the data in the $dsrr itself i.e. if the DS
-pointing to the DNSKEY from the argument. It will return 0
-otherwise.
-
-$dsrr->($keyrr);
-
-
-=head2 algorithm
-
-    print "algorithm" = ", $rr->algorithm, "\n";
-
-Returns the RR's algorithm field in decimal representation
-
-    1 = MD5 RSA
-    2 = DH
-    3 = DSA
-    4 = Elliptic curve
-
-=head2 digest
-
-    print "digest" = ", $dsrr->digest, "\n";
-
-Returns the SHA1 digest over the label and key in hexadecimal representation
-
-
-=head2 digestbin
-
-    $digestbin =  $dsrr->digestbin;
-
-Returns the digest as  binary material
 
 =head2 keytag
 
-    print "keytag" ." = ". $dsrr->keytag . "\n";
+    $keytag = $rr->keytag;
+    $rr->keytag( $keytag );
 
-Returns the key tag of the key. (RFC2535 4.1.6)
+The 16-bit numerical key tag of the key. (RFC2535 4.1.6)
 
+=head2 algorithm
+
+    $algorithm = $rr->algorithm;
+    $rr->algorithm( $algorithm );
+
+Decimal representation of the 8-bit algorithm field.
+
+algorithm() may also be invoked as a class method or simple function
+to perform mnemonic and numeric code translation.
 
 =head2 digtype
 
-   print "digest type" . " = " . $dsrr->digtype ."\n";
+    $digtype = $rr->digtype;
+    $rr->digtype( $digtype );
 
-Returns the digest type of the DS RR.
+Decimal representation of the 8-bit digest type field.
+
+digtype() may also be invoked as a class method or simple function
+to perform mnemonic and numeric code translation.
+
+=head2 digest
+
+    $digest = $rr->digest;
+    $rr->digest( $digest );
+
+Hexadecimal representation of the digest over the label and key.
+
+=head2 digestbin
+
+    $digestbin = $rr->digestbin;
+    $rr->digestbin( $digestbin );
+
+Binary representation of the digest over the label and key.
 
 =head2 babble
 
-   print $dsrr->babble;
+    print $rr->babble;
 
-Returns the 'BabbleBubble' representation of the digest. The
-'BabbleBubble' string may be handy for telephone confirmation.
+The babble() method returns the 'BubbleBabble' representation of the
+The babble() method returns the 'BubbleBabble' representation of the
+digest if the Digest::BubbleBabble package is available, otherwise
+an empty string is returned.
 
-The 'BabbleBubble' string returned as a comment behind the RDATA when
+BubbleBabble represents a message digest as a string of plausible
+words, to make the digest easier to verify.  The "words" are not
+necessarily real words, but they look more like words than a string
+of hex characters.
+
+The 'BubbleBabble' string is appended as a comment to the RDATA when
 the string method is called.
 
+=head2 create
+
+    $dsrr = create Net::DNS::RR::DS($keyrr, digtype => 'SHA-256' );
+    $keyrr->print;
+    $dsrr->print;
+
+This constructor takes a key object as argument and will return the
+corresponding DS RR object.
+
+The digest type defaults to SHA-1.
+
+=head2 verify
+
+    $verify = $dsrr->verify($keyrr);
+
+The boolean verify method will return true if the hash over the key
+RR provided as the argument conforms to the data in the DS itself
+i.e. the DS points to the DNSKEY from the argument.
 
 
 =head1 COPYRIGHT
 
-Copyright (c) 2001-2005  RIPE NCC.  Author Olaf M. Kolkman <olaf@net-dns.org>
+Copyright (c)2001-2005 RIPE NCC.  Author Olaf M. Kolkman <olaf@net-dns.org>
+
+Portions Copyright (c)2013 Dick Franks.
 
 All Rights Reserved
 
@@ -333,33 +366,26 @@ Permission to use, copy, modify, and distribute this software and its
 documentation for any purpose and without fee is hereby granted,
 provided that the above copyright notice appear in all copies and that
 both that copyright notice and this permission notice appear in
-supporting documentation, and that the name of the author not be
-used in advertising or publicity pertaining to distribution of the
-software without specific, written prior permission.
+supporting documentation, and that the name of the author not be used
+in advertising or publicity pertaining to distribution of the software
+without specific prior written permission.
 
+THE AUTHOR DISCLAIMS ALL WARRANTIES WITH REGARD TO THIS SOFTWARE,
+INCLUDING ALL IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS; IN NO
+EVENT SHALL AUTHOR BE LIABLE FOR ANY SPECIAL, INDIRECT OR CONSEQUENTIAL
+DAMAGES OR ANY DAMAGES WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR
+PROFITS, WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS
+ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR PERFORMANCE OF
+THIS SOFTWARE.
 
-THE AUTHOR DISCLAIMS ALL WARRANTIES WITH REGARD TO THIS SOFTWARE, INCLUDING
-ALL IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS; IN NO EVENT SHALL
-AUTHOR BE LIABLE FOR ANY SPECIAL, INDIRECT OR CONSEQUENTIAL DAMAGES OR ANY
-DAMAGES WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN
-AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
-OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
-
-
-Based on, and contains, code by Copyright (c) 1997 Michael Fuhr.
+Package template (c)2009,2012 O.M.Kolkman and R.W.Franks.
 
 
 =head1 SEE ALSO
 
-L<http://www.net-dns.org/> 
+L<perl>, L<Net::DNS>, L<Net::DNS::RR>, RFC4034, RFC3658
 
-L<perl(1)>, L<Net::DNS>, L<Net::DNS::Resolver>, L<Net::DNS::Packet>,
-L<Net::DNS::Header>, L<Net::DNS::Question>, L<Net::DNS::RR>,
-RFC 4033, RFC4034, RFC4035
+L<Algorithm Numbers|http://www.iana.org/assignments/dns-sec-alg-numbers>,
+L<Digest Types|http://www.iana.org/assignments/ds-rr-types>
 
 =cut
-
-
-
-
-

@@ -1,449 +1,376 @@
 package Net::DNS::RR::NSEC3;
-# 
-# $Id: NSEC3.pm 1130 2013-11-21 15:50:43Z willem $
+
+#
+# $Id: NSEC3.pm 1169 2014-02-03 10:15:09Z willem $
+#
+use vars qw($VERSION);
+$VERSION = (qw$LastChangedRevision: 1169 $)[1];
+
 
 use strict;
-require Exporter;
-
-use vars qw(
-	@ISA 
-	$VERSION 
-	@EXPORT_OK
-	%digestbyname
-	%digestbyval
-);
-
-
-use Carp;
-use bytes;
-use MIME::Base64;
-use MIME::Base32;
-
-use Digest::SHA  qw(sha1 sha1_hex sha256 sha256_hex );
-
-use Net::DNS qw( name2labels );
-use Net::DNS::SEC;
-use Net::DNS::Packet;
-use Net::DNS::RR::NSEC;
-
-
-#http://www.iana.org/assignments/dnssec-nsec3-parameters
-%digestbyname = (
-			"SHA1"		   => 1,		
-			);      
-
-@EXPORT_OK= qw (
-		name2hash
-               );
-
-
-# Inherit a couple of methods from NSEC.
-@ISA     = qw(Exporter Net::DNS::SEC Net::DNS::RR Net::DNS::RR::NSEC);
-
-
-
-$VERSION = do { my @r=(q$Revision: 510 $=~/\d+/g); sprintf "%d."."%03d"x$#r,@r };
-
-sub new {
-    my ($class, $self, $data, $offset) = @_;
-
-    if ($self->{'rdlength'} > 0) {
-
-      # section 3.1 of NSEC3 specs
-      #                        1 1 1 1 1 1 1 1 1 1 2 2 2 2 2 2 2 2 2 2 3 3
-      #    0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
-      #   +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-      #   | Hash Alg.     |  Flags Field  |          Iterations           |
-      #   +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-      #   |  Salt Length  |                     Salt                      /
-      #   +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-      #   |  Hash Length  |             Next Hashed Ownername             /
-      #   +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-      #   /                         Type Bit Maps                         /
-      #   +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-
-      my $offsettoits=$offset+2;
-      my $offsettoflags=$offset+1;
-      my $offsettosaltlength=$offset+4;
-      my $offsettosalt=$offset+5;
-      $self->{'hashalgo'}=unpack("C",substr($$data,$offset,1));
-      $self->{'flags'}=unpack("C",substr($$data,$offsettoflags,1));
-      $self->{'iterations'}=unpack("n",substr($$data,$offsettoits,3));
-
-      $self->{'saltlength'}=unpack("C",substr($$data,$offsettosaltlength,1));
-      $self->{'saltbin'}=substr($$data,$offsettosalt,$self->{'saltlength'});
-      $self->{'salt'}= unpack("H*",$self->{'saltbin'});
-
-      my $offsettohashlength= $offsettosalt+$self->{'saltlength'};
-      $self->{'hashlength'}=unpack("C",substr($$data,$offsettohashlength,1));
-
-      $self->{'hnxtnamebin'}=substr($$data,$offsettohashlength+1,$self->{'hashlength'});
-      $self->{'hnxtname'}=MIME::Base32::encode  $self->{'hnxtnamebin'};
-      my $offsettotypebm=$offsettohashlength+1+$self->{'hashlength'};
-
-      my $typebm =substr($$data,$offsettotypebm, $self->{'rdlength'}-$offsettotypebm +$offset );
-
-
-      $self->{'typebm'}=$typebm;
-      $self->{'typelist'} = join " " 
-	,  Net::DNS::RR::NSEC::_typebm2typearray($typebm);
-      
-    }
-    bless $self, $class;
-    return $self;
-}
-
-
-
-
-sub new_from_string {
-    my ($class, $self, $string) = @_;
-    if ($string) {
-      $string =~ tr/()//d;
-      $string =~ s/;.*$//mg;
-      $string =~ s/\n//mg;
-      
-      my ($hashalgo,$flags,$iterations,$salt,$hnxtname,$nxtstr)= 
-	$string =~ /^\s*(\d+)\s+(\d+)\s+(\d+)\s+(\S+)\s+(\S+)\s?(.*)/;
-      my @nxttypes = split ' ' , $nxtstr;  # everything after last match...
-
-      bless $self, $class;
-
-      # This assumes that the digest type allocations follow the assignments as used for DS...
-
-      #overwrite the digestby name table used by Net::DNS::SEC digtype
-      $self->{'hashalgo'}=$self->digtype($hashalgo) || 
-		    return undef;
-      $self->{'flags'}=$flags;
-      $self->{'iterations'}=$iterations;
-      if ($salt eq '-') {$salt=''}; 
-      $self->{'salt'}=$salt;
-      $self->{'saltbin'}=pack("H*",$salt);
-      $self->{'saltlength'}=length $self->{saltbin}; 
-
-      $self->{'hnxtname'}= Net::DNS::stripdot($hnxtname);
-      $self->{'hnxtnamebin'}=MIME::Base32::decode uc $hnxtname;
-
-      $self->{'typelist'}= join " " , sort @nxttypes ;
-      $self->{'typebm'}=Net::DNS::RR::NSEC::_typearray2typebm(@nxttypes);
-      
-    }
-    return $self;
-}
-
-
-
-
-sub rdatastr 
-{
-   my $self = shift;
-   my $rdatastr;
-   if (exists $self->{hashalgo}) 
-   {
-      $rdatastr .= $self->{hashalgo} ." ";
-      $rdatastr .= $self->{flags}." ";
-      $rdatastr .= $self->{iterations}. " ";
-      $rdatastr .=   $self->salt()." ";
-
-      $rdatastr .= "(\n\t\t\t";
-      $rdatastr .= $self->{hnxtname} . "\n";
-      $rdatastr .= "\t\t\t$self->{typelist} )";
-   }
-   else 
-   {
-      $rdatastr = "; no data"
-   }
-   $rdatastr
-}
-
-sub rr_rdata {
-    my ($self, $packet, $offset) = @_;
-
-    my $rdata = "" ;
-
-    if (exists $self->{'hnxtname'}) {
-      $rdata = pack("C",$self->{'hashalgo'});
-      $rdata .= pack("C", $self->{'flags'} );
-      $rdata .= pack("n", $self->{'iterations'} );
-
-      unless( exists  $self->{'saltbin'}) {      
-	if ($self->{'salt'} eq "-"){
-	     $self->{'saltbin'}="";
-	}else{
-	    $self->{'saltbin'}=pack("H*",$self->{'salt'}) 
-	}
-      }
-      $rdata.= pack("C",length($self->{'saltbin'}));
-      $rdata .= $self->{'saltbin'};
-
-      $self->{'hnxtnamebin'}=MIME::Base32::decode(uc $self->{'hnxtname'}) unless 
-	 exists  $self->{'hnxtnamebin'} ;
-      $rdata.= pack("C",length($self->{'hnxtnamebin'}));
-      $rdata .= $self->{'hnxtnamebin'};
-      $rdata .= $self->typebm();
-
-    }
-    return $rdata;
-}
-
-
-sub _normalize_dnames {
-	my $self=shift;
-	$self->_normalize_ownername();
-	$self->{'hnxtname'}= Net::DNS::stripdot($self->{'hnxtname'}) if defined $self->{'hnxtname'};
-	$self->{'hnxtnamebin'}=MIME::Base32::decode(uc $self->{'hnxtname'});
-
-}
-
-
-
-
-sub salt {
-  my ($self,$salt)=@_;
-  if (defined $salt){
-    if ($salt eq "-"){
-      $self->{'salt'} = "" ;
-    }else{
-      $self->{'salt'} = $salt ;
-      unless ($salt =~ /^[0-9a-f]*$/i ) {
-	# print "input ($salt) not hex" ; 
-	return undef;
-      }
-      $self->{'saltbin'} = pack("H*",$salt);
-    }
-  }
-  return "-" if ($self->{'salt'} eq "");
-  return $self->{'salt'};
-}
-
-
-sub name2hash {
-  my $hashalg=shift;
-  my $inname= lc shift;
-  my $iterations=shift;
-  my $saltbin=shift;
-
-  my  $hashfunc;
-  if ($hashalg==1){
-    $hashfunc = sub {my $x=shift ; return sha1($x)};
-  }elsif($hashalg==2){
-    $hashfunc = sub {my $x=shift ; return sha256($x)};
-  }else{
-    return;
-  }
-  my $wirename=Net::DNS::RR->_name2wire($inname);
-  my $i=0;
-  for (0..$iterations)
-    {
-      $wirename=&$hashfunc($wirename.$saltbin);
-    }
-  return lc MIME::Base32::encode $wirename;
-
-
-}
-
-
-
-sub ownername {
-	my $self=shift;
-	if (defined $self->{'ownername'}){
-		return $self->{'ownername'};
-	}else{
-		return $self->{'ownername'} = (name2labels($self->name))[0] ;
-	}
-	
-}
-
-
-sub _zonelabels {
-    # Extracts the labels that make up the zone from the owner name of the 
-    # record, simply by stripping the first label.
-    # returns an array of labels in wire format.
-    my $self=shift;
-    unless (defined $self->{'zonelabels'}){
-	my @labels= (name2labels($self->name)) ;
-	shift @labels;
-	$self->{'zonelabels'} =  \@labels ;
-
-    }
-    return @{$self->{'zonelabels'}};
-}
-
-sub _zone {
-    # Returns the result from the zonelabels method in presentation
-    # format (without trailing dot
-    my $self=shift;
-    my $name;
-    foreach my $label ($self->zonelabels){
-	$name .= wire2presentation($label) . ".";
-    }
-    chop($name);
-    return $name;
-}
-
-
-sub optout {
-    my ($self,$newval )= @_;
-    if (defined ($newval)) {
-	if ($newval){
-	    $self->{'flags'} |= hex("0x01");
-	}else{
-	    $self->{'flags'} &= ~hex("0x01");
-	}
-    }
-
-    return $self->{'flags'} & hex("0x01");
-}
-
-
-
-	
-sub covered {
-    my $self=shift;
-    my $domainname=shift;
-
-    # first test if the domain name is in the NSEC zone.
-    my @domainlabels=name2labels($domainname);
-    my @zonelabels= $self->_zonelabels();
-
-    while (my $zlabel = pop @zonelabels ){
-	my $dlabel= pop @domainlabels;
-	return 0 unless ($dlabel eq $zlabel)
-    }
-
-    my $hashedname= Net::DNS::RR::NSEC3::name2hash(
-	$self->hashalgo,
-	$domainname,
-	$self->iterations,
-	$self->saltbin,
-	);
-
-    if ( (lc $self->ownername() cmp lc $self->hnxtname() )== 1 ) {
-	# last name in the zone.
-	return 1 if ( ( lc $hashedname cmp lc $self->hnxtname() ) == 1 );
-	return 1 if ( ( lc $hashedname cmp lc $self->ownername() ) == -1  );
-    }
-    elsif ( (lc $self->ownername() cmp lc $self->hnxtname() )== 0 ) {
-	# One entry in the zone.
-	return 1;
-    }else{
-	return 1 if ( (lc $self->ownername() cmp lc $hashedname) == -1  )
-	    &&
-	    ( ( lc $hashedname cmp lc $self->hnxtname() ) == -1 );
-    }
-    return 0;
-    
-}
-
-
-
-sub match {
-    my $self=shift;
-    my $domainname=shift;
-    my $ownername=$self->ownername();
-    my $hashedname= Net::DNS::RR::NSEC3::name2hash(
-	$self->hashalgo,
-	$domainname,
-	$self->iterations,
-	$self->saltbin
-	);
-
-    return $ownername eq $hashedname;
-
-}
-
-
-
-
-
-sub digtype {
-    my $self=shift;
-    $self->{'digestbyname'}= \%digestbyname;
-    $self->_digtype(@_);
-}
-
-
-
-1;
-
+use base qw(Net::DNS::RR::NSEC);
 
 =head1 NAME
 
 Net::DNS::RR::NSEC3 - DNS NSEC3 resource record
 
+=cut
+
+
+use integer;
+
+use Carp;
+use MIME::Base32;
+
+use base qw(Exporter);
+use vars qw(@EXPORT_OK);
+@EXPORT_OK = qw(name2hash);
+
+require Net::DNS::DomainName;
+
+eval { require Digest::SHA };		## optional for simple Net::DNS RR
+
+my %digest = (
+	'1' => ['Digest::SHA', 1],				# RFC3658
+	);
+
+{
+	my @digestbyname = (
+		'SHA-1' => 1,					# RFC3658
+		);
+
+	my @digestbyalias = ( 'SHA' => 1 );
+
+	my %digestbyval = reverse @digestbyname;
+
+	my @digestbynum = map { ( $_, 0 + $_ ) } keys %digestbyval;    # accept algorithm number
+
+	my %digestbyname = map { s /[^A-Za-z0-9]//g; $_ } @digestbyalias, @digestbyname, @digestbynum;
+
+
+	sub digestbyname {
+		my $name = shift;
+		my $key	 = uc $name;				# synthetic key
+		$key =~ s /[^A-Z0-9]//g;			# strip non-alphanumerics
+		return $digestbyname{$key} || croak "unknown digest type $name";
+	}
+
+	sub digestbyval {
+		my $value = shift;
+		return $digestbyval{$value} || $value;
+	}
+}
+
+
+sub decode_rdata {			## decode rdata from wire-format octet string
+	my $self = shift;
+	my ( $data, $offset ) = @_;
+
+	my $limit = $offset + $self->{rdlength};
+	my $ssize = unpack "\@$offset x4 C", $$data;
+	@{$self}{qw(algorithm flags iterations saltbin)} = unpack "\@$offset CCnx a$ssize", $$data;
+	$offset += 5 + $ssize;
+	my $hsize = unpack "\@$offset C",	  $$data;
+	my $hname = unpack "\@$offset x a$hsize", $$data;
+	$self->hnxtname( MIME::Base32::encode $hname, '' );
+	$offset += 1 + $hsize;
+	$self->{typebm} = substr $$data, $offset, ( $limit - $offset );
+}
+
+
+sub encode_rdata {			## encode rdata as wire-format octet string
+	my $self = shift;
+
+	return '' unless $self->{typebm};
+	my $salt = $self->saltbin;
+	my $hash = MIME::Base32::decode uc( $self->hnxtname );
+	pack 'CCn C a* C a* a*', $self->algorithm, $self->flags, $self->iterations,
+			length($salt), $salt,
+			length($hash), $hash,
+			$self->{typebm};
+}
+
+
+sub format_rdata {			## format rdata portion of RR string.
+	my $self = shift;
+
+	return '' unless $self->{typebm};
+	join ' ', $self->algorithm, $self->flags, $self->iterations,
+			$self->salt || '-',
+			$self->hnxtname,
+			$self->typelist;
+}
+
+
+sub parse_rdata {			## populate RR from rdata in argument list
+	my $self = shift;
+
+	$self->algorithm(shift);
+	$self->flags(shift);
+	$self->iterations(shift);
+	$self->salt(shift);
+	$self->hnxtname(shift);
+	$self->typelist(@_);
+}
+
+
+sub defaults() {			## specify RR attribute default values
+	my $self = shift;
+
+	$self->parse_rdata( 1, 0, 0, '' );
+}
+
+
+sub algorithm {
+	my ( $self, $arg ) = @_;
+
+	unless ( ref($self) ) {		## class method or simple function
+		my $argn = pop || croak 'undefined argument';
+		return $argn =~ /[^0-9]/ ? digestbyname($argn) : digestbyval($argn);
+	}
+
+	return $self->{algorithm} unless defined $arg;
+	return digestbyval( $self->{algorithm} ) if $arg =~ /MNEMONIC/i;
+	return $self->{algorithm} = digestbyname($arg);
+}
+
+
+sub flags {
+	my $self = shift;
+
+	$self->{flags} = 0 + shift if scalar @_;
+	return $self->{flags} || 0;
+}
+
+
+sub iterations {
+	my $self = shift;
+
+	$self->{iterations} = 0 + shift if scalar @_;
+	return $self->{iterations} || 0;
+}
+
+
+sub salt {
+	my $self = shift;
+
+	$self->saltbin( pack "H*", map { die "!hex!" if m/[^0-9A-Fa-f]/; $_ } join "", @_ ) if scalar @_;
+	unpack "H*", $self->saltbin() if defined wantarray;
+}
+
+
+sub saltbin {
+	my $self = shift;
+
+	$self->{saltbin} = shift if scalar @_;
+	$self->{saltbin} || "";
+}
+
+
+sub hnxtname {
+	my $self = shift;
+	return $self->{hnxtname} unless scalar @_;
+	$self->{hnxtname} = lc( shift || '' );
+}
+
+
+sub covered {
+	my $self = shift;
+	my $name = lc( shift || '' );
+
+	# first test if the domain name is in the NSEC zone.
+	my @domainlabels = new Net::DNS::DomainName($name)->_wire;
+	my ( $ownlabel, @zonelabels ) = $self->{owner}->_wire;
+	my $ownername = lc( $ownlabel || '' );
+
+	foreach ( reverse @zonelabels ) {
+		return 0 unless lc($_) eq ( pop(@domainlabels) || '' );
+	}
+
+	my $hnxtname = $self->hnxtname;
+
+	my $hashedname = name2hash( $self->algorithm, $name, $self->iterations, $self->saltbin );
+
+	my $hashorder = $ownername cmp $hnxtname;
+
+	if ( $hashorder < 0 ) {
+		return 0 unless ( $ownername cmp $hashedname ) < 0;
+		return 1 if ( $hashedname cmp $hnxtname ) < 0;
+
+	} elsif ($hashorder) {					# last name in zone
+		return 1 if ( $hashedname cmp $hnxtname ) < 0;
+		return 1 if ( $ownername cmp $hashedname ) < 0;
+
+	} else {						# only name in zone
+		return 1;
+	}
+
+	return 0;
+}
+
+
+sub match {
+	my $self = shift;
+	my $name = shift;
+
+	my ($ownername) = $self->{owner}->_wire;
+	my $hashedname = name2hash( $self->algorithm, $name, $self->iterations, $self->saltbin );
+
+	return $hashedname eq lc( $ownername || '' );
+}
+
+
+sub optout {
+	my $bit = 0x01;
+	for ( shift->{flags} ||= 0 ) {
+		return $_ & $bit unless scalar @_;
+		my $set = $_ | $bit;
+		$_ = (shift) ? $set : ( $set ^ $bit );
+		return $_ & $bit;
+	}
+}
+
+
+########################################
+
+
+sub hashalgo {				## historical
+	&algorithm;
+}
+
+sub nxtdname {				## inherited method inapplicable
+	my $method = join '::', __PACKAGE__, 'nxtdname';
+	confess "method '$method' undefined";
+}
+
+
+sub name2hash {
+	my $hashalg    = shift;
+	my $name       = lc( shift || '' );
+	my $iterations = shift || 0;
+	my $salt       = shift || '';
+
+	my $arglist = $digest{$hashalg} || die 'unsupported hash algorithm';
+	my ( $object, @argument ) = @$arglist;
+
+	my $hashfunc = sub {
+		my $hash = $object->new(@argument);
+		$hash->add(shift);
+		$hash->add($salt);
+		return $hash->digest;
+	};
+
+	my $wirename = new Net::DNS::DomainName($name)->encode;
+	$wirename = &$hashfunc($wirename);
+
+	while ( $iterations-- > 0 ) {
+		$wirename = &$hashfunc($wirename);
+	}
+
+	my $base32hex = MIME::Base32::encode( $wirename, '' );	# [0-9 A-V]	per RFC4648, 7.
+	return lc $base32hex;
+}
+
+
+1;
+__END__
+
+
 =head1 SYNOPSIS
 
-C<use Net::DNS::RR;>
+    use Net::DNS;
+    $rr = new Net::DNS::RR('name NSEC3 algorithm flags iterations salt hnxtname');
 
 =head1 DESCRIPTION
 
-Class for DNS Address (NSEC3) resource records.
+Class for DNSSEC NSEC3 resource records.
 
 The NSEC3 Resource Record (RR) provides authenticated denial of
-existence for DNS Resource Record Sets.  The NSEC3 RR lists RR types
-present at the NSEC3 RR's original ownername.  It includes the next
-hashed ownername in the hash order of the zone.  The complete set of
-NSEC3 RRs in a zone indicates which RRsets exist for the original
-ownername of the RRset and form a chain of hashed ownernames in the
-zone.
+existence for DNS Resource Record Sets.
 
-
+The NSEC3 RR lists RR types present at the original owner name of the
+NSEC3 RR.  It includes the next hashed owner name in the hash order
+of the zone.  The complete set of NSEC3 RRs in a zone indicates which
+RRSets exist for the original owner name of the RR and form a chain
+of hashed owner names in the zone.
 
 =head1 METHODS
 
-=head2 ownername
+The available methods are those inherited from the base class augmented
+by the type-specific methods defined in this package.
 
-Returns the hashed value of the original owner name as contained in the first
-label of the ownername of the record. 
-
-   The owner name for the NSEC3 RR is the base32 encoding of the hashed
-   owner name prepended as a single label to the name of the zone.
-
-In other words the name(name) method returns the result of the
-ownername() method prepended to the name of the containing zone.
+Use of undocumented package features or direct access to internal data
+structures is discouraged and could result in program termination or
+other unpredictable behaviour.
 
 
-=head2 optout
+=head2 algorithm
 
-Reads and sets the opt-out attribute.
+    $algorithm = $rr->algorithm;
+    $rr->algorithm( $algorithm );
 
+The Hash Algorithm field is represented as an unsigned decimal
+integer.  The value has a maximum of 255.
+
+algorithm() may also be invoked as a class method or simple function
+to perform mnemonic and numeric code translation.
 
 =head2 flags
 
-Reads and sets the flag field. 
+    $flags = $rr->flags;
+    $rr->flags( $flags );
 
-=head2 hashalgo
+The Flags field is represented as an unsigned decimal integer.
+The value has a maximum value of 255. 
 
-Reads and sets the hashalgo (hash algorithm) attribute. 
+=head2 iterations
+
+    $iterations = $rr->iterations;
+    $rr->iterations( $iterations );
+
+The Iterations field is represented as an unsigned decimal
+integer.  The value is between 0 and 65535, inclusive. 
+
+=head2 salt
+
+    $salt = $rr->salt;
+    $rr->salt( $salt );
+
+The Salt field is represented by a contiguous sequence of hexadecimal
+digits. This field is represented as "-" (without quotes) when the
+used in string format to indicate that the salt field is absent. 
+
+=head2 saltbin
+
+    $saltbin = $rr->saltbin;
+    $rr->saltbin( $saltbin );
+
+The Salt field as a sequence of octets. 
 
 =head2 hnxtname
 
-Reads and sets the hnxtname (hashed next ownername) attribute. 
+    $hnxtname = $rr->hnxtname;
+    $rr->hnxtname( $hnxtname );
 
-=head2 typelist  (inhereted from NSEC)
+The Next Hashed Owner Name field points to the next node that has
+authoritative data or contains a delegation point NS RRset.
 
-    print "typelist" = ", $rr->typelist, "\n";
+=head2 typelist
 
-Returns a string with the list of qtypes for which data exists for
-this particular label.
+    @typelist = $rr->typelist;
+    $typelist = $rr->typelist;
+    $rr->typelist( @typelist );
 
-
-=head2 typebm  (inhereted from NSEC)
-
-    print "typebm" = " unpack("B*", $rr->typebm), "\n";
-
-Same as the typelist but now in a representation  bitmap as in 
-specified in the RFC. This is not the kind of method you will need
-on daily basis.
-
+The Type List identifies the RRset types that exist at the NSEC RR
+owner name.  When called in scalar context, the list is interpolated
+into a string.
 
 =head2 covered, matched
 
     print "covered" if $rr->covered{'example.foo'}
 
-covered returns a nonzero value when the the domain name provided as argument
+covered() returns a nonzero value when the the domain name provided as argument
 is covered as defined in the NSEC3 specification:
-
 
    To cover:  An NSEC3 RR is said to "cover" a name if the hash of the
       name or "next closer" name falls between the owner name and the
@@ -452,42 +379,28 @@ is covered as defined in the NSEC3 specification:
       nonexistence of an ancestor of the name.
 
 
-
-
-Similarly ismatched returns a nonzero value when the domainname in the argument
+Similarly matched() returns a nonzero value when the domainname in the argument
 matches as defined in the NSEC3 specification:
 
    To match: An NSEC3 RR is said to "match" a name if the owner name
       of the NSEC3 RR is the same as the hashed owner name of that
       name.
 
+=head2 optout
 
+    $rr->optout(0);
+    $rr->optout(1);
 
-=head1 Functions
+    if ( $rr->optout ) {
+	...
+    }
 
-=head2 name2hash
-
-Takes the hash identifyer (numeric), a fullyqualfied domain name, the
-number of iterations and a binary salt to compute the hash value used
-in the NSEC3 calculations.
-
-    $hashalg=Net::DNS::SEC->digtype("SHA1");
-    $salt=pack("H*","aabbccdd");
-    $iterations=12;
-    $name="*.x.w.example";
-
-    $hashedname= Net::DNS::RR::NSEC3::name2hash($hashalg,$name,$iterations,$salt);
-    print $hashedname;
-results in:
-    92pqneegtaue7pjatc3l3qnk738c6v5m
-
-Normally the salt and itterations would be fetched from an NSEC3PARAM record.
-
+Boolean Opt Out flag.
 
 
 =head1 COPYRIGHT
 
-Copyright (c) 2007, 2008  NLnet Labs.  Author Olaf M. Kolkman <olaf@net-dns.org>
+Copyright (c)2007,2008 NLnet Labs.  Author Olaf M. Kolkman
 
 All Rights Reserved
 
@@ -495,29 +408,25 @@ Permission to use, copy, modify, and distribute this software and its
 documentation for any purpose and without fee is hereby granted,
 provided that the above copyright notice appear in all copies and that
 both that copyright notice and this permission notice appear in
-supporting documentation, and that the name of the author not be
-used in advertising or publicity pertaining to distribution of the
-software without specific, written prior permission.
+supporting documentation, and that the name of the author not be used
+in advertising or publicity pertaining to distribution of the software
+without specific prior written permission.
 
-THE AUTHOR DISCLAIMS ALL WARRANTIES WITH REGARD TO THIS SOFTWARE, INCLUDING
-ALL IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS; IN NO EVENT SHALL
-AUTHOR BE LIABLE FOR ANY SPECIAL, INDIRECT OR CONSEQUENTIAL DAMAGES OR ANY
-DAMAGES WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN
-AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
-OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
+THE AUTHOR DISCLAIMS ALL WARRANTIES WITH REGARD TO THIS SOFTWARE,
+INCLUDING ALL IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS; IN NO
+EVENT SHALL AUTHOR BE LIABLE FOR ANY SPECIAL, INDIRECT OR CONSEQUENTIAL
+DAMAGES OR ANY DAMAGES WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR
+PROFITS, WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS
+ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR PERFORMANCE OF
+THIS SOFTWARE.
 
-Based on, and contains, code by Copyright (c) 1997 Michael Fuhr.
+Package template (c)2009,2012 O.M.Kolkman and R.W.Franks.
 
-Acknowledgements to Roy Arends who made a test version for this class
-and whose code I've looked at before writing this module.
 
 =head1 SEE ALSO
 
-L<http://www.net-dns.org/> 
-L<http://www.iana.org/assignments/dnssec-nsec3-parameters>
-L<Net::DNS::RR::NSEC3PARAM>,
-L<perl(1)>, L<Net::DNS>, L<Net::DNS::Resolver>, L<Net::DNS::Packet>,
-L<Net::DNS::Header>, L<Net::DNS::Question>, L<Net::DNS::RR>,
-RFC4033, RFC4034, RFC4035, RFC5155
+L<perl>, L<Net::DNS>, L<Net::DNS::RR>, RFC5155
+
+L<Hash Algorithms|http://www.iana.org/assignments/dnssec-nsec3-parameters>
 
 =cut

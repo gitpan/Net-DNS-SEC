@@ -1,6 +1,6 @@
 --- #YAML:1.0
 name:               Net-DNS-SEC
-version:            0.17
+version:            0.17_1
 abstract:           DNSSEC extensions to Net::DNS
 author:
     - Olaf M. Kolkman <olaf@net-dns.org>
@@ -20,7 +20,7 @@ requires:
     Math::BigInt:         0
     MIME::Base32:         0
     MIME::Base64:         0
-    Net::DNS:             0.64
+    Net::DNS:             0.69
     Test::More:           0.47
     Time::Local:          0
 no_index:

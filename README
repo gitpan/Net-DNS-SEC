@@ -16,34 +16,31 @@ through: http://search.cpan.org/src/OLAF/Net-DNS-SEC/Changes
   Request and Transaction Signatures ( SIG(0)s )"
 
   RFC 3225 (Indicating Resolver Support of DNSSEC) support has been
-  is available Net::DNS.
+  integrated into Net::DNS.
 
   The extensions provide the following additional features on top of
   the Net::DNS package (http://www.net-dns.org/). 
 
-  - DS, RRSIG, DNSKEY and NSEC records. These are all implemented as RR
-    objects.  The cryptography has been implemented using
+  - DS, DNSKEY, RRSIG, NSEC and NSEC3 records. These are all implemented
+    as Net::DNS RR objects.  The cryptography has been implemented using
     Crypt::OpenSSL::DSA, Crypt::OpenSSL::RSA and related modules.
 
   The reason for not making these RRs a part of the regular Net::DNS
   distribution is that they rely on crypto modules that do not easily
   port.
 
-  The DNSSEC protocol is a moving target. Follow the IETF DNSEXT working
-  group if you are interested in the protocol developments. We try to 
-  keep the code in sync with the development.
-
   Also see the 'pod' documentation in: 
        Net::DNS::RR::DNSKEY
+       Net::DNS::RR::DS
+       Net::DNS::RR::NSEC
+       Net::DNS::RR::NSEC3
        Net::DNS::RR::RRSIG
        Net::DNS::SEC::Private
-       Net::DNS::RR::NSEC
-       Net::DNS::RR::DS
   and for the use of SIG0 see:
        Net::DNS::Packet (sign_sig0)
+       Net::DNS::RR::KEY
        Net::DNS::RR::SIG
        Net::DNS::SEC::Private
-       Net::DNS::RR::KEY
 
 
   On top of the RR classes defined above we also provide a class for
@@ -53,9 +50,8 @@ through: http://search.cpan.org/src/OLAF/Net-DNS-SEC/Changes
 
 2. Dependencies
 
-  This package relies on Net-DNS version 0.27 or higher (also see CHANGES).
-  since that contains a number of place holders for 
-  Net::DNS::SEC functionality.
+  This package relies on Net-DNS version 0.69 or higher (also see CHANGES)
+  which has features specifically designed to support Net::DNS::SEC.
 
   Among other straightforward routines you will need to have
   Crypt::OpenSSL::DSA and Crypt::OpenSSL::RSA installed.
@@ -187,4 +183,4 @@ Based on, and contains, code by Copyright (c) 1997-2001 Michael Fuhr.
 
 
 ------------------------------------------------------------------------------
-$Id: README 359 2005-06-06 13:54:18Z olaf $
+$Id: README 1167 2014-02-03 09:55:08Z willem $
