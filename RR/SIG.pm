@@ -14,10 +14,10 @@ sub UNITCHECK {				## restore %SIG after compilation
 package Net::DNS::RR::SIG;
 
 #
-# $Id: SIG.pm 1167 2014-02-03 09:55:08Z willem $
+# $Id: SIG.pm 1177 2014-03-10 08:33:21Z willem $
 #
 use vars qw($VERSION);
-$VERSION = (qw$LastChangedRevision: 1167 $)[1];
+$VERSION = (qw$LastChangedRevision: 1177 $)[1];
 
 
 use strict;
@@ -412,7 +412,7 @@ sub _ordered($$) {			## irreflexive 32-bit partial ordering
 sub _string2time {			## parse time specification string
 	my $arg = shift;
 	die 'undefined time' unless defined $arg;
-	return $arg & 0xFFFFFFFF if length($arg) < 12;
+	return unpack 'L', pack 'L', $arg if length($arg) < 12;
 	my ( $yyyy, $mm, @dhms ) = unpack 'a4 a2 a2 a2 a2 a2', $arg . '00';
 	return timegm( reverse(@dhms), $mm - 1, $yyyy - 1900 );
 }
