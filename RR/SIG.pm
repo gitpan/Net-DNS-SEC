@@ -14,10 +14,10 @@ sub UNITCHECK {				## restore %SIG after compilation
 package Net::DNS::RR::SIG;
 
 #
-# $Id: SIG.pm 1177 2014-03-10 08:33:21Z willem $
+# $Id: SIG.pm 1178 2014-03-14 13:05:44Z willem $
 #
 use vars qw($VERSION);
-$VERSION = (qw$LastChangedRevision: 1177 $)[1];
+$VERSION = (qw$LastChangedRevision: 1178 $)[1];
 
 
 use strict;
@@ -409,19 +409,41 @@ sub _ordered($$) {			## irreflexive 32-bit partial ordering
 	return $a < $b ? ( $a > ( $b - 0x80000000 ) ) : ( $b < ( $a - 0x80000000 ) );
 }
 
+
+my $y1998 = timegm( 0, 0, 0, 1, 0, 1998 );
+my $y2026 = timegm( 0, 0, 0, 1, 0, 2026 );
+my $y2082 = $y2026 << 1;
+my $y2054 = $y2082 - $y1998;
+
 sub _string2time {			## parse time specification string
 	my $arg = shift;
-	die 'undefined time' unless defined $arg;
-	return unpack 'L', pack 'L', $arg if length($arg) < 12;
-	my ( $yyyy, $mm, @dhms ) = unpack 'a4 a2 a2 a2 a2 a2', $arg . '00';
-	return timegm( reverse(@dhms), $mm - 1, $yyyy - 1900 );
+	croak 'undefined time' unless defined $arg;
+	return int($arg) if length($arg) < 12;
+	my ( $y, $m, @dhms ) = unpack 'a4 a2 a2 a2 a2 a2', $arg . '00';
+	unless ( $arg gt '20380119031407' ) {			# calendar folding
+		return timegm( reverse(@dhms), $m - 1, $y ) if $y < 2026;
+		return timegm( reverse(@dhms), $m - 1, $y - 56 ) + $y2026;
+	} elsif ( $y > 2054 ) {
+		my $z = timegm( reverse(@dhms), $m - 1, $y - 84 );    # expunge 29 Feb 2100
+		return $z < 1456790400 ? $z + $y2054 : $z + $y2054 - 86400;
+	}
+	return ( timegm( reverse(@dhms), $m - 1, $y - 56 ) + $y2054 ) - $y1998;
 }
+
 
 sub _time2string {			## format time specification string
 	my $arg = shift;
-	die 'undefined time' unless defined $arg;
-	my ( $yy, $mm, @dhms ) = reverse( ( gmtime $arg )[0 .. 5] );
-	return sprintf '%d%02d%02d%02d%02d%02d', $yy + 1900, $mm + 1, @dhms;
+	croak 'undefined time' unless defined $arg;
+	unless ( $arg < 0 ) {
+		my ( $yy, $mm, @dhms ) = reverse( ( gmtime $arg )[0 .. 5] );
+		return sprintf '%d%02d%02d%02d%02d%02d', $yy + 1900, $mm + 1, @dhms;
+	} elsif ( $arg > $y2082 ) {
+		$arg += 86400 unless $arg < $y2054 + 1456704000;      # expunge 29 Feb 2100
+		my ( $yy, $mm, @dhms ) = reverse( ( gmtime( $arg - $y2054 ) )[0 .. 5] );
+		return sprintf '%d%02d%02d%02d%02d%02d', $yy + 1984, $mm + 1, @dhms;
+	}
+	my ( $yy, $mm, @dhms ) = reverse( ( gmtime( $arg - $y2026 ) )[0 .. 5] );
+	return sprintf '%d%02d%02d%02d%02d%02d', $yy + 1956, $mm + 1, @dhms;
 }
 
 
@@ -826,8 +848,8 @@ The code is not optimized for speed.
 
 =head1 TODO
 
-If this code is still around in 2106 you will need to check for
-proper handling of times ...
+If this code is still around in 2100 (not a leapyear) you will need
+to check for proper handling of times ...
 
 
 =head1 ACKNOWLEDGMENTS
