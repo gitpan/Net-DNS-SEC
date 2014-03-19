@@ -1,10 +1,10 @@
 package Net::DNS::RR::RRSIG;
 
 #
-# $Id: RRSIG.pm 1178 2014-03-14 13:05:44Z willem $
+# $Id: RRSIG.pm 1179 2014-03-19 21:46:58Z willem $
 #
 use vars qw($VERSION);
-$VERSION = (qw$LastChangedRevision: 1178 $)[1];
+$VERSION = (qw$LastChangedRevision: 1179 $)[1];
 
 
 use strict;
@@ -19,7 +19,7 @@ Net::DNS::RR::RRSIG - DNS RRSIG resource record
 
 use integer;
 
-use strict;
+use warnings;
 use Carp;
 use MIME::Base64;
 use Time::Local;
@@ -474,7 +474,7 @@ sub _string2time {			## parse time specification string
 	unless ( $arg gt '20380119031407' ) {			# calendar folding
 		return timegm( reverse(@dhms), $m - 1, $y ) if $y < 2026;
 		return timegm( reverse(@dhms), $m - 1, $y - 56 ) + $y2026;
-	} elsif ( $y > 2054 ) {
+	} elsif ( $y > 2082 ) {
 		my $z = timegm( reverse(@dhms), $m - 1, $y - 84 );    # expunge 29 Feb 2100
 		return $z < 1456790400 ? $z + $y2054 : $z + $y2054 - 86400;
 	}
@@ -975,7 +975,10 @@ requests.
 =head1 COPYRIGHT
 
 Copyright (c)2001-2005 RIPE NCC,   Olaf M. Kolkman 
+
 Copyright (c)2007-2008 NLnet Labs, Olaf M. Kolkman 
+
+Portions Copyright (c)2014 Dick Franks 
 
 
 All Rights Reserved

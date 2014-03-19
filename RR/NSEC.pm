@@ -1,10 +1,10 @@
 package Net::DNS::RR::NSEC;
 
 #
-# $Id: NSEC.pm 1166 2014-01-22 10:49:35Z willem $
+# $Id: NSEC.pm 1179 2014-03-19 21:46:58Z willem $
 #
 use vars qw($VERSION);
-$VERSION = (qw$LastChangedRevision: 1166 $)[1];
+$VERSION = (qw$LastChangedRevision: 1179 $)[1];
 
 
 use strict;
@@ -19,7 +19,7 @@ Net::DNS::RR::NSEC - DNS NSEC resource record
 
 use integer;
 
-use Carp;
+use warnings;
 use Net::DNS::DomainName;
 use Net::DNS::Parameters;
 

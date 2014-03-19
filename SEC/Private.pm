@@ -1,10 +1,10 @@
 package Net::DNS::SEC::Private;
 
 #
-# $Id: Private.pm 1170 2014-02-10 10:42:45Z willem $
+# $Id: Private.pm 1181 2014-03-19 21:58:16Z willem $
 #
 use vars qw($VERSION);
-$VERSION = (qw$LastChangedRevision: 1170 $)[1];
+$VERSION = (qw$LastChangedRevision: 1181 $)[1];
 
 
 =head1 NAME
@@ -33,6 +33,7 @@ use strict;
 use base qw(Net::DNS::SEC);
 
 use integer;
+use warnings;
 use Carp;
 use File::Basename;
 use Math::BigInt;
@@ -531,16 +532,9 @@ Then a self signature over the public key is created and verified.
              "Self verification consistent.");
 
 
-
-
-
-
-
-
-
 =head1 COPYRIGHT
 
-Copyright (c) 2002-2005 RIPE NCC.  Author Olaf M. Kolkman <olaf@net-dns.org>
+Copyright (c) 2002-2005 RIPE NCC.  Author Olaf M. Kolkman
 
 All Rights Reserved
 
@@ -548,17 +542,17 @@ Permission to use, copy, modify, and distribute this software and its
 documentation for any purpose and without fee is hereby granted,
 provided that the above copyright notice appear in all copies and that
 both that copyright notice and this permission notice appear in
-supporting documentation, and that the name of the author not be
-used in advertising or publicity pertaining to distribution of the
-software without specific, written prior permission.
+supporting documentation, and that the name of the author not be used
+in advertising or publicity pertaining to distribution of the software
+without specific prior written permission.
 
-
-THE AUTHOR DISCLAIMS ALL WARRANTIES WITH REGARD TO THIS SOFTWARE, INCLUDING
-ALL IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS; IN NO EVENT SHALL
-AUTHOR BE LIABLE FOR ANY SPECIAL, INDIRECT OR CONSEQUENTIAL DAMAGES OR ANY
-DAMAGES WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN
-AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
-OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
+THE AUTHOR DISCLAIMS ALL WARRANTIES WITH REGARD TO THIS SOFTWARE,
+INCLUDING ALL IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS; IN NO
+EVENT SHALL AUTHOR BE LIABLE FOR ANY SPECIAL, INDIRECT OR CONSEQUENTIAL
+DAMAGES OR ANY DAMAGES WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR
+PROFITS, WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS
+ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR PERFORMANCE OF
+THIS SOFTWARE.
 
 
 This code uses Crypt::OpenSSL which uses the openssl library
@@ -566,9 +560,11 @@ This code uses Crypt::OpenSSL which uses the openssl library
 
 =head1 SEE ALSO
 
-L<http://www.net-dns.org/>
-
-L<perl(1)>, L<Net::DNS>, L<Net::DNS::RR::SIG>, L<Crypt::OpenSSL::RSA>,L<Crypt::OpenSSL::DSA>, RFC 2435 Section 4, RFC 2931.
+L<perl>, L<Net::DNS>,
+L<Net::DNS::RR::DNSKEY>, L<Net::DNS::RR::KEY>,
+L<Net::DNS::RR::RRSIG>, L<Net::DNS::RR::SIG>,
+L<Crypt::OpenSSL::RSA>,L<Crypt::OpenSSL::DSA>,
+RFC 2435 Section 4, RFC 2931.
 
 =cut
 

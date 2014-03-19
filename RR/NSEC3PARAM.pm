@@ -1,10 +1,10 @@
 package Net::DNS::RR::NSEC3PARAM;
 
 #
-# $Id: NSEC3PARAM.pm 1167 2014-02-03 09:55:08Z willem $
+# $Id: NSEC3PARAM.pm 1179 2014-03-19 21:46:58Z willem $
 #
 use vars qw($VERSION);
-$VERSION = (qw$LastChangedRevision: 1167 $)[1];
+$VERSION = (qw$LastChangedRevision: 1179 $)[1];
 
 
 use strict;
@@ -18,6 +18,8 @@ Net::DNS::RR::NSEC3PARAM - DNS NSEC3PARAM resource record
 
 
 use integer;
+
+use warnings;
 
 
 sub decode_rdata {			## decode rdata from wire-format octet string

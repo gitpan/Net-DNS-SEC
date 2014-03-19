@@ -1,10 +1,10 @@
 package Net::DNS::RR::DS;
 
 #
-# $Id: DS.pm 1167 2014-02-03 09:55:08Z willem $
+# $Id: DS.pm 1179 2014-03-19 21:46:58Z willem $
 #
 use vars qw($VERSION);
-$VERSION = (qw$LastChangedRevision: 1167 $)[1];
+$VERSION = (qw$LastChangedRevision: 1179 $)[1];
 
 
 use strict;
@@ -19,6 +19,7 @@ Net::DNS::RR::DS - DNS DS resource record
 
 use integer;
 
+use warnings;
 use Carp;
 
 use constant BABBLE => eval { require Digest::BubbleBabble; };

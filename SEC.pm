@@ -1,11 +1,11 @@
 package Net::DNS::SEC;
 
 #
-# $Id: SEC.pm 1178 2014-03-14 13:05:44Z willem $
+# $Id: SEC.pm 1179 2014-03-19 21:46:58Z willem $
 #
 use vars qw($VERSION $SVNVERSION);
-$VERSION    = '0.17_3';
-$SVNVERSION = (qw$LastChangedRevision: 1178 $)[1];
+$VERSION    = '0.17_4';
+$SVNVERSION = (qw$LastChangedRevision: 1179 $)[1];
 
 
 =head1 NAME
@@ -41,6 +41,7 @@ use vars qw(@EXPORT);
 
 
 use integer;
+use warnings;
 use Carp;
 
 require Net::DNS::RR::DS;
@@ -122,6 +123,9 @@ __END__
 Copyright (c)2001-2005 RIPE NCC.  Author Olaf M. Kolkman
 
 All Rights Reserved
+
+
+=head1 LICENSE
 
 Permission to use, copy, modify, and distribute this software and its
 documentation for any purpose and without fee is hereby granted,

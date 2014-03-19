@@ -1,21 +1,22 @@
 package Net::DNS::RR::DLV;
 
 #
-# $Id: DLV.pm 1141 2013-12-16 15:10:15Z willem $
+# $Id: DLV.pm 1179 2014-03-19 21:46:58Z willem $
 #
 use vars qw($VERSION);
-$VERSION = (qw$LastChangedRevision: 1141 $)[1];
+$VERSION = (qw$LastChangedRevision: 1179 $)[1];
 
 
 use strict;
 use base qw(Net::DNS::RR::DS);
+
+no warnings;
 
 =head1 NAME
 
 Net::DNS::RR::DLV - DNS DLV resource record
 
 =cut
-
 
 
 1;

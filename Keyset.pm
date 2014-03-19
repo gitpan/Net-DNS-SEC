@@ -1,10 +1,10 @@
 package Net::DNS::Keyset;
 
 #
-# $Id: Keyset.pm 1171 2014-02-26 08:56:52Z willem $
+# $Id: Keyset.pm 1179 2014-03-19 21:46:58Z willem $
 #
 use vars qw($VERSION);
-$VERSION = (qw$LastChangedRevision: 1171 $)[1];
+$VERSION = (qw$LastChangedRevision: 1179 $)[1];
 
 
 =head1 NAME
@@ -31,13 +31,15 @@ subject to change.
 
 
 use strict;
+use integer;
+use warnings;
 use Carp;
 use File::Spec::Functions;
 
 require Net::DNS::SEC;
 require Net::DNS::ZoneFile;
 
-use vars qw ($keyset_err);
+use vars qw($keyset_err);
 
 my $debug = 0;
 
@@ -77,7 +79,7 @@ sub _new_from_file {
 	my ( $class, $file, $path ) = @_;
 	$file = catfile( $path, $file ) if $path && !file_name_is_absolute($file);
 
-	my @rr  = new Net::DNS::ZoneFile($file)->read;
+	my @rr = new Net::DNS::ZoneFile($file)->read;
 
 	return $class->_new_from_keys_sigs( \@rr, \@rr );
 }
