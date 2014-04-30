@@ -1,18 +1,17 @@
 #!/usr/bin/perl  -sw 
 # Test script for dnssec functionalty
-# $Id: 10-typeroll.t 813 2009-11-27 09:10:10Z olaf $
+# $Id: 10-typeroll.t 1192 2014-04-11 08:43:54Z willem $
 # 
 # Called in a fashion simmilar to:
 # /usr/bin/perl -Iblib/arch -Iblib/lib -I/usr/lib/perl5/5.6.1/i386-freebsd \
 # -I/usr/lib/perl5/5.6.1 -e 'use Test::Harness qw(&runtests $verbose); \
 # $verbose=0; runtests @ARGV;' t/10-typeroll.t
 
-use Net::DNS::RR::RRSIG;
 
 use Test::More tests=>38;
 use strict;
 
-BEGIN {use_ok('Net::DNS'); }                                 # test 1
+BEGIN { use_ok('Net::DNS::SEC'); }				# test 1
 
 
 
@@ -131,10 +130,10 @@ ok ($sigdsa->verify($datarrset,$dsakeyrr), 'DSA sig verifies');       # test 10
 
 # on the other hand checking against the wrong key should fail.
 ok (! $sigrsa->verify($datarrset,$dsakeyrr), 
-    'RSA sig fails agains corrupt data');                             # test 11
+    'RSA sig fails against corrupt data');			# test 11
 
 ok (! $sigdsa->verify($datarrset,$rsakeyrr),
-    'DSA sig fails agains corrupt data');                             # test 12
+    'DSA sig fails against corrupt data');			# test 12
 
 # Now corrupt the key and test again.. that should fail
 # Corruption is very hard to notice.. we modified one letter
@@ -147,8 +146,8 @@ wZBaards8JcMEcT8nHyKHNZlq9fAhQ36guqGdZuRPqxgYfwz71VJb2t9
 6KX/5w==");
 
 
-ok (!$sigrsa->verify($datarrset,$corrupt_rsakeyrr),'RSA fails agains corrupt key');
-                                                                     # test 13
+ok (!$sigrsa->verify($datarrset,$corrupt_rsakeyrr),'RSA fails against corrupt key');
+								# test 13
 
 my $corrupt_dsakeyrr=new Net::DNS::RR ("test.tld. IN DNSKEY 256 3 3 
 CI0YHeX8DlMFJjaXA+lM7P7TM8t17m5wm/8KMO1fLaBB2Wbq3s0/jMue 
@@ -163,8 +162,8 @@ v2z/FTRSMTdkBz550C+9nLVKbzC3vpFl+3xl7l1jyFAllZ2wHj9kp8aY
 8VNN/RPQNkZOg6fRLtKF7DPIXFFJ0b+npMnA");
 
 
-ok (! $sigdsa->verify($datarrset,$corrupt_dsakeyrr),'DSA fails agains corrupt key');
-                                                                     # test 14
+ok (! $sigdsa->verify($datarrset,$corrupt_dsakeyrr),'DSA fails against corrupt key');
+								# test 14
 
 
 # Now test some DSA stuff
@@ -245,7 +244,7 @@ ok ($sigrsa->verify($datarrset,$rsakeyrr),'RSA sig over SOA  with escaped dot ve
 # Cross check with a  signature generated with bind tools.
 #test fails after October 2030 :
 
-my $bindkey=Net::DNS::RR->new("    netdns.work.                   900     DNSKEY  257 3 5 (
+my $bindkey=Net::DNS::RR->new("netdns.work.  900     DNSKEY  257 3 5 (
                                         AQOwktT7a2gfGNXWK+QWKP/Lln5Z/fSz0q2f
                                         R1fA4QBQsWsrnKz/yqXRmOHhf8X975ZVwpdo
                                         456wYjbfrP03sSjI3Wj9y5Mnr09HUUaBdwF/
@@ -271,13 +270,13 @@ my    $binddataset=[$bindkey];
 
 
 
-my $nxtrr=Net::DNS::RR->new("example.com  7200    NSEC    bert.example.com. NS SOA MX TXT LOC RRSIG NSEC DNSKEY");
+my $nsecrr = Net::DNS::RR->new("example.com  7200    NSEC    bert.example.com. NS SOA MX TXT LOC RRSIG NSEC DNSKEY");
 
 
 
-ok ( $nxtrr, 'NXT RR created from string');		#test 27
+ok ( $nsecrr, 'NSEC RR created from string');		#test 27
 
-my $nxtsig=Net::DNS::RR->new("example.com  7200    RRSIG   NSEC 5 2 7200 20310101000000 (
+my $nsecsig = Net::DNS::RR->new("example.com  7200    RRSIG   NSEC 5 2 7200 20310101000000 (
                                         20040126131948 37790 example.com.
                                         IFK3Y4xZwkyHP0TwMnsC7g2IvHRZmsk8rFH7
                                         l1dM7Jyb7+p2Mh1nm13vv56sBOItHNDGvQtN
@@ -285,7 +284,7 @@ my $nxtsig=Net::DNS::RR->new("example.com  7200    RRSIG   NSEC 5 2 7200 2031010
                                         0JNu2WwiZo62dZLQqIY4RQqTsWxf17c0f3aA
                                         w8ogGRXVnHwv0uGKRfMnWpX2AgA= )");
 
-my $nxtkey=Net::DNS::RR->new("example.com                        900     DNSKEY  256 3 5 (
+my $nseckey = Net::DNS::RR->new("example.com  900     DNSKEY  256 3 5 (
                                         AQOzkktb0iNYIj9GuasRjJixkK/YZ5eAe/Hs
                                         anvfZ7023ZPmEdNvRfygmCRDOFs0ud7J8u8n
                                         YnWn9EBxxS4AKSj8To+Dtx+vuW/g72SQjbNZ
@@ -294,15 +293,14 @@ my $nxtkey=Net::DNS::RR->new("example.com                        900     DNSKEY 
                                         )");
 
 
-my @nxtdata=($nxtrr);
+my @nsecdata = ($nsecrr);
 
 
 
 SKIP: {
     skip "Test material not available yet, will be fixed in later release", 2 if 0;
-    ok( $bindsig->verify($binddataset,$bindkey),
-	'RSA sig generated with bind verifies');        #test 29
-    ok( $nxtsig->verify(\@nxtdata,$nxtkey), "RRSIG over NXT verifies");   #test 29
+    ok( $bindsig->verify( $binddataset, $bindkey ), 'RSA sig generated with bind verifies');	#test 28
+    ok( $nsecsig->verify( \@nsecdata, $nseckey ), "RRSIG over NSEC verifies");	#test 29
 }
 
 

@@ -1,7 +1,7 @@
-# $Id: 05-NSEC3PARAM.t 1166 2014-01-22 10:49:35Z willem $	-*-perl-*-
+# $Id: 05-NSEC3PARAM.t 1193 2014-04-28 07:11:19Z willem $	-*-perl-*-
 
 use strict;
-use Test::More tests => 12;
+use Test::More tests => 16;
 
 
 use Net::DNS;
@@ -60,6 +60,22 @@ my $wire = '0100000c04aabbccdd';
 	is( length($empty),  length($null), 'encoded RDATA can be empty' );
 	is( length($rxbin),  length($null), 'decoded RDATA can be empty' );
 	is( length($rxtext), length($null), 'string RDATA can be empty' );
+}
+
+
+{
+	# check parsing of RR with null salt (RT#95034)
+	my $rr = eval { Net::DNS::RR->new('nosalt.example NSEC3PARAM 2 0 12 -') };
+	diag $@ if $@;
+	ok( $rr, 'NSEC3PARAM created with null salt' );
+	is( $rr->salt, '', 'NSEC3PARAM null salt value' );
+	is( unpack( 'H*', $rr->saltbin ), '', 'NSEC3PARAM null salt binary value' );
+}
+
+
+{
+	my $rr = eval { Net::DNS::RR->new('corrupt.example NSEC3PARAM 2 0 12 aabbccfs') };
+	ok( !$rr, 'NSEC3PARAM not created with corrupt hex data' );
 }
 
 exit;

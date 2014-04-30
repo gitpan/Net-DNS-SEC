@@ -1,10 +1,10 @@
 package Net::DNS::RR::NSEC3PARAM;
 
 #
-# $Id: NSEC3PARAM.pm 1179 2014-03-19 21:46:58Z willem $
+# $Id: NSEC3PARAM.pm 1193 2014-04-28 07:11:19Z willem $
 #
 use vars qw($VERSION);
-$VERSION = (qw$LastChangedRevision: 1179 $)[1];
+$VERSION = (qw$LastChangedRevision: 1193 $)[1];
 
 
 use strict;
@@ -18,7 +18,6 @@ Net::DNS::RR::NSEC3PARAM - DNS NSEC3PARAM resource record
 
 
 use integer;
-
 use warnings;
 
 
@@ -54,7 +53,8 @@ sub parse_rdata {			## populate RR from rdata in argument list
 	$self->algorithm(shift);
 	$self->flags(shift);
 	$self->iterations(shift);
-	$self->salt(shift);
+	my ($s) = map { /^[-]/ ? '' : $_ } @_;
+	$self->salt($s) if scalar @_;
 }
 
 

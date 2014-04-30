@@ -1,10 +1,10 @@
 package Net::DNS::RR::NSEC3;
 
 #
-# $Id: NSEC3.pm 1179 2014-03-19 21:46:58Z willem $
+# $Id: NSEC3.pm 1193 2014-04-28 07:11:19Z willem $
 #
 use vars qw($VERSION);
-$VERSION = (qw$LastChangedRevision: 1179 $)[1];
+$VERSION = (qw$LastChangedRevision: 1193 $)[1];
 
 
 use strict;
@@ -18,7 +18,6 @@ Net::DNS::RR::NSEC3 - DNS NSEC3 resource record
 
 
 use integer;
-
 use warnings;
 use Carp;
 use MIME::Base32;
@@ -253,19 +252,15 @@ sub name2hash {
 
 	my $arglist = $digest{$hashalg} || die 'unsupported hash algorithm';
 	my ( $object, @argument ) = @$arglist;
-
-	my $hashfunc = sub {
-		my $hash = $object->new(@argument);
-		$hash->add(shift);
-		$hash->add($salt);
-		return $hash->digest;
-	};
+	my $hash = $object->new(@argument);
 
 	my $wirename = new Net::DNS::DomainName($name)->encode;
-	$wirename = &$hashfunc($wirename);
+	$iterations++;
 
 	while ( $iterations-- > 0 ) {
-		$wirename = &$hashfunc($wirename);
+		$hash->add($wirename);
+		$hash->add($salt);
+		$wirename = $hash->digest;
 	}
 
 	my $base32hex = MIME::Base32::encode( $wirename, '' );	# [0-9 A-V]	per RFC4648, 7.

@@ -1,16 +1,15 @@
 package Net::DNS::RR::KEY;
 
 #
-# $Id: KEY.pm 1179 2014-03-19 21:46:58Z willem $
+# $Id: KEY.pm 1192 2014-04-11 08:43:54Z willem $
 #
 use vars qw($VERSION);
-$VERSION = (qw$LastChangedRevision: 1179 $)[1];
+$VERSION = (qw$LastChangedRevision: 1192 $)[1];
 
 
+use warnings;
 use strict;
 use base qw(Net::DNS::RR::DNSKEY);
-
-no warnings;
 
 =head1 NAME
 
