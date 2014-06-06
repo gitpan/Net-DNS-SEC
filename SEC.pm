@@ -1,11 +1,11 @@
 package Net::DNS::SEC;
 
 #
-# $Id: SEC.pm 1200 2014-05-08 08:11:57Z willem $
+# $Id: SEC.pm 1217 2014-06-06 11:54:19Z willem $
 #
 use vars qw($VERSION $SVNVERSION);
-$VERSION    = '0.18';
-$SVNVERSION = (qw$LastChangedRevision: 1200 $)[1];
+$VERSION    = '0.19';
+$SVNVERSION = (qw$LastChangedRevision: 1217 $)[1];
 
 
 =head1 NAME
@@ -46,7 +46,7 @@ use Carp;
 
 require Net::DNS::RR::DS;
 
-new Net::DNS::RR( type => $_ ) for qw(SIG RRSIG DLV);		# pre-load RR with create() constructor
+new Net::DNS::RR( type => $_ ) for qw(SIG RRSIG DS CDS DLV);	# pre-load RR with create() constructor
 
 
 =head1 UTILITY FUNCTIONS

@@ -1,0 +1,53 @@
+{
+   "abstract" : "DNSSEC extensions to Net::DNS",
+   "author" : [
+      "Olaf M. Kolkman <olaf@net-dns.org>"
+   ],
+   "dynamic_config" : 1,
+   "generated_by" : "ExtUtils::MakeMaker version 6.98, CPAN::Meta::Converter version 2.120351",
+   "license" : [
+      "mit"
+   ],
+   "meta-spec" : {
+      "url" : "http://search.cpan.org/perldoc?CPAN::Meta::Spec",
+      "version" : "2"
+   },
+   "name" : "Net-DNS-SEC",
+   "no_index" : {
+      "directory" : [
+         "t",
+         "inc"
+      ]
+   },
+   "prereqs" : {
+      "build" : {
+         "requires" : {
+            "ExtUtils::MakeMaker" : "0"
+         }
+      },
+      "configure" : {
+         "requires" : {
+            "ExtUtils::MakeMaker" : "0"
+         }
+      },
+      "runtime" : {
+         "requires" : {
+            "Crypt::OpenSSL::Bignum" : "0.03",
+            "Crypt::OpenSSL::DSA" : "0.1",
+            "Crypt::OpenSSL::RSA" : "0.19",
+            "Digest::BubbleBabble" : "0.01",
+            "Digest::SHA" : "5.23",
+            "File::Basename" : "0",
+            "MIME::Base32" : "0",
+            "MIME::Base64" : "0",
+            "Math::BigInt" : "0",
+            "Net::DNS" : "0.69",
+            "Test::More" : "0.47",
+            "Time::Local" : "0",
+            "perl" : "5.006"
+         }
+      }
+   },
+   "release_status" : "stable",
+   "version" : "0.19"
+}

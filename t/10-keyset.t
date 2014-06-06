@@ -1,6 +1,6 @@
 #!/usr/bin/perl	 -sw 
 # Test script for keyset functionality
-# $Id: 10-keyset.t 1171 2014-02-26 08:56:52Z willem $
+# $Id: 10-keyset.t 1209 2014-05-29 10:19:07Z willem $
 #
 # Called in a fashion similar to:
 # /usr/bin/perl -Iblib/arch -Iblib/lib -I/usr/lib/perl5/5.6.1/i386-freebsd \
@@ -412,6 +412,5 @@ unlink($keypathdsa);
 unlink($keypathrsa);
 
 
-0;
-
+exit;
 

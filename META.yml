@@ -1,34 +1,34 @@
---- #YAML:1.0
-name:               Net-DNS-SEC
-version:            0.18
-abstract:           DNSSEC extensions to Net::DNS
+---
+abstract: 'DNSSEC extensions to Net::DNS'
 author:
-    - Olaf M. Kolkman <olaf@net-dns.org>
-license:            mit
-distribution_type:  module
-configure_requires:
-    ExtUtils::MakeMaker:  0
+  - 'Olaf M. Kolkman <olaf@net-dns.org>'
 build_requires:
-    ExtUtils::MakeMaker:  0
-requires:
-    Crypt::OpenSSL::Bignum:  0.03
-    Crypt::OpenSSL::DSA:  0.1
-    Crypt::OpenSSL::RSA:  0.19
-    Digest::BubbleBabble:  0.01
-    Digest::SHA:          5.23
-    File::Basename:       0
-    Math::BigInt:         0
-    MIME::Base32:         0
-    MIME::Base64:         0
-    Net::DNS:             0.69
-    perl:                 5.006
-    Test::More:           0.47
-    Time::Local:          0
-no_index:
-    directory:
-        - t
-        - inc
-generated_by:       ExtUtils::MakeMaker version 6.57_05
+  ExtUtils::MakeMaker: 0
+configure_requires:
+  ExtUtils::MakeMaker: 0
+dynamic_config: 1
+generated_by: 'ExtUtils::MakeMaker version 6.98, CPAN::Meta::Converter version 2.120351'
+license: mit
 meta-spec:
-    url:      http://module-build.sourceforge.net/META-spec-v1.4.html
-    version:  1.4
+  url: http://module-build.sourceforge.net/META-spec-v1.4.html
+  version: 1.4
+name: Net-DNS-SEC
+no_index:
+  directory:
+    - t
+    - inc
+requires:
+  Crypt::OpenSSL::Bignum: 0.03
+  Crypt::OpenSSL::DSA: 0.1
+  Crypt::OpenSSL::RSA: 0.19
+  Digest::BubbleBabble: 0.01
+  Digest::SHA: 5.23
+  File::Basename: 0
+  MIME::Base32: 0
+  MIME::Base64: 0
+  Math::BigInt: 0
+  Net::DNS: 0.69
+  Test::More: 0.47
+  Time::Local: 0
+  perl: 5.006
+version: 0.19

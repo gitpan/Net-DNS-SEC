@@ -1,10 +1,10 @@
 package Net::DNS::RR::DNSKEY;
 
 #
-# $Id: DNSKEY.pm 1179 2014-03-19 21:46:58Z willem $
+# $Id: DNSKEY.pm 1209 2014-05-29 10:19:07Z willem $
 #
 use vars qw($VERSION);
-$VERSION = (qw$LastChangedRevision: 1179 $)[1];
+$VERSION = (qw$LastChangedRevision: 1209 $)[1];
 
 
 use strict;
@@ -264,7 +264,6 @@ my $warned;
 
 sub is_sep {				## historical
 	my $self = shift;
-	carp "Deprecated method: please use rr->sep(@_)" unless $warned++;
 	return $self->sep(@_) ? 1 : 0;
 }
 

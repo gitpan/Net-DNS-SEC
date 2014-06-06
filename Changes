@@ -1,5 +1,10 @@
 Revision history for Perl extension Net::DNS::SEC.
 
+***0.19 Jun 6, 2014
+
+   Remove inappropriate deprecation warning in DNSKEY.pm
+
+
 ***0.18 May 8, 2014
 
    Recode RR implementations to provide Net::DNS 0.69+ interface.
@@ -9,6 +14,7 @@ Revision history for Perl extension Net::DNS::SEC.
 
    Fix: rt.cpan.org #81289
    Failure to handle GOST DS records
+
 
 ***0.17 November 29, 2013
 
@@ -457,7 +463,7 @@ Net::DNS. The history of those is documented below.
 
 0.19-DNSSEC-0.3: 
   Solved patch problems that where due to the 
-  $Id: Changes 1200 2014-05-08 08:11:57Z willem $ in headers not 
+  $Id: Changes 1217 2014-06-06 11:54:19Z willem $ in headers not 
   being from the original distribution.
 
   Added DSA signature creation
@@ -489,4 +495,4 @@ Net::DNS. The history of those is documented below.
 
 
 ---------------------------------------------------------------------------
-$Id: Changes 1200 2014-05-08 08:11:57Z willem $
+$Id: Changes 1217 2014-06-06 11:54:19Z willem $
