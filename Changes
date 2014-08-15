@@ -1,5 +1,11 @@
 Revision history for Perl extension Net::DNS::SEC.
 
+***0.20 August 15, 2014
+
+   Fix: rt.cpan.org #97457
+   !hex! error when parsing NSEC3 with empty salt
+
+
 ***0.19 Jun 6, 2014
 
    Remove inappropriate deprecation warning in DNSKEY.pm
@@ -463,7 +469,7 @@ Net::DNS. The history of those is documented below.
 
 0.19-DNSSEC-0.3: 
   Solved patch problems that where due to the 
-  $Id: Changes 1217 2014-06-06 11:54:19Z willem $ in headers not 
+  $Id: Changes 1248 2014-08-15 08:44:56Z willem $ in headers not 
   being from the original distribution.
 
   Added DSA signature creation
@@ -495,4 +501,4 @@ Net::DNS. The history of those is documented below.
 
 
 ---------------------------------------------------------------------------
-$Id: Changes 1217 2014-06-06 11:54:19Z willem $
+$Id: Changes 1248 2014-08-15 08:44:56Z willem $
