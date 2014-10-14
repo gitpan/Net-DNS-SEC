@@ -14,10 +14,10 @@ sub UNITCHECK {				## restore %SIG after compilation
 package Net::DNS::RR::SIG;
 
 #
-# $Id: SIG.pm 1179 2014-03-19 21:46:58Z willem $
+# $Id: SIG.pm 1271 2014-10-10 21:55:38Z willem $
 #
 use vars qw($VERSION);
-$VERSION = (qw$LastChangedRevision: 1179 $)[1];
+$VERSION = (qw$LastChangedRevision: 1271 $)[1];
 
 
 use strict;
@@ -77,18 +77,17 @@ sub encode_rdata {			## encode rdata as wire-format octet string
 	}
 
 	my @field = qw(typecovered algorithm labels orgttl sigexpiration siginception keytag);
-	pack 'n C2 N3 n a* a*', @{$self}{@field}, $signame->encode(0), $self->sigbin;
+	pack 'n C2 N3 n a* a*', @{$self}{@field}, $signame->encode, $self->sigbin;
 }
 
 
 sub format_rdata {			## format rdata portion of RR string.
 	my $self = shift;
 
-	return '' unless exists $self->{signame};
+	my $base64 = encode_base64 $self->sigbin || return '';
 	my $line1 = join ' ', map $self->$_, qw(typecovered algorithm labels orgttl);
 	my $line2 = join ' ', map $self->$_, qw(sigexpiration siginception keytag);
 	my $signame = $self->{signame}->string;
-	my $base64  = encode_base64 $self->sigbin;
 	chomp $base64;
 	return "$line1 (\n$line2 $signame\n$base64 )";
 }
@@ -463,7 +462,7 @@ sub _CreateSigData {
 	}
 
 	my @field = qw(typecovered algorithm labels orgttl sigexpiration siginception keytag);
-	my $sigdata = pack 'n C2 N3 n a*', @{$self}{@field}, $self->{signame}->encode(0);
+	my $sigdata = pack 'n C2 N3 n a*', @{$self}{@field}, $self->{signame}->encode;
 	print "preamble:\t", unpack( 'H*', $sigdata ) if $debug;
 
 	print "\nSIG0 processing\nrawdata:\t", unpack( "H*", $rawdata ), "\n" if $debug;
@@ -742,12 +741,10 @@ RR that a validator is supposed to use to validate this signature.
 
 =head2 signature
 
-	$signature = $rr->signature;
+    $signature = $rr->signature;
 
 The Signature field contains the cryptographic signature that covers
-the RRSIG RDATA (excluding the Signature field) and the RRset
-specified by the RRSIG owner name, RRSIG class, and RRSIG type
-covered fields.
+the SIG RDATA (excluding the Signature field) and the subject data.
 
 =head2 sigbin
 
@@ -759,6 +756,8 @@ Binary representation of the cryptographic signature.
 =head2 create
 
 Create a signature over scalar data.
+
+    use Net::DNS::SEC;
 
     $keypath = '/home/olaf/keys/Kbla.foo.+001+60114.private';
 
@@ -790,6 +789,7 @@ that comes with the ISC BIND distribution.
 
 The optional remaining arguments consist of ( name => value ) pairs
 as follows:
+
 	sigin  => 20130901010101,	# signature inception
 	sigex  => 20130901011101,	# signature expiration
 	sigval => 10,			# signature validity
@@ -799,7 +799,7 @@ a string with the format 'yyyymmddhhmmss'. The default for sigin is
 the time of signing. 
 
 The sigval argument specifies the signature validity window in minutes
-( sigex = sigin+sigval ).  Sigval wins if sigex is also specified.
+( sigex = sigin + sigval ).  Sigval wins if sigex is also specified.
 
 By default the signature is valid for 10 minutes.
 

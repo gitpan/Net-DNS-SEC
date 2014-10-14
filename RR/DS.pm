@@ -1,10 +1,10 @@
 package Net::DNS::RR::DS;
 
 #
-# $Id: DS.pm 1179 2014-03-19 21:46:58Z willem $
+# $Id: DS.pm 1271 2014-10-10 21:55:38Z willem $
 #
 use vars qw($VERSION);
-$VERSION = (qw$LastChangedRevision: 1179 $)[1];
+$VERSION = (qw$LastChangedRevision: 1271 $)[1];
 
 
 use strict;
@@ -236,7 +236,7 @@ sub create {
 		);
 
 	my $owner = $self->{owner}->encode();
-	my $data = pack 'a* a*', $owner, $keyrr->_canonicalRdata;
+	my $data = pack 'a* a*', $owner, $keyrr->encode_rdata;
 
 	my $arglist = $digest{$self->digtype} || croak 'unsupported digest type';
 	my ( $object, @argument ) = @$arglist;
@@ -336,6 +336,8 @@ The 'BubbleBabble' string is appended as a comment to the RDATA when
 the string method is called.
 
 =head2 create
+
+    use Net::DNS::SEC;
 
     $dsrr = create Net::DNS::RR::DS($keyrr, digtype => 'SHA-256' );
     $keyrr->print;

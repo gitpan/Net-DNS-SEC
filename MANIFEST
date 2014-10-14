@@ -39,8 +39,6 @@ t/11-sep.t
 t/11-sigstress.t
 t/12-nsec++.t
 t/13-utilities.t
-t/14-misc.t
-t/16-dlv.t
 t/51-DS-SHA1.t
 t/52-DS-SHA256.t
 t/53-DS-GOST.t

@@ -1,15 +1,15 @@
 package Net::DNS::SEC::Private;
 
 #
-# $Id: Private.pm 1181 2014-03-19 21:58:16Z willem $
+# $Id: Private.pm 1268 2014-09-29 08:09:00Z willem $
 #
 use vars qw($VERSION);
-$VERSION = (qw$LastChangedRevision: 1181 $)[1];
+$VERSION = (qw$LastChangedRevision: 1268 $)[1];
 
 
 =head1 NAME
 
-Net::DNS::SEC::Private - DNS SIG Private key object
+Net::DNS::SEC::Private - DNSSEC Private key object
 
 
 =head1 SYNOPSIS
@@ -36,11 +36,10 @@ use integer;
 use warnings;
 use Carp;
 use File::Basename;
-use Math::BigInt;
 use MIME::Base64;
-use Time::Local;
 
 use Crypt::OpenSSL::Bignum;
+use Crypt::OpenSSL::Random;
 use Crypt::OpenSSL::DSA;
 use Crypt::OpenSSL::RSA;
 
@@ -76,7 +75,7 @@ sub new {
 
     open (KEYFH, "<$key_file" ) || croak "Cannot open keyfile: $key_file";
     
-    
+    local $_;
     while (<KEYFH>) {
 	if (/Private-key-format: (v\d*\.\d*)/) {
 	    if ($1 ne "v1.2" && $1 ne "v1.3") {
@@ -409,7 +408,7 @@ $private->private
 
 Returns the private key material. This is either a Crypt::OpenSSL::RSA
 or Crypt::OpenSSL::DSA object. This is really only relevant to the
-Net::DNS::RR::SIG class.
+Net::DNS::RR::RRSIG and Net::DNS::RR::SIG classes.
 
 
 =head2  algorithm, keytag, signame, created, publish, activate

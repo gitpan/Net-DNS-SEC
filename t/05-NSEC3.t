@@ -1,7 +1,7 @@
-# $Id: 05-NSEC3.t 1166 2014-01-22 10:49:35Z willem $	-*-perl-*-
+# $Id: 05-NSEC3.t 1268 2014-09-29 08:09:00Z willem $	-*-perl-*-
 
 use strict;
-use Test::More tests => 25;
+use Test::More tests => 27;
 
 
 use Net::DNS;
@@ -93,8 +93,13 @@ my $wire = '0101000c04aabbccdd14174eb2409fe28bcb4887a1836f957f0a8425e27b00072201
 	}
 }
 
-print 'A' cmp 'B', "\n";
 
+{
+	my @rdata = qw(1 1 12 - 2t7b4g4vsa5smi47k61mv5bv1a22bojr A);
+	my $rr = new Net::DNS::RR(". $type @rdata");
+	is( $rr->salt, '', 'parse RR with salt field placeholder' );
+	is( $rr->rdstring, "@rdata", 'placeholder denotes empty salt field' );
+}
 
 exit;
 

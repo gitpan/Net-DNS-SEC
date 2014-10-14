@@ -1,11 +1,11 @@
 package Net::DNS::SEC;
 
 #
-# $Id: SEC.pm 1248 2014-08-15 08:44:56Z willem $
+# $Id: SEC.pm 1270 2014-09-29 08:12:35Z willem $
 #
 use vars qw($VERSION $SVNVERSION);
-$VERSION    = '0.20';
-$SVNVERSION = (qw$LastChangedRevision: 1248 $)[1];
+$VERSION    = '0.20_1';
+$SVNVERSION = (qw$LastChangedRevision: 1270 $)[1];
 
 
 =head1 NAME
@@ -146,11 +146,10 @@ THIS SOFTWARE.
 
 =head1 SEE ALSO
 
-L<perl>, L<Net::DNS>,
-L<Net::DNS::RR::DLV>, L<Net::DNS::RR::DNSKEY>, L<Net::DNS::RR::DS>,
+L<perl>, L<Net::DNS>, L<Net::DNS::RR::DNSKEY>, L<Net::DNS::RR::DS>,
 L<Net::DNS::RR::NSEC>, L<Net::DNS::RR::NSEC3>, L<Net::DNS::RR::NSEC3PARAM>,
-L<Net::DNS::RR::RRSIG>,
-L<Net::DNS::RR::KEY>, L<Net::DNS::RR::SIG>,
+L<Net::DNS::RR::RRSIG>, L<Net::DNS::RR::KEY>, L<Net::DNS::RR::SIG>,
+L<Net::DNS::RR::CDS>, L<Net::DNS::RR::CDNSKEY>, L<Net::DNS::RR::DLV>,
 RFC4033, RFC4034, RFC4035
 
 =cut

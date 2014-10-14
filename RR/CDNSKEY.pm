@@ -1,10 +1,10 @@
 package Net::DNS::RR::CDNSKEY;
 
 #
-# $Id: CDNSKEY.pm 1209 2014-05-29 10:19:07Z willem $
+# $Id: CDNSKEY.pm 1261 2014-09-11 10:14:45Z willem $
 #
 use vars qw($VERSION);
-$VERSION = (qw$LastChangedRevision: 1209 $)[1];
+$VERSION = (qw$LastChangedRevision: 1261 $)[1];
 
 
 use warnings;
@@ -61,6 +61,6 @@ Package template (c)2009,2012 O.M.Kolkman and R.W.Franks.
 
 =head1 SEE ALSO
 
-L<perl>, L<Net::DNS>, L<Net::DNS::RR>, L<Net::DNS::RR::DNSKEY>, RFC4034
+L<perl>, L<Net::DNS>, L<Net::DNS::RR>, L<Net::DNS::RR::DNSKEY>, RFC7344
 
 =cut

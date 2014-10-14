@@ -1,10 +1,10 @@
 package Net::DNS::RR::NSEC3PARAM;
 
 #
-# $Id: NSEC3PARAM.pm 1193 2014-04-28 07:11:19Z willem $
+# $Id: NSEC3PARAM.pm 1271 2014-10-10 21:55:38Z willem $
 #
 use vars qw($VERSION);
-$VERSION = (qw$LastChangedRevision: 1193 $)[1];
+$VERSION = (qw$LastChangedRevision: 1271 $)[1];
 
 
 use strict;
@@ -53,8 +53,8 @@ sub parse_rdata {			## populate RR from rdata in argument list
 	$self->algorithm(shift);
 	$self->flags(shift);
 	$self->iterations(shift);
-	my ($s) = map { /^[-]/ ? '' : $_ } @_;
-	$self->salt($s) if scalar @_;
+	my $salt = shift;
+	$self->salt($salt) unless $salt eq '-';
 }
 
 
@@ -165,9 +165,9 @@ integer.  The value is between 0 and 65535, inclusive.
     $salt = $rr->salt;
     $rr->salt( $salt );
 
-The Salt field is represented as a sequence of hexadecimal digits.
-No whitespace is allowed within the sequence.  A "-" (unquoted) is
-used in string format to indicate that the salt field is absent. 
+The Salt field is represented as a contiguous sequence of hexadecimal
+digits. A "-" (unquoted) is used in string format to indicate that the
+salt field is absent. 
 
 =head2 saltbin
 

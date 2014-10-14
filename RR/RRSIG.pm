@@ -1,10 +1,10 @@
 package Net::DNS::RR::RRSIG;
 
 #
-# $Id: RRSIG.pm 1179 2014-03-19 21:46:58Z willem $
+# $Id: RRSIG.pm 1271 2014-10-10 21:55:38Z willem $
 #
 use vars qw($VERSION);
-$VERSION = (qw$LastChangedRevision: 1179 $)[1];
+$VERSION = (qw$LastChangedRevision: 1271 $)[1];
 
 
 use strict;
@@ -42,7 +42,7 @@ sub decode_rdata {			## decode rdata from wire-format octet string
 	my $limit = $offset + $self->{rdlength};
 	my @field = qw(typecovered algorithm labels orgttl sigexpiration siginception keytag);
 	@{$self}{@field} = unpack "\@$offset n C2 N3 n", $$data;
-	( $self->{signame}, $offset ) = decode Net::DNS::DomainName( $data, $offset + 18 );
+	( $self->{signame}, $offset ) = decode Net::DNS::DomainName2535( $data, $offset + 18 );
 	$self->{sigbin} = substr $$data, $offset, $limit - $offset;
 }
 
@@ -50,21 +50,19 @@ sub decode_rdata {			## decode rdata from wire-format octet string
 sub encode_rdata {			## encode rdata as wire-format octet string
 	my $self = shift;
 
-	my $signame = $self->{signame} || return '';
-
+	my $sigbin = $self->sigbin || return '';
 	my @field = qw(typecovered algorithm labels orgttl sigexpiration siginception keytag);
-	pack 'n C2 N3 n a* a*', @{$self}{@field}, $signame->encode(0), $self->sigbin;
+	pack 'n C2 N3 n a* a*', @{$self}{@field}, $self->{signame}->encode, $sigbin;
 }
 
 
 sub format_rdata {			## format rdata portion of RR string.
 	my $self = shift;
 
-	return '' unless exists $self->{signame};
+	my $base64 = encode_base64 $self->sigbin || return '';
 	my $line1 = join ' ', map $self->$_, qw(typecovered algorithm labels orgttl);
 	my $line2 = join ' ', map $self->$_, qw(sigexpiration siginception keytag);
 	my $signame = $self->{signame}->string;
-	my $base64  = encode_base64 $self->sigbin;
 	chomp $base64;
 	return "$line1 (\n$line2 $signame\n$base64 )";
 }
@@ -208,7 +206,7 @@ sub keytag {
 sub signame {
 	my $self = shift;
 
-	$self->{signame} = new Net::DNS::DomainName(shift) if scalar @_;
+	$self->{signame} = new Net::DNS::DomainName2535(shift) if scalar @_;
 	$self->{signame}->name if defined wantarray;
 }
 
@@ -502,7 +500,7 @@ sub _CreateSigData {
 	my ( $self, $rawdata ) = @_;
 
 	# This method creates the data string that will be signed.
-	# See RFC4034 section 6 on how this string is constructed
+	# See RFC4034(6) and RFC6840(5.1) on how this string is constructed
 
 	# This method is called by the method that creates a signature
 	# and by the method that verifies the signature. It is assumed
@@ -838,14 +836,13 @@ validates this signature.
 =head2 signame
 
     $signame = $rr->signame;
-    $rr->signame( $signame );
 
 The signer name field value identifies the owner name of the DNSKEY
 RR that a validator is supposed to use to validate this signature.
 
 =head2 signature
 
-	$signature = $rr->signature;
+    $signature = $rr->signature;
 
 The Signature field contains the cryptographic signature that covers
 the RRSIG RDATA (excluding the Signature field) and the RRset
@@ -862,6 +859,8 @@ Binary representation of the cryptographic signature.
 =head2 create
 
 Create a signature over a RR set.
+
+    use Net::DNS::SEC;
 
     $keypath = '/home/olaf/keys/Kbla.foo.+001+60114.private';
 
@@ -894,9 +893,10 @@ that comes with the ISC BIND distribution.
 
 The optional remaining arguments consist of ( name => value ) pairs
 as follows:
+
 	sigin  => 20130701010101,	# signature inception
 	sigex  => 20130731010101,	# signature expiration
-	sigval => 1.5,			# signature validity
+	sigval => 30,			# signature validity
 	ttl    => 3600			# TTL
 
 The sigin and sigex values may be specified as Perl time values or as
@@ -904,7 +904,7 @@ a string with the format 'yyyymmddhhmmss'. The default for sigin is
 the time of signing. 
 
 The sigval argument specifies the signature validity window in days
-( sigex = sigin+sigval ).  Sigval wins if sigex is also specified.
+( sigex = sigin + sigval ).  Sigval wins if sigex is also specified.
 
 By default the signature is valid for 30 days.
 
@@ -1004,7 +1004,7 @@ Package template (c)2009,2012 O.M.Kolkman and R.W.Franks.
 
 =head1 SEE ALSO
 
-L<perl>, L<Net::DNS>, L<Net::DNS::RR>, L<Net::DNS::SEC>, RFC4034, RFC3755,
+L<perl>, L<Net::DNS>, L<Net::DNS::RR>, L<Net::DNS::SEC>, RFC4034, RFC6840, RFC3755,
 L<Crypt::OpenSSL::DSA>, L<Crypt::OpenSSL::RSA>
 
 L<Algorithm Numbers|http://www.iana.org/assignments/dns-sec-alg-numbers>

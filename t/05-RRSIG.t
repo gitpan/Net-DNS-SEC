@@ -1,4 +1,4 @@
-# $Id: 05-RRSIG.t 1165 2014-01-20 14:06:08Z willem $	-*-perl-*-
+# $Id: 05-RRSIG.t 1271 2014-10-10 21:55:38Z willem $	-*-perl-*-
 
 use strict;
 use Test::More tests => 18;
@@ -70,8 +70,8 @@ my $wire = '0002070200000E1052346FD7520CE2D7EDED076E65742D646E73036F726700211942
 	my $predecessor = $rr->encode( 0, $hash );
 	my $compressed	= $rr->encode( length $predecessor, $hash );
 	ok( length $compressed == length $predecessor, 'encoded RDATA not compressible' );
-	isnt( $rr->encode, $lc->encode, 'encoded RDATA names not downcased' );
-	isnt( $rr->canonical, $lc->encode, 'canonical RDATA names not downcased' );
+	is( $rr->encode, $lc->encode, 'encoded RDATA names downcased' );
+	is( $rr->canonical, $lc->encode, 'canonical RDATA names downcased' );
 }
 
 

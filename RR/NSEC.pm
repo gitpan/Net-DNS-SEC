@@ -1,10 +1,10 @@
 package Net::DNS::RR::NSEC;
 
 #
-# $Id: NSEC.pm 1179 2014-03-19 21:46:58Z willem $
+# $Id: NSEC.pm 1271 2014-10-10 21:55:38Z willem $
 #
 use vars qw($VERSION);
-$VERSION = (qw$LastChangedRevision: 1179 $)[1];
+$VERSION = (qw$LastChangedRevision: 1271 $)[1];
 
 
 use strict;
@@ -104,7 +104,7 @@ sub _type2bm {
 		$window++;
 	}
 
-	return $bitmap;
+	return $bitmap || '';
 }
 
 

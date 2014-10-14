@@ -1,5 +1,5 @@
 #
-# $Id: Makefile.PL 1179 2014-03-19 21:46:58Z willem $
+# $Id: Makefile.PL 1275 2014-10-14 20:37:29Z willem $
 #
 
 
@@ -29,6 +29,7 @@ WriteMakefile(
 	PREREQ_PM	 => {
 		Net::DNS	       => 0.69,
 		Crypt::OpenSSL::Bignum => 0.03,
+		Crypt::OpenSSL::Random => 0.0,
 		Crypt::OpenSSL::RSA    => 0.19,
 		Crypt::OpenSSL::DSA    => 0.10,
 		Digest::BubbleBabble   => 0.01,

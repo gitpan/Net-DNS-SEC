@@ -1,10 +1,10 @@
 package Net::DNS::Keyset;
 
 #
-# $Id: Keyset.pm 1179 2014-03-19 21:46:58Z willem $
+# $Id: Keyset.pm 1271 2014-10-10 21:55:38Z willem $
 #
 use vars qw($VERSION);
-$VERSION = (qw$LastChangedRevision: 1179 $)[1];
+$VERSION = (qw$LastChangedRevision: 1271 $)[1];
 
 
 =head1 NAME
@@ -180,7 +180,7 @@ sub keys {
 
     @keyrr = $keyset->sigs;
 
-Returns an array of Net::DNS::RR::Sig objects
+Returns an array of Net::DNS::RR::RRSIG objects
 
 =cut
 

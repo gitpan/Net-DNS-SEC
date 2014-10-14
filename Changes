@@ -1,5 +1,15 @@
 Revision history for Perl extension Net::DNS::SEC.
 
+
+***0.21 [unreleased]
+
+   Fix: rt.cpan.org #99250
+   [RRSIG] validation fails when Signer's Name is upper case
+
+   Fix: rt.cpan.org #99106
+   Premature end of base64 data  (in 14-misc.t test script)
+
+
 ***0.20 August 15, 2014
 
    Fix: rt.cpan.org #97457
@@ -469,7 +479,7 @@ Net::DNS. The history of those is documented below.
 
 0.19-DNSSEC-0.3: 
   Solved patch problems that where due to the 
-  $Id: Changes 1248 2014-08-15 08:44:56Z willem $ in headers not 
+  $Id: Changes 1271 2014-10-10 21:55:38Z willem $ in headers not 
   being from the original distribution.
 
   Added DSA signature creation
@@ -501,4 +511,4 @@ Net::DNS. The history of those is documented below.
 
 
 ---------------------------------------------------------------------------
-$Id: Changes 1248 2014-08-15 08:44:56Z willem $
+$Id: Changes 1271 2014-10-10 21:55:38Z willem $
