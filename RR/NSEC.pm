@@ -1,10 +1,10 @@
 package Net::DNS::RR::NSEC;
 
 #
-# $Id: NSEC.pm 1271 2014-10-10 21:55:38Z willem $
+# $Id: NSEC.pm 1276 2014-10-19 06:02:40Z willem $
 #
 use vars qw($VERSION);
-$VERSION = (qw$LastChangedRevision: 1271 $)[1];
+$VERSION = (qw$LastChangedRevision: 1276 $)[1];
 
 
 use strict;
@@ -71,7 +71,7 @@ sub typelist {
 
 	$self->{typebm} = &_type2bm if scalar @_;
 
-	my @type = &_bm2type( $self->{typebm} ) if defined wantarray;
+	my @type = defined wantarray ? &_bm2type( $self->{typebm} ) : ();
 	return "@type" unless wantarray;
 	return @type;
 }

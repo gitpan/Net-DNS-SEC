@@ -14,10 +14,10 @@ sub UNITCHECK {				## restore %SIG after compilation
 package Net::DNS::RR::SIG;
 
 #
-# $Id: SIG.pm 1271 2014-10-10 21:55:38Z willem $
+# $Id: SIG.pm 1276 2014-10-19 06:02:40Z willem $
 #
 use vars qw($VERSION);
-$VERSION = (qw$LastChangedRevision: 1271 $)[1];
+$VERSION = (qw$LastChangedRevision: 1276 $)[1];
 
 
 use strict;
@@ -451,8 +451,8 @@ sub _CreateSigData {
 	my ( $self, $rawdata ) = @_;
 
 	if ( ref($rawdata) ) {
-		my $packet = $rawdata if $rawdata->isa('Net::DNS::Packet');
-		die 'missing packet reference' unless $packet;
+		die 'missing packet reference' unless $rawdata->isa('Net::DNS::Packet');
+		my $packet = $rawdata;
 
 		my $original = $packet->{additional};
 		my @unsigned = grep ref($_) ne ref($self), @$original;

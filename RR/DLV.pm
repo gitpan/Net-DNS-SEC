@@ -1,10 +1,10 @@
 package Net::DNS::RR::DLV;
 
 #
-# $Id: DLV.pm 1192 2014-04-11 08:43:54Z willem $
+# $Id: DLV.pm 1276 2014-10-19 06:02:40Z willem $
 #
 use vars qw($VERSION);
-$VERSION = (qw$LastChangedRevision: 1192 $)[1];
+$VERSION = (qw$LastChangedRevision: 1276 $)[1];
 
 
 use warnings;
@@ -34,7 +34,7 @@ DNS DLV resource record
 This is a clone of the DS record and inherits all properties of
 the Net::DNS::RR::DS class.
 
-Please see the L<Net::DNS::RR::DS> perldocumentation for details.
+Please see the L<Net::DNS::RR::DS> documentation for details.
 
 =head1 METHODS
 

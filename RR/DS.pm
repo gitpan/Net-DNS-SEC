@@ -1,10 +1,10 @@
 package Net::DNS::RR::DS;
 
 #
-# $Id: DS.pm 1271 2014-10-10 21:55:38Z willem $
+# $Id: DS.pm 1276 2014-10-19 06:02:40Z willem $
 #
 use vars qw($VERSION);
-$VERSION = (qw$LastChangedRevision: 1271 $)[1];
+$VERSION = (qw$LastChangedRevision: 1276 $)[1];
 
 
 use strict;
@@ -136,7 +136,7 @@ sub format_rdata {			## format rdata portion of RR string.
 	my $self = shift;
 
 	return '' unless $self->{digtype};
-	my @babble = ( "\n;", $self->babble ) if BABBLE;
+	my @babble = BABBLE ? ( "\n;", $self->babble ) : ();
 	my $digest = $self->digest;
 	$digest = join( "\n", '(', split /(\S{64})/, $digest ) . ' )' if length $digest > 40;
 	join ' ', @{$self}{qw(keytag algorithm digtype)}, $digest, @babble;
