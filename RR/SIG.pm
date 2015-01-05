@@ -14,10 +14,10 @@ sub UNITCHECK {				## restore %SIG after compilation
 package Net::DNS::RR::SIG;
 
 #
-# $Id: SIG.pm 1276 2014-10-19 06:02:40Z willem $
+# $Id: SIG.pm 1289 2015-01-05 10:08:59Z willem $
 #
 use vars qw($VERSION);
-$VERSION = (qw$LastChangedRevision: 1276 $)[1];
+$VERSION = (qw$LastChangedRevision: 1289 $)[1];
 
 
 use strict;
@@ -37,15 +37,21 @@ use Carp;
 use MIME::Base64;
 use Time::Local;
 
+use constant UTIL => eval { require Scalar::Util; } || 0;
+
 use Net::DNS::Parameters;
 
-eval { require Crypt::OpenSSL::RSA };	## optional for simple Net::DNS RR
-eval { require Crypt::OpenSSL::DSA };
-eval { require Crypt::OpenSSL::Bignum };
-eval { require Digest::SHA };
 eval { require Net::DNS::SEC::Private };
 
 my $debug = 0;
+
+BEGIN {
+	eval { require Crypt::OpenSSL::RSA };
+	eval { require Crypt::OpenSSL::Bignum };
+	eval { require Digest::SHA };
+
+	use constant DSA => eval { require Crypt::OpenSSL::DSA } || 0;
+}
 
 
 sub decode_rdata {			## decode rdata from wire-format octet string
@@ -57,6 +63,11 @@ sub decode_rdata {			## decode rdata from wire-format octet string
 	@{$self}{@field} = unpack "\@$offset n C2 N3 n", $$data;
 	( $self->{signame}, $offset ) = decode Net::DNS::DomainName2535( $data, $offset + 18 );
 	$self->{sigbin} = substr $$data, $offset, $limit - $offset;
+
+	return if $self->{typecovered};
+	croak('misplaced or corrupt SIG') unless $limit == length $$data;
+	my $raw = substr $$data, 0, $self->{offset} || return;
+	$self->{rawref} = \$raw;
 }
 
 
@@ -69,11 +80,12 @@ sub encode_rdata {			## encode rdata as wire-format octet string
 	my $signame = $self->{signame} || return '';
 
 	unless ( $self->{sigbin} ) {
-		die 'missing packet reference' unless $packet;
+		my $private = $self->{private};
+		delete $self->{private};			# one shot is all you get
 
+		die 'missing packet reference' unless $packet;
 		my $sigdata = $self->_CreateSigData($packet);
-		$self->_CreateSig( $sigdata, $self->{private} || die 'missing key reference' );
-		undef $self->{private};				# one shot is all you get
+		$self->_CreateSig( $sigdata, $private || die 'missing key reference' );
 	}
 
 	my @field = qw(typecovered algorithm labels orgttl sigexpiration siginception keytag);
@@ -188,7 +200,6 @@ sub algorithm {
 
 sub labels {
 	my $self = shift;
-
 	$self->{labels} = 0 + shift if scalar @_;
 	return $self->{labels} || 0;
 }
@@ -196,7 +207,6 @@ sub labels {
 
 sub orgttl {
 	my $self = shift;
-
 	$self->{orgttl} = 0 + shift if scalar @_;
 	return $self->{orgttl} || 0;
 }
@@ -205,13 +215,17 @@ sub orgttl {
 sub sigexpiration {
 	my $self = shift;
 	$self->{sigexpiration} = _string2time(shift) if scalar @_;
-	_time2string( $self->{sigexpiration} ) if defined wantarray;
+	return unless defined wantarray;
+	my $time = $self->{sigexpiration};
+	return UTIL ? Scalar::Util::dualvar( $time, _time2string($time) ) : _time2string($time);
 }
 
 sub siginception {
 	my $self = shift;
 	$self->{siginception} = _string2time(shift) if scalar @_;
-	_time2string( $self->{siginception} ) if defined wantarray;
+	return unless defined wantarray;
+	my $time = $self->{siginception};
+	return UTIL ? Scalar::Util::dualvar( $time, _time2string($time) ) : _time2string($time);
 }
 
 
@@ -333,7 +347,7 @@ sub verify {
 			$errorstring .= "key $i:" . $self->vrfyerrstr . " ";
 		}
 
-		$self->{"vrfyerrstr"} = $errorstring;
+		$self->{vrfyerrstr} = $errorstring;
 		return (0);
 
 	} elsif ( $keyref->isa('Net::DNS::RR::DNSKEY') || $keyref->isa('Net::DNS::RR::KEY') ) {
@@ -346,12 +360,12 @@ sub verify {
 	}
 
 
-	$self->{vrfyerrstr} = "---- Unknown Error Condition ------";
+	$self->{vrfyerrstr} = '';
 	if ($debug) {
-		print "\n ------------------------------- SIG DEBUG ------------------";
+		print "\n ---------------------- SIG DEBUG ------------------------------";
 		print "\n  SIG:\t", $self->string;
 		print "\n  KEY:\t", $keyref->string;
-		print "\n --------------------------------------------------------------\n";
+		print "\n ---------------------------------------------------------------\n";
 	}
 
 	croak "Trying to verify SIG0 using non-SIG0 signature" unless $self->typecovered eq 'TYPE0';
@@ -366,8 +380,7 @@ sub verify {
 	# The data that is to be verified
 	my $sigdata = $self->_CreateSigData($dataref);
 
-	my $signature = $self->sigbin;
-	my $verified = $self->_VerifySig( $sigdata, $signature, $keyref ) || return 0;
+	my $verified = $self->_VerifySig( $sigdata, $keyref ) || return 0;
 
 	# time to do some time checking.
 	my $t = time;
@@ -379,7 +392,7 @@ sub verify {
 		$self->{vrfyerrstr} = join ' ', 'Signature valid from', $self->siginception;
 		return 0;
 	}
-	$self->{vrfyerrstr} = 'No Error';
+
 	return 1;
 }								#END verify
 
@@ -391,7 +404,6 @@ sub vrfyerrstr {
 
 
 ########################################
-
 
 sub _ordered($$) {			## irreflexive 32-bit partial ordering
 	use integer;
@@ -448,30 +460,29 @@ sub _time2string {			## format time specification string
 
 
 sub _CreateSigData {
-	my ( $self, $rawdata ) = @_;
+	my ( $self, $message ) = @_;
 
-	if ( ref($rawdata) ) {
-		die 'missing packet reference' unless $rawdata->isa('Net::DNS::Packet');
-		my $packet = $rawdata;
-
-		my $original = $packet->{additional};
-		my @unsigned = grep ref($_) ne ref($self), @$original;
-		$packet->{additional} = \@unsigned;		# strip signature RR
-		$rawdata	      = $packet->data;
-		$packet->{additional} = $original;		# reinstate signature RR
+	if ( ref($message) ) {
+		die 'missing packet reference' unless $message->isa('Net::DNS::Packet');
+		my @unsigned = grep ref($_) ne ref($self), @{$message->{additional}};
+		local $message->{additional} = \@unsigned;	# remake header image
+		my @part = qw(question answer authority additional);
+		my @size = map scalar( @{$message->{$_}} ), @part;
+		my $data = $self->{rawref};
+		delete $self->{rawref};
+		my $id = $message->{id} || $message->header->id;
+		my $hbin = pack 'n6', $id, $message->{status}, @size;
+		$message = $hbin . substr $data ? $$data : $message->data, length $hbin;
 	}
 
 	my @field = qw(typecovered algorithm labels orgttl sigexpiration siginception keytag);
 	my $sigdata = pack 'n C2 N3 n a*', @{$self}{@field}, $self->{signame}->encode;
-	print "preamble:\t", unpack( 'H*', $sigdata ) if $debug;
-
-	print "\nSIG0 processing\nrawdata:\t", unpack( "H*", $rawdata ), "\n" if $debug;
-	return join '', $sigdata, $rawdata;
+	print "\npreamble\t", unpack( 'H*', $sigdata ), "\nrawdata\t", unpack( 'H100', $message ), " ...\n" if $debug;
+	return join '', $sigdata, $message;
 }
 
 
 ########################################
-
 
 sub _CreateSig {
 	my $self = shift;
@@ -479,9 +490,9 @@ sub _CreateSig {
 	my $algorithm = $self->algorithm;
 
 	return $self->_CreateRSA(@_) if $RSA{$algorithm};
-	return $self->_CreateDSA(@_) if $DSA{$algorithm};
+	return $self->_CreateDSA(@_) if DSA && $DSA{$algorithm};
 
-	croak "Algorithm $algorithm not supported";
+	croak "Signature generation not supported for algorithm $algorithm";
 }
 
 
@@ -491,9 +502,9 @@ sub _VerifySig {
 	my $algorithm = $self->algorithm;
 
 	return $self->_VerifyRSA(@_) if $RSA{$algorithm};
-	return $self->_VerifyDSA(@_) if $DSA{$algorithm};
+	return $self->_VerifyDSA(@_) if DSA && $DSA{$algorithm};
 
-	$self->{vrfyerrstr} = "Algorithm $algorithm not supported";
+	$self->{vrfyerrstr} = "Verification not supported for algorithm $algorithm";
 	return 0;
 }
 
@@ -504,141 +515,126 @@ sub _CreateRSA {
 	my $hash = $RSA{$private->algorithm} || croak 'private key not RSA';
 
 	eval {
-		my $private_rsa = $private->privatekey;
-		$private_rsa->use_pkcs1_oaep_padding;
-		$private_rsa->$hash;
-		$self->sigbin( $private_rsa->sign($sigdata) );
-	} || croak "RSA Signature generation failed\n\t$@";
+		my @param = map Crypt::OpenSSL::Bignum->new_from_bin( decode_base64( $private->$_ ) ),
+				qw(Modulus PublicExponent PrivateExponent
+				Prime1 Prime2 Exponent1 Exponent2 Coefficient);
+		my $rsa = Crypt::OpenSSL::RSA->new_key_from_parameters(@param);
+
+		$rsa->use_pkcs1_oaep_padding;
+		$rsa->$hash;
+		$self->sigbin( $rsa->sign($sigdata) );
+	} || carp "RSA signature generation failed\n\t$@";
 }
 
 
 sub _VerifyRSA {
-	my ( $self, $sigdata, $signature, $keyrr ) = @_;
+	my ( $self, $sigdata, $keyrr ) = @_;
 
 	# Implementation using Crypt::OpenSSL::RSA
 
-	print "\nRSA verification called with key:\n\t", $keyrr->string,
-			"\nsig:\n\t", $self->string, "\nsigdata:\n\t", unpack( 'H*', $sigdata ), "\n"
-			if $debug;
+	print "\n_VerifyRSA:\n", $self->string, "\nusing key:\n", $keyrr->string, "\n" if $debug;
 
-	#RFC 2537 sect 2
-	my ( $exponent, $modulus );
-	if ( my $explength = unpack( 'C', my $keybin = $keyrr->keybin ) ) {
-		( $exponent, $modulus ) = unpack( "x a$explength a*", $keybin );
-	} else {
-		$explength = unpack( 'xn', $keybin );
-		( $exponent, $modulus ) = unpack( "x3 a$explength a*", $keybin );
-	}
+	eval {
+		my $keybin = $keyrr->keybin;			# public key
+		my ( $exponent, $modulus );			# RFC 2537, section 2
+		if ( my $explength = unpack( 'C', $keybin ) ) {
+			( $exponent, $modulus ) = unpack( "x a$explength a*", $keybin );
+		} else {
+			$explength = unpack( 'xn', $keybin );
+			( $exponent, $modulus ) = unpack( "x3 a$explength a*", $keybin );
+		}
 
-	my $bn_modulus	= Crypt::OpenSSL::Bignum->new_from_bin($modulus);
-	my $bn_exponent = Crypt::OpenSSL::Bignum->new_from_bin($exponent);
+		my $bn_modulus	= Crypt::OpenSSL::Bignum->new_from_bin($modulus);
+		my $bn_exponent = Crypt::OpenSSL::Bignum->new_from_bin($exponent);
 
-	my $rsa_pub = Crypt::OpenSSL::RSA->new_key_from_parameters( $bn_modulus, $bn_exponent );
-	die "Could not load public key" unless $rsa_pub;
+		my $rsa = Crypt::OpenSSL::RSA->new_key_from_parameters( $bn_modulus, $bn_exponent );
 
-	my $hash = $RSA{$self->algorithm};
-	$rsa_pub->use_pkcs1_oaep_padding;
-	$rsa_pub->$hash;
+		my $hash = $RSA{$self->algorithm};
+		$rsa->use_pkcs1_oaep_padding;
+		$rsa->$hash;
 
-	if ( eval { $rsa_pub->verify( $sigdata, $signature ); } ) {
-		$self->{vrfyerrstr} = "RSA Verification successful";
-		print "\n", $self->{vrfyerrstr}, "\n" if $debug;
-		return 1;
-
-	} elsif ( my $error = $@ ) {
-		$self->{vrfyerrstr} = "RSA Verification error: $error";
-
-	} else {
+		$rsa->verify( $sigdata, $self->sigbin );
+	} || do {
 		$self->{vrfyerrstr} = "RSA Verification failed";
-	}
+		$self->{vrfyerrstr} = "RSA verification error: $@" if $@;
+		print "\n", $self->{vrfyerrstr}, "\n" if $debug;
+		return 0;
+	};
 
-	print "\n", $self->{vrfyerrstr}, "\n" if $debug;
-	return 0;
+	print "\nRSA verification successful\n" if $debug;
+	return 1;
 }
 
 
 sub _CreateDSA {
 	my ( $self, $sigdata, $private ) = @_;
 
-	my ( $object, @param ) = @{$DSA{$private->algorithm}};	# digest sig data
-	croak 'private key not DSA' unless $object;
-	my $hash = $object->new(@param);
-	$hash->add($sigdata);
+	eval {
+		my $algorithm = $private->algorithm;		# digest sigdata
+		my ( $object, @param ) = @{$DSA{$algorithm}};
+		croak 'private key not DSA' unless $object;
+		my $hash = $object->new(@param);
+		$hash->add($sigdata);
 
-	my $private_dsa = $private->privatekey;
-	if ( my $sig_obj = $private_dsa->do_sign( $hash->digest ) ) {
+		my $dsa = Crypt::OpenSSL::DSA->new();		# private key
+		$dsa->set_p( decode_base64 $private->prime );
+		$dsa->set_q( decode_base64 $private->subprime );
+		$dsa->set_g( decode_base64 $private->base );
+		$dsa->set_priv_key( decode_base64 $private->private_value );
+
+		my $dsasig = $dsa->do_sign( $hash->digest );
 
 		# See RFC 2535 for the content of the SIG
-		my $T = ( length( $private_dsa->get_g ) - 64 ) / 8;
-		my $R = $sig_obj->get_r;
-		my $S = $sig_obj->get_s;
+		my $T = ( length( $dsa->get_g ) - 64 ) / 8;
+		my $R = $dsasig->get_r;
+		my $S = $dsasig->get_s;
 
 		# both the R and S parameters need to be 20 octets:
 		my $Rpad = 20 - length($R);
 		my $Spad = 20 - length($S);
 		$self->sigbin( pack "C x$Rpad a* x$Spad a*", $T, $R, $S );
-
-	} else {
-		croak "DSA Signature generation failed";
-	}
+	} || carp "DSA signature generation failed\n\t$@";
 }
 
 
 sub _VerifyDSA {
-	my ( $self, $sigdata, $signature, $keyrr ) = @_;
+	my ( $self, $sigdata, $keyrr ) = @_;
 
-	# Implementation using Crypt::OpenSSL
+	print "\n_VerifyDSA:\n", $self->string, "\nusing key:\n", $keyrr->string, "\n" if $debug;
 
-	print "\nDSA verification called with key:\n", $keyrr->string, " and sig:\n", $self->string, "\n" if $debug;
+	my $retval = eval {
+		my $algorithm = $self->algorithm;		# digest sigdata
+		my ( $object, @param ) = @{$DSA{$algorithm}};
+		my $hash = $object->new(@param);
+		$hash->add($sigdata);
 
-	my ( $object, @param ) = @{$DSA{$self->algorithm}};	# digest sig data
-	my $hash = $object->new(@param);
-	$hash->add($sigdata);
-	my $sighash = $hash->digest;
+		my $keybin = $keyrr->keybin;			# public key
+		my $numlen = 64 + 8 * unpack( 'C', $keybin );
+		my ( $q, $p, $g, $k ) = unpack "x a20 a$numlen a$numlen a$numlen", $keybin;
 
-	# RFC3279  section 2.3.2
-	# (...)
-	# The DSA public key MUST be ASN.1 DER encoded as an INTEGER; this
-	# encoding shall be used as the contents (i.e., the value) of the
-	# subjectPublicKey component (a BIT STRING) of the
-	# SubjectPublicKeyInfo data element.
-	# (...)
+		my $dsa = Crypt::OpenSSL::DSA->new();
+		$dsa->set_q($q);
+		$dsa->set_g($g);
+		$dsa->set_p($p);
+		$dsa->set_pub_key($k);
 
-	my $t = unpack 'C', $keyrr->keybin;
+		my $dsasig = Crypt::OpenSSL::DSA::Signature->new();
+		my ( $r, $s ) = unpack 'x a20 a20', $self->sigbin;
+		$dsasig->set_r($r);
+		$dsasig->set_s($s);
 
-	my $size = $t * 8 + 64;
-	my ( $q, $p, $g, $pubkey ) = unpack "x a20 a$size a$size a$size", $keyrr->keybin;
-
-	my $dsa_pub = Crypt::OpenSSL::DSA->new();
-	$dsa_pub->set_q($q);
-	$dsa_pub->set_g($g);
-	$dsa_pub->set_p($p);
-	$dsa_pub->set_pub_key($pubkey);
-
-	my ( $r, $s ) = unpack 'x a20 a20', $self->sigbin;
-
-	my $DSAsig = Crypt::OpenSSL::DSA::Signature->new();
-	$DSAsig->set_r($r);
-	$DSAsig->set_s($s);
-
-	if ( my $retval = eval { $dsa_pub->do_verify( $sighash, $DSAsig ); } ) {
-		croak 'Error in DSA do_verify' if $retval == -1;    # fix for DSA < 0.14
-		$self->{vrfyerrstr} = "DSA Verification successful";
+		$dsa->do_verify( $hash->digest, $dsasig );
+	} || do {
+		$self->{vrfyerrstr} = "DSA verification failed";
+		$self->{vrfyerrstr} = "DSA verification error: $@" if $@;
 		print "\n", $self->{vrfyerrstr}, "\n" if $debug;
-		return 1;
+		return 0;
+	};
 
-	} elsif ( my $error = $@ ) {
-		$self->{vrfyerrstr} = "DSA Verification error: $error";
-
-	} else {
-		$self->{vrfyerrstr} = "DSA Verification failed";
-	}
-
-	print "\n", $self->{vrfyerrstr}, "\n" if $debug;
-	return 0;
+	croak 'Error in DSA_do_verify' unless $retval == 1;	# fix for DSA < 0.14
+	print "\nDSA verification successful\n" if $debug;
+	return 1;
 }
- 
-
 
 1;
 __END__
@@ -651,12 +647,12 @@ __END__
 				orgttl sigexpiration siginception
 				keytag signame signature');
 
-    $rrsig = create Net::DNS::RR::SIG( $string, $keypath,
-					sigval => 60		# minutes
+    $sigrr = create Net::DNS::RR::SIG( $string, $keypath,
+					sigval => 10	# minutes
 					);
 
-    $sigrr->verify($string, $keyrr) || croak $sigrr->vrfyerrstr;
-    $sigrr->verify($packet, $keyrr) || croak $sigrr->vrfyerrstr;
+    $sigrr->verify( $string, $keyrr ) || die $sigrr->vrfyerrstr;
+    $sigrr->verify( $packet, $keyrr ) || die $sigrr->vrfyerrstr;
 
 =head1 DESCRIPTION
 
@@ -679,13 +675,6 @@ structures is discouraged and could result in program termination or
 other unpredictable behaviour.
 
 
-=head2 typecovered
-
-    $typecovered = $rr->typecovered;
-
-The typecovered field identifies the type of the RRset that is
-covered by this RRSIG record.
-
 =head2 algorithm
 
     $algorithm = $rr->algorithm;
@@ -696,32 +685,22 @@ used to create the signature.
 algorithm() may also be invoked as a class method or simple function
 to perform mnemonic and numeric code translation.
 
-=head2 labels
-
-    $labels = $rr->labels;
-    $rr->labels( $labels );
-
-The labels field specifies the number of labels in the original RRSIG
-RR owner name.
-
-=head2 orgttl
-
-    $orgttl = $rr->orgttl;
-    $rr->orgttl( $orgttl );
-
-The original TTL field specifies the TTL of the covered RRset as it
-appears in the authoritative zone.
-
 =head2 sigexpiration and siginception time
 
     $expiration = $rr->sigexpiration;
+    $expiration = $rr->sigexpiration( $value );
+
     $inception = $rr->siginception;
+    $inception = $rr->siginception( $value );
 
 The signature expiration and inception fields specify a validity
 time interval for the signature.
 
 The value may be specified by a string with format 'yyyymmddhhmmss'
 or a Perl time() value.
+
+Return values are dual-valued, providing either a string value or
+numerical Perl time() value.
 
 =head2 keytag
 
@@ -764,7 +743,7 @@ Create a signature over scalar data.
     $sigrr = create Net::DNS::RR::SIG( $data, $keypath );
 
     $sigrr = create Net::DNS::RR::SIG( $data, $keypath,
-					sigin => 20130901010101
+					sigval => 10
 					);
     $sigrr->print;
 
@@ -790,20 +769,18 @@ that comes with the ISC BIND distribution.
 The optional remaining arguments consist of ( name => value ) pairs
 as follows:
 
-	sigin  => 20130901010101,	# signature inception
-	sigex  => 20130901011101,	# signature expiration
-	sigval => 10,			# signature validity
+	sigin  => 20140701010101,	# signature inception
+	sigex  => 20140701011101,	# signature expiration
+	sigval => 10,			# validity window (minutes)
 
 The sigin and sigex values may be specified as Perl time values or as
 a string with the format 'yyyymmddhhmmss'. The default for sigin is
 the time of signing. 
 
 The sigval argument specifies the signature validity window in minutes
-( sigex = sigin + sigval ).  Sigval wins if sigex is also specified.
+( sigex = sigin + sigval ).
 
 By default the signature is valid for 10 minutes.
-
-Notes: 
 
 =over 4
 
@@ -815,13 +792,10 @@ determine the keyowner, algorithm and the keyid (keytag).
 
 =back
 
-=head2 verify and vrfyerrstr
+=head2 verify
 
-    $sigrr->verify( $data, $keyrr ) || croak $sigrr->vrfyerrstr;
-    $sigrr->verify( $data, [$keyrr, $keyrr2, $keyrr3] )
-			|| croak $sigrr->vrfyerrstr;
-
-    $sigrr->verify( $packet, $keyrr ) || croak $sigrr->vrfyerrstr;
+    $verify = $sigrr->verify( $data, $keyrr );
+    $verify = $sigrr->verify( $data, [$keyrr, $keyrr2, $keyrr3] );
 
 The verify() method performs SIG0 verification of the specified data
 against the signature contained in the $sigrr object itself using
@@ -835,34 +809,29 @@ reference to an array of such objects. Verification will return
 successful as soon as one of the keys in the array leads to positive
 validation.
 
-Returns 0 on error and sets $sig->vrfyerrstr
+Returns false on error and sets $sig->vrfyerrstr
 
-=head2 Example
+=head2 vrfyerrstr
 
-    $sig0 = $packet->pop('additional');
+    $sig0 = $packet->sigrr || die 'not signed';
     print $sig0->vrfyerrstr unless $sig0->verify( $packet, $keyrr );
 
-=head1 Remarks
+    $sigrr->verify( $packet, $keyrr ) || die $sigrr->vrfyerrstr;
+
+=head1 REMARKS
 
 The code is not optimized for speed.
 
-
-=head1 TODO
-
 If this code is still around in 2100 (not a leapyear) you will need
 to check for proper handling of times ...
-
 
 =head1 ACKNOWLEDGMENTS
 
 Andy Vaskys (Network Associates Laboratories) supplied the code for
 handling RSA with SHA1 (Algorithm 5).
 
-T.J. Mather, <tjmather@tjmather.com>, the Crypt::OpenSSL::DSA
-maintainer, for his quick responses to bug report and feature
-requests.
-
-=cut
+T.J. Mather, the Crypt::OpenSSL::DSA maintainer, for his quick
+responses to bug report and feature requests.
 
 
 =head1 COPYRIGHT
@@ -872,7 +841,6 @@ Copyright (c)2001-2005 RIPE NCC,   Olaf M. Kolkman
 Copyright (c)2007-2008 NLnet Labs, Olaf M. Kolkman 
 
 Portions Copyright (c)2014 Dick Franks
-
 
 All Rights Reserved
 
@@ -899,6 +867,11 @@ Package template (c)2009,2012 O.M.Kolkman and R.W.Franks.
 
 L<perl>, L<Net::DNS>, L<Net::DNS::RR>, L<Net::DNS::SEC>,
 RFC4034, RFC3755, RFC2535, RFC2931, RFC3110, RFC3008,
-L<Crypt::OpenSSL::DSA>, L<Crypt::OpenSSL::RSA>
+L<Crypt::OpenSSL::DSA>,
+L<Crypt::OpenSSL::RSA>
+
+L<Algorithm Numbers|http://www.iana.org/assignments/dns-sec-alg-numbers>
+
+L<BIND 9 Administrator Reference Manual|http://www.bind9.net/manuals>
 
 =cut

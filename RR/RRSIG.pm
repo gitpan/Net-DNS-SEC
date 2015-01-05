@@ -1,10 +1,10 @@
 package Net::DNS::RR::RRSIG;
 
 #
-# $Id: RRSIG.pm 1277 2014-10-20 07:46:37Z willem $
+# $Id: RRSIG.pm 1289 2015-01-05 10:08:59Z willem $
 #
 use vars qw($VERSION);
-$VERSION = (qw$LastChangedRevision: 1277 $)[1];
+$VERSION = (qw$LastChangedRevision: 1289 $)[1];
 
 
 use strict;
@@ -24,15 +24,24 @@ use Carp;
 use MIME::Base64;
 use Time::Local;
 
+use constant UTIL => eval { require Scalar::Util; } || 0;
+
 use Net::DNS::Parameters;
 
-eval { require Crypt::OpenSSL::RSA };	## optional for simple Net::DNS RR
-eval { require Crypt::OpenSSL::DSA };
-eval { require Crypt::OpenSSL::Bignum };
-eval { require Digest::SHA };
 eval { require Net::DNS::SEC::Private };
 
 my $debug = 0;
+
+BEGIN {
+	eval { require Crypt::OpenSSL::RSA };
+	eval { require Crypt::OpenSSL::Bignum };
+	eval { require Digest::SHA };
+
+	use constant DSA => eval { require Crypt::OpenSSL::DSA } || 0;
+	use constant EC	 => eval { require Crypt::OpenSSL::EC }	 || 0;
+	use constant ECDSA => EC && eval { require Crypt::OpenSSL::ECDSA }   || 0;
+	use constant GOST  => EC && eval { require Digest::GOST::CryptoPro } || 0;
+}
 
 
 sub decode_rdata {			## decode rdata from wire-format octet string
@@ -97,6 +106,7 @@ my %ECDSA = (
 	'14' => ['Digest::SHA', 384],
 	);
 
+
 #
 # source: http://www.iana.org/assignments/dns-sec-alg-numbers
 #
@@ -144,7 +154,6 @@ my %ECDSA = (
 }
 
 
-
 sub typecovered {
 	my $self = shift;
 	$self->{typecovered} = typebyname(shift) if scalar @_;
@@ -185,13 +194,17 @@ sub orgttl {
 sub sigexpiration {
 	my $self = shift;
 	$self->{sigexpiration} = _string2time(shift) if scalar @_;
-	_time2string( $self->{sigexpiration} ) if defined wantarray;
+	return unless defined wantarray;
+	my $time = $self->{sigexpiration};
+	return UTIL ? Scalar::Util::dualvar( $time, _time2string($time) ) : _time2string($time);
 }
 
 sub siginception {
 	my $self = shift;
 	$self->{siginception} = _string2time(shift) if scalar @_;
-	_time2string( $self->{siginception} ) if defined wantarray;
+	return unless defined wantarray;
+	my $time = $self->{siginception};
+	return UTIL ? Scalar::Util::dualvar( $time, _time2string($time) ) : _time2string($time);
 }
 
 
@@ -362,16 +375,16 @@ sub verify {
 		}
 	}
 
-	$self->{vrfyerrstr} = "---- Unknown Error Condition ------";
+	$self->{vrfyerrstr} = '';
 	if ($debug) {
-		print "\n ------------------------------- RRSIG DEBUG ------------------";
+		print "\n ---------------------- RRSIG DEBUG ----------------------------";
 		print "\n  Reference:\t", ref($dataref);
 		print "\n  RRSIG:\t",	  $self->string;
 		if ($rrarray_verify) {
 			print "\n  DATA:\t\t", $_->string for @{$dataref};
 		}
 		print "\n  KEY:\t\t", $keyrr->string;
-		print "\n --------------------------------------------------------------\n";
+		print "\n ---------------------------------------------------------------\n";
 	}
 
 	if ( !$sigzero_verify && !$packet_verify && $dataref->[0]->type ne $self->typecovered ) {
@@ -414,8 +427,7 @@ sub verify {
 	# The data that is to be verified
 	my $sigdata = $self->_CreateSigData($dataref);
 
-	my $signature = $self->sigbin;
-	my $verified = $self->_VerifySig( $sigdata, $signature, $keyrr ) || return 0;
+	my $verified = $self->_VerifySig( $sigdata, $keyrr ) || return 0;
 
 	# time to do some time checking.
 	my $t = time;
@@ -427,9 +439,8 @@ sub verify {
 		$self->{vrfyerrstr} = join ' ', 'Signature valid from', $self->siginception;
 		return 0;
 	}
-	$self->{vrfyerrstr} = 'No Error';
-	return 1;
 
+	return 1;
 }								#END verify
 
 
@@ -440,7 +451,6 @@ sub vrfyerrstr {
 
 
 ########################################
-
 
 sub _ordered($$) {			## irreflexive 32-bit partial ordering
 	use integer;
@@ -515,10 +525,10 @@ sub _CreateSigData {
 
 	my @field = qw(typecovered algorithm labels orgttl sigexpiration siginception keytag);
 	my $sigdata = pack 'n C2 N3 n a*', @{$self}{@field}, $self->{signame}->encode;
-	print "preamble:\t", unpack( 'H*', $sigdata ) if $debug;
+	print "\npreamble\t", unpack( 'H*', $sigdata ), "\n" if $debug;
 
 	unless ( ref($rawdata) ) {				# SIG0 case
-		print "\nSIG0 processing\nrawdata:\t", unpack( "H*", $rawdata ), "\n" if $debug;
+		print "\nSIG0 processing\nrawdata\t", unpack( 'H100', $rawdata ), "\n" if $debug;
 		return join '', $sigdata, $rawdata;
 	}
 
@@ -574,16 +584,17 @@ sub _CreateSigData {
 
 ########################################
 
-
 sub _CreateSig {
 	my $self = shift;
 
 	my $algorithm = $self->algorithm;
 
 	return $self->_CreateRSA(@_) if $RSA{$algorithm};
-	return $self->_CreateDSA(@_) if $DSA{$algorithm};
+	return $self->_CreateDSA(@_) if DSA && $DSA{$algorithm};
 
-	croak "Algorithm $algorithm not supported";
+	return $self->_CreateECDSA(@_) if ECDSA && $ECDSA{$algorithm};
+
+	croak "Signature generation not supported for algorithm $algorithm";
 }
 
 
@@ -593,9 +604,12 @@ sub _VerifySig {
 	my $algorithm = $self->algorithm;
 
 	return $self->_VerifyRSA(@_) if $RSA{$algorithm};
-	return $self->_VerifyDSA(@_) if $DSA{$algorithm};
+	return $self->_VerifyDSA(@_) if DSA && $DSA{$algorithm};
 
-	$self->{vrfyerrstr} = "Algorithm $algorithm not supported";
+	return $self->_VerifyECDSA(@_) if ECDSA && $ECDSA{$algorithm};
+	return $self->_VerifyGOST(@_)  if GOST	&& $GOST{$algorithm};
+
+	$self->{vrfyerrstr} = "Verification not supported for algorithm $algorithm";
 	return 0;
 }
 
@@ -606,140 +620,326 @@ sub _CreateRSA {
 	my $hash = $RSA{$private->algorithm} || croak 'private key not RSA';
 
 	eval {
-		my $private_rsa = $private->privatekey;
-		$private_rsa->use_pkcs1_oaep_padding;
-		$private_rsa->$hash;
-		$self->sigbin( $private_rsa->sign($sigdata) );
-	} || croak "RSA Signature generation failed\n\t$@";
+		my @param = map Crypt::OpenSSL::Bignum->new_from_bin( decode_base64( $private->$_ ) ),
+				qw(Modulus PublicExponent PrivateExponent
+				Prime1 Prime2 Exponent1 Exponent2 Coefficient);
+		my $rsa = Crypt::OpenSSL::RSA->new_key_from_parameters(@param);
+
+		$rsa->use_pkcs1_oaep_padding;
+		$rsa->$hash;
+		$self->sigbin( $rsa->sign($sigdata) );
+	} || carp "RSA signature generation failed\n\t$@";
 }
 
 
 sub _VerifyRSA {
-	my ( $self, $sigdata, $signature, $keyrr ) = @_;
+	my ( $self, $sigdata, $keyrr ) = @_;
 
 	# Implementation using Crypt::OpenSSL::RSA
 
-	print "\nRSA verification called with key:\n\t", $keyrr->string,
-			"\nsig:\n\t", $self->string, "\nsigdata:\n\t", unpack( 'H*', $sigdata ), "\n"
-			if $debug;
+	print "\n_VerifyRSA:\n", $self->string, "\nusing key:\n", $keyrr->string, "\n" if $debug;
 
-	#RFC 2537 sect 2
-	my ( $exponent, $modulus );
-	if ( my $explength = unpack( 'C', my $keybin = $keyrr->keybin ) ) {
-		( $exponent, $modulus ) = unpack( "x a$explength a*", $keybin );
-	} else {
-		$explength = unpack( 'xn', $keybin );
-		( $exponent, $modulus ) = unpack( "x3 a$explength a*", $keybin );
-	}
+	eval {
+		my $keybin = $keyrr->keybin;			# public key
+		my ( $exponent, $modulus );			# RFC 2537, section 2
+		if ( my $explength = unpack( 'C', $keybin ) ) {
+			( $exponent, $modulus ) = unpack( "x a$explength a*", $keybin );
+		} else {
+			$explength = unpack( 'xn', $keybin );
+			( $exponent, $modulus ) = unpack( "x3 a$explength a*", $keybin );
+		}
 
-	my $bn_modulus	= Crypt::OpenSSL::Bignum->new_from_bin($modulus);
-	my $bn_exponent = Crypt::OpenSSL::Bignum->new_from_bin($exponent);
+		my $bn_modulus	= Crypt::OpenSSL::Bignum->new_from_bin($modulus);
+		my $bn_exponent = Crypt::OpenSSL::Bignum->new_from_bin($exponent);
 
-	my $rsa_pub = Crypt::OpenSSL::RSA->new_key_from_parameters( $bn_modulus, $bn_exponent );
-	die "Could not load public key" unless $rsa_pub;
+		my $rsa = Crypt::OpenSSL::RSA->new_key_from_parameters( $bn_modulus, $bn_exponent );
 
-	my $hash = $RSA{$self->algorithm};
-	$rsa_pub->use_pkcs1_oaep_padding;
-	$rsa_pub->$hash;
+		my $hash = $RSA{$self->algorithm};
+		$rsa->use_pkcs1_oaep_padding;
+		$rsa->$hash;
 
-	if ( eval { $rsa_pub->verify( $sigdata, $signature ); } ) {
-		$self->{vrfyerrstr} = "RSA Verification successful";
-		print "\n", $self->{vrfyerrstr}, "\n" if $debug;
-		return 1;
-
-	} elsif ( my $error = $@ ) {
-		$self->{vrfyerrstr} = "RSA Verification error: $error";
-
-	} else {
+		$rsa->verify( $sigdata, $self->sigbin );
+	} || do {
 		$self->{vrfyerrstr} = "RSA Verification failed";
-	}
+		$self->{vrfyerrstr} = "RSA verification error: $@" if $@;
+		print "\n", $self->{vrfyerrstr}, "\n" if $debug;
+		return 0;
+	};
 
-	print "\n", $self->{vrfyerrstr}, "\n" if $debug;
-	return 0;
+	print "\nRSA verification successful\n" if $debug;
+	return 1;
 }
 
 
 sub _CreateDSA {
 	my ( $self, $sigdata, $private ) = @_;
 
-	my ( $object, @param ) = @{$DSA{$private->algorithm}};	# digest sig data
-	croak 'private key not DSA' unless $object;
-	my $hash = $object->new(@param);
-	$hash->add($sigdata);
+	eval {
+		my $algorithm = $private->algorithm;		# digest sigdata
+		my ( $object, @param ) = @{$DSA{$algorithm}};
+		croak 'private key not DSA' unless $object;
+		my $hash = $object->new(@param);
+		$hash->add($sigdata);
 
-	my $private_dsa = $private->privatekey;
-	if ( my $sig_obj = $private_dsa->do_sign( $hash->digest ) ) {
+		my $dsa = Crypt::OpenSSL::DSA->new();		# private key
+		$dsa->set_p( decode_base64 $private->prime );
+		$dsa->set_q( decode_base64 $private->subprime );
+		$dsa->set_g( decode_base64 $private->base );
+		$dsa->set_priv_key( decode_base64 $private->private_value );
+
+		my $dsasig = $dsa->do_sign( $hash->digest );
 
 		# See RFC 2535 for the content of the SIG
-		my $T = ( length( $private_dsa->get_g ) - 64 ) / 8;
-		my $R = $sig_obj->get_r;
-		my $S = $sig_obj->get_s;
+		my $T = ( length( $dsa->get_g ) - 64 ) / 8;
+		my $R = $dsasig->get_r;
+		my $S = $dsasig->get_s;
 
 		# both the R and S parameters need to be 20 octets:
 		my $Rpad = 20 - length($R);
 		my $Spad = 20 - length($S);
 		$self->sigbin( pack "C x$Rpad a* x$Spad a*", $T, $R, $S );
-
-	} else {
-		croak "DSA Signature generation failed";
-	}
+	} || carp "DSA signature generation failed\n\t$@";
 }
 
 
 sub _VerifyDSA {
-	my ( $self, $sigdata, $signature, $keyrr ) = @_;
+	my ( $self, $sigdata, $keyrr ) = @_;
 
-	# Implementation using Crypt::OpenSSL
+	print "\n_VerifyDSA:\n", $self->string, "\nusing key:\n", $keyrr->string, "\n" if $debug;
 
-	print "\nDSA verification called with key:\n", $keyrr->string, " and sig:\n", $self->string, "\n" if $debug;
+	my $retval = eval {
+		my $algorithm = $self->algorithm;		# digest sigdata
+		my ( $object, @param ) = @{$DSA{$algorithm}};
+		my $hash = $object->new(@param);
+		$hash->add($sigdata);
 
-	my ( $object, @param ) = @{$DSA{$self->algorithm}};	# digest sig data
-	my $hash = $object->new(@param);
-	$hash->add($sigdata);
-	my $sighash = $hash->digest;
+		my $keybin = $keyrr->keybin;			# public key
+		my $numlen = 64 + 8 * unpack( 'C', $keybin );
+		my ( $q, $p, $g, $k ) = unpack "x a20 a$numlen a$numlen a$numlen", $keybin;
 
-	# RFC3279  section 2.3.2
-	# (...)
-	# The DSA public key MUST be ASN.1 DER encoded as an INTEGER; this
-	# encoding shall be used as the contents (i.e., the value) of the
-	# subjectPublicKey component (a BIT STRING) of the
-	# SubjectPublicKeyInfo data element.
-	# (...)
+		my $dsa = Crypt::OpenSSL::DSA->new();
+		$dsa->set_q($q);
+		$dsa->set_g($g);
+		$dsa->set_p($p);
+		$dsa->set_pub_key($k);
 
-	my $t = unpack 'C', $keyrr->keybin;
+		my $dsasig = Crypt::OpenSSL::DSA::Signature->new();
+		my ( $r, $s ) = unpack 'x a20 a20', $self->sigbin;
+		$dsasig->set_r($r);
+		$dsasig->set_s($s);
 
-	my $size = $t * 8 + 64;
-	my ( $q, $p, $g, $pubkey ) = unpack "x a20 a$size a$size a$size", $keyrr->keybin;
-
-	my $dsa_pub = Crypt::OpenSSL::DSA->new();
-	$dsa_pub->set_q($q);
-	$dsa_pub->set_g($g);
-	$dsa_pub->set_p($p);
-	$dsa_pub->set_pub_key($pubkey);
-
-	my ( $r, $s ) = unpack 'x a20 a20', $self->sigbin;
-
-	my $DSAsig = Crypt::OpenSSL::DSA::Signature->new();
-	$DSAsig->set_r($r);
-	$DSAsig->set_s($s);
-
-	if ( my $retval = eval { $dsa_pub->do_verify( $sighash, $DSAsig ); } ) {
-		croak 'Error in DSA do_verify' if $retval == -1;    # fix for DSA < 0.14
-		$self->{vrfyerrstr} = "DSA Verification successful";
+		$dsa->do_verify( $hash->digest, $dsasig );
+	} || do {
+		$self->{vrfyerrstr} = "DSA verification failed";
+		$self->{vrfyerrstr} = "DSA verification error: $@" if $@;
 		print "\n", $self->{vrfyerrstr}, "\n" if $debug;
-		return 1;
+		return 0;
+	};
 
-	} elsif ( my $error = $@ ) {
-		$self->{vrfyerrstr} = "DSA Verification error: $error";
-
-	} else {
-		$self->{vrfyerrstr} = "DSA Verification failed";
-	}
-
-	print "\n", $self->{vrfyerrstr}, "\n" if $debug;
-	return 0;
+	croak 'Error in DSA_do_verify' unless $retval == 1;	# fix for DSA < 0.14
+	print "\nDSA verification successful\n" if $debug;
+	return 1;
 }
- 
+
+
+BEGIN {
+	use vars qw(%ECcurve);
+
+	my %NIST_P256 = (		## FIPS 186-4, D.1.2.3
+		p => 'ffffffff00000001000000000000000000000000ffffffffffffffffffffffff',
+		a => 'ffffffff00000001000000000000000000000000fffffffffffffffffffffffc',    # -3 mod p
+		b => '5ac635d8aa3a93e7b3ebbd55769886bc651d06b0cc53b0f63bce3c3e27d2604b',
+		x => '6b17d1f2e12c4247f8bce6e563a440f277037d812deb33a0f4a13945d898c296',
+		y => '4fe342e2fe1a7f9b8ee7eb4a7c0f9e162bce33576b315ececbb6406837bf51f5',
+		n => 'ffffffff00000000ffffffffffffffffbce6faada7179e84f3b9cac2fc632551',
+		);
+
+	my %NIST_P384 = (		## FIPS 186-4, D.1.2.4
+		p => 'fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffeffffffff0000000000000000ffffffff',
+		a => 'fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffeffffffff0000000000000000fffffffc',
+		b => 'b3312fa7e23ee7e4988e056be3f82d19181d9c6efe8141120314088f5013875ac656398d8a2ed19d2a85c8edd3ec2aef',
+		x => 'aa87ca22be8b05378eb1c71ef320ad746e1d3b628ba79b9859f741e082542a385502f25dbf55296c3a545e3872760ab7',
+		y => '3617de4a96262c6f5d9e98bf9292dc29f8f41dbd289a147ce9da3113b5f0b8c00a60b1ce1d7e819d7a431d7c90ea0e5f',
+		n => 'ffffffffffffffffffffffffffffffffffffffffffffffffc7634d81f4372ddf581a0db248b0a77aecec196accc52973',
+		);
+
+	my %GOST_R_34_10_2001_CryptoPro_A = (			# RFC4357
+		a => 'FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFD94',    # -3 mod p
+		b => '00A6',					# 166
+		p => 'FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFD97',
+		n => 'FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF6C611070995AD10045841B09B761B893',    # q
+		x => '01',
+		y => '8D91E471E0989CDA27DF505A453F2B7635294F2DDF23E3B122ACC99C9E9F1E14'
+		);
+
+
+	my $_curve = sub {
+		return unless EC;
+
+		my %param = @_;
+
+		my $p = Crypt::OpenSSL::Bignum->new_from_hex( $param{p} );
+		my $a = Crypt::OpenSSL::Bignum->new_from_hex( $param{a} );
+		my $b = Crypt::OpenSSL::Bignum->new_from_hex( $param{b} );
+		my $x = Crypt::OpenSSL::Bignum->new_from_hex( $param{x} );
+		my $y = Crypt::OpenSSL::Bignum->new_from_hex( $param{y} );
+		my $n = Crypt::OpenSSL::Bignum->new_from_hex( $param{n} );
+		my $h = Crypt::OpenSSL::Bignum->one;
+
+		my $ctx	   = Crypt::OpenSSL::Bignum::CTX->new();
+		my $method = Crypt::OpenSSL::EC::EC_GFp_mont_method();
+		my $group  = Crypt::OpenSSL::EC::EC_GROUP::new($method);
+		$group->set_curve_GFp( $p, $a, $b, $ctx );	# y^2 = x^3 + a*x + b  mod p
+
+		my $G = Crypt::OpenSSL::EC::EC_POINT::new($group);
+		Crypt::OpenSSL::EC::EC_POINT::set_affine_coordinates_GFp( $group, $G, $x, $y, $ctx );
+		$group->set_generator( $G, $n, $h );
+		die 'bad curve' unless Crypt::OpenSSL::EC::EC_GROUP::check( $group, $ctx );
+		return $group;
+	};
+
+	$ECcurve{12} = &$_curve(%GOST_R_34_10_2001_CryptoPro_A);
+	$ECcurve{13} = &$_curve(%NIST_P256);
+	$ECcurve{14} = &$_curve(%NIST_P384);
+}
+
+
+sub _CreateECDSA {
+	my ( $self, $sigdata, $private ) = @_;
+
+	eval {
+		my $algorithm = $self->algorithm;
+		my $group     = $ECcurve{$algorithm}->dup();	# precalculated curve
+
+		my ( $object, @param ) = @{$ECDSA{$algorithm}}; # digest sigdata
+		croak 'private key not ECDSA' unless $object;
+		my $hash = $object->new(@param);
+		$hash->add($sigdata);
+		my $digest = $hash->digest;
+
+		my $keybin = decode_base64( $private->PrivateKey );
+		my $bignum = Crypt::OpenSSL::Bignum->new_from_bin($keybin);
+
+		my $eckey = Crypt::OpenSSL::EC::EC_KEY::new();
+		$eckey->set_group($group)	 || die;
+		$eckey->set_private_key($bignum) || die;
+
+		my $ecsig = Crypt::OpenSSL::ECDSA::ECDSA_do_sign( $digest, $eckey );
+		my ( $r, $s ) = ( $ecsig->get_r, $ecsig->get_s );
+
+		# both the r and s parameters need to be zero padded:
+		my $size = length $digest;
+		my $Rpad = $size - length $r;
+		my $Spad = $size - length $s;
+		$self->sigbin( pack "x$Rpad a* x$Spad a*", $r, $s );
+	} || carp "ECDSA signature generation failed\n\t$@";
+}
+
+
+sub _VerifyECDSA {
+	my ( $self, $sigdata, $keyrr ) = @_;
+
+	# Implementation using Crypt::OpenSSL::ECDSA
+
+	print "\n_VerifyECDSA:\n", $self->string, "\nusing key:\n", $keyrr->string, "\n" if $debug;
+
+	my $retval = eval {
+		my $algorithm = $self->algorithm;
+		my $group     = $ECcurve{$algorithm}->dup();	# precalculated curve
+
+		my ( $object, @param ) = @{$ECDSA{$algorithm}}; # digest sigdata
+		my $hash = $object->new(@param);
+		$hash->add($sigdata);
+		my $digest = $hash->digest;
+
+		my $keybin = $keyrr->keybin;			# public key
+		my $keylen = length($keybin) >> 1;
+		my ( $x, $y ) = map Crypt::OpenSSL::Bignum->new_from_bin($_), unpack "a$keylen a*", $keybin;
+		my $key = Crypt::OpenSSL::EC::EC_POINT::new($group);
+		my $ctx = Crypt::OpenSSL::Bignum::CTX->new();
+		Crypt::OpenSSL::EC::EC_POINT::set_affine_coordinates_GFp( $group, $key, $x, $y, $ctx );
+
+		my $eckey = Crypt::OpenSSL::EC::EC_KEY::new();
+		$eckey->set_group($group)    || die;
+		$eckey->set_public_key($key) || die;
+
+		my $sigbin = $self->sigbin;			# signature
+		my $siglen = length($sigbin) >> 1;
+		my ( $r, $s ) = unpack( "a$siglen a*", $sigbin );
+
+		my $dsasig = Crypt::OpenSSL::ECDSA::ECDSA_SIG->new();
+		$dsasig->set_r($r);
+		$dsasig->set_s($s);
+
+		Crypt::OpenSSL::ECDSA::ECDSA_do_verify( $digest, $dsasig, $eckey );
+	} || do {
+		$self->{vrfyerrstr} = "ECDSA verification failed";
+		$self->{vrfyerrstr} = "ECDSA verification error: $@" if $@;
+		print "\n", $self->{vrfyerrstr}, "\n" if $debug;
+		return 0;
+	};
+
+	croak 'Error in ECDSA_do_verify' unless $retval == 1;
+	print "\nECDSA verification successful\n" if $debug;
+	return 1;
+}
+
+
+sub _VerifyGOST {
+	my ( $self, $sigdata, $keyrr ) = @_;
+
+	# Implementation (ab)using Crypt::OpenSSL::ECDSA
+
+	print "\n_VerifyGOST:\n", $self->string, "\nusing key:\n", $keyrr->string, "\n" if $debug;
+
+	my $retval = eval {
+		my $algorithm = $self->algorithm;
+		my $group     = $ECcurve{$algorithm}->dup();	# precalculated curve
+
+		my $zeta = $self->sigbin;			# step 1	(nomenclature per RFC5832)
+		my $size = length($zeta) >> 1;
+		my ( $s, $r ) = unpack( "a$size a*", $zeta );
+
+		my ( $object, @param ) = @{$GOST{$algorithm}};	# step 2
+		my $hash = $object->new(@param);
+		$hash->add($sigdata);
+		my $H = reverse $hash->digest;
+
+		my $ctx = Crypt::OpenSSL::Bignum::CTX->new();	# step 3
+		my $q	= Crypt::OpenSSL::Bignum->zero;
+		$group->get_order( $q, $ctx );
+		my $alpha = Crypt::OpenSSL::Bignum->new_from_bin($H);
+		my $e = $alpha->mod( $q, $ctx );    # Note: alpha can exceed but is never longer than q
+		$e = Crypt::OpenSSL::Bignum->one if $e->is_zero;
+
+		my $keybin = reverse $keyrr->keybin;		# public key
+		my $keylen = length($keybin) >> 1;
+		my ( $y, $x ) = map Crypt::OpenSSL::Bignum->new_from_bin($_), unpack "a$keylen a*", $keybin;
+		my $Q = Crypt::OpenSSL::EC::EC_POINT::new($group);
+		Crypt::OpenSSL::EC::EC_POINT::set_affine_coordinates_GFp( $group, $Q, $x, $y, $ctx );
+
+		my $eckey = Crypt::OpenSSL::EC::EC_KEY::new();
+		$eckey->set_group($group)  || die;
+		$eckey->set_public_key($Q) || die;
+
+		# algebraic transformation of ECC-GOST into equivalent ECDSA problem
+		my $dsasig = Crypt::OpenSSL::ECDSA::ECDSA_SIG->new();
+		$dsasig->set_r($r);
+		$dsasig->set_s( $q->sub($e)->to_bin );
+
+		my $m = $q->sub( Crypt::OpenSSL::Bignum->new_from_bin($s) )->mod( $q, $ctx );
+		Crypt::OpenSSL::ECDSA::ECDSA_do_verify( $m->to_bin, $dsasig, $eckey );
+	} || do {
+		$self->{vrfyerrstr} = "EC-GOST verification failed";
+		$self->{vrfyerrstr} = "EC-GOST verification error: $@" if $@;
+		print "\n", $self->{vrfyerrstr}, "\n" if $debug;
+		return 0;
+	};
+
+	croak 'Error in ECDSA_do_verify' unless $retval == 1;
+	print "\nECC-GOST verification successful\n" if $debug;
+	return 1;
+}
 
 
 1;
@@ -753,11 +953,12 @@ __END__
 				orgttl sigexpiration siginception
 				keytag signame signature');
 
-    $rrsig = create Net::DNS::RR::RRSIG( \@rrset, $keypath,
-					sigin => 20130701010101
+    $sigrr = create Net::DNS::RR::RRSIG( \@rrset, $keypath,
+					sigex => 20140731010101
+					sigin => 20140701010101
 					);
 
-    $sigrr->verify( \@rrset, $keyrr ) || croak $sigrr->vrfyerrstr;
+    $sigrr->verify( \@rrset, $keyrr ) || die $sigrr->vrfyerrstr;
 
 =head1 DESCRIPTION
 
@@ -816,7 +1017,10 @@ appears in the authoritative zone.
 =head2 sigexpiration and siginception time
 
     $expiration = $rr->sigexpiration;
+    $expiration = $rr->sigexpiration( $value );
+
     $inception = $rr->siginception;
+    $inception = $rr->siginception( $value );
 
 The signature expiration and inception fields specify a validity
 time interval for the signature.
@@ -824,6 +1028,8 @@ time interval for the signature.
 The value may be specified by a string with format 'yyyymmddhhmmss'
 or a Perl time() value.
 
+Return values are dual-valued, providing either a string value or 
+numerical Perl time() value.
 
 =head2 keytag
 
@@ -867,7 +1073,8 @@ Create a signature over a RR set.
     $sigrr = create Net::DNS::RR::RRSIG( \@datarrset, $keypath );
 
     $sigrr = create Net::DNS::RR::RRSIG( \@datarrset, $keypath,
-					sigin => 20130701010101
+					sigex => 20140731010101
+					sigin => 20140701010101
 					);
     $sigrr->print;
 
@@ -893,9 +1100,9 @@ containing the private key as generated by dnssec-keygen.
 The optional remaining arguments consist of ( name => value ) pairs
 as follows:
 
-	sigin  => 20130701010101,	# signature inception
-	sigex  => 20130731010101,	# signature expiration
-	sigval => 30,			# signature validity
+	sigex  => 20140731010101,	# signature expiration
+	sigin  => 20140701010101,	# signature inception
+	sigval => 30,			# validity window (days)
 	ttl    => 3600			# TTL
 
 The sigin and sigex values may be specified as Perl time values or as
@@ -903,20 +1110,16 @@ a string with the format 'yyyymmddhhmmss'. The default for sigin is
 the time of signing. 
 
 The sigval argument specifies the signature validity window in days
-( sigex = sigin + sigval ).  Sigval wins if sigex is also specified.
+( sigex = sigin + sigval ).
 
 By default the signature is valid for 30 days.
 
-By default the TTL matches the RRSet that is presented for signing.
+By default the TTL matches the RRset that is presented for signing.
 
-Only RSA signatures (algorithms 1,5,7,8 and 10) and DSA signatures 
-(algorithms 3 and 6) have been implemented.
+=head2 verify
 
-=head2 verify and vrfyerrstr
-
-    $sigrr->verify( $dataref, $keyrr ) || croak $sigrr->vrfyerrstr;
-    $sigrr->verify( $dataref, [$keyrr, $keyrr2, $keyrr3] ) || 
-		croak $sigrr->vrfyerrstr;
+    $verify = $sigrr->verify( $dataref, $keyrr );
+    $verify = $sigrr->verify( $dataref, [$keyrr, $keyrr2, $keyrr3] );
 
 $dataref contains a reference to an array of RR objects and the
 method verifies the RRset against the signature contained in the
@@ -929,9 +1132,12 @@ validation.
 
 Returns 0 on error and sets $sig->vrfyerrstr
 
-=head2 Example
+=head2 vrfyerrstr
 
-    print $sigrr->vrfyerrstr unless $sigrr->verify( $rrset, $keyrr );
+    $verify = $sigrr->verify( $dataref, $keyrr );
+    print $sigrr->vrfyerrstr unless $verify;
+
+    $sigrr->verify( $dataref, $keyrr ) || die $sigrr->vrfyerrstr;
 
 =head1 KEY GENERATION
 
@@ -940,7 +1146,7 @@ are most conveniently generated using dnssec-keygen,
 a program that comes with the ISC BIND distribution.
 
     dnssec-keygen -a 10 -b 2048 -f ksk	rsa.example.
-    dnssec-keygen -a 10 -b 1024		rsa.example.com.
+    dnssec-keygen -a 10 -b 1024		rsa.example.
 
     dnssec-keygen -a 14	-f ksk	ecdsa.example.
     dnssec-keygen -a 14		ecdsa.example.
@@ -958,17 +1164,18 @@ It is probably not suitable to be used for signing large zones.
 If this code is still around in 2100 (not a leapyear) you will need
 to check for proper handling of times ...
 
-
 =head1 ACKNOWLEDGMENTS
 
 Andy Vaskys (Network Associates Laboratories) supplied the code for
 handling RSA with SHA1 (Algorithm 5).
 
-T.J. Mather, <tjmather@tjmather.com>, the Crypt::OpenSSL::DSA
-maintainer, for his quick responses to bug report and feature
-requests.
+T.J. Mather, the Crypt::OpenSSL::DSA maintainer, for his quick
+responses to bug report and feature requests.
 
-=cut
+Dick Franks added support for elliptic curve signatures.
+
+Mike McCauley created the Crypt::OpenSSL::ECDSA perl extension module
+specifically for this development.
 
 
 =head1 COPYRIGHT
@@ -1003,10 +1210,15 @@ Package template (c)2009,2012 O.M.Kolkman and R.W.Franks.
 
 =head1 SEE ALSO
 
-L<perl>, L<Net::DNS>, L<Net::DNS::RR>, L<Net::DNS::SEC>, RFC4034, RFC6840, RFC3755,
-L<Crypt::OpenSSL::DSA>, L<Crypt::OpenSSL::RSA>
+L<perl>, L<Net::DNS>, L<Net::DNS::RR>, L<Net::DNS::SEC>,
+RFC4034, RFC6840, RFC3755,
+L<Crypt::OpenSSL::DSA>,
+L<Crypt::OpenSSL::EC>,
+L<Crypt::OpenSSL::ECDSA>,
+L<Crypt::OpenSSL::RSA>
 
 L<Algorithm Numbers|http://www.iana.org/assignments/dns-sec-alg-numbers>
-BIND 9 Administrator Reference Manual
+
+L<BIND 9 Administrator Reference Manual|http://www.bind9.net/manuals>
 
 =cut

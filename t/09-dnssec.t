@@ -1,6 +1,6 @@
 #!/usr/bin/perl  -sw 
 # Test script for dnssec functionalty
-# $Id: 09-dnssec.t 1113 2013-09-20 09:10:06Z willem $
+# $Id: 09-dnssec.t 1287 2014-12-19 08:18:17Z willem $
 # 
 # Called in a fashion simmilar to:
 # /usr/bin/perl -Iblib/arch -Iblib/lib -I/usr/lib/perl5/5.6.1/i386-freebsd \
@@ -8,14 +8,13 @@
 # $verbose=0; runtests @ARGV;' t/09-dnssec.t 
 
 
-use Net::DNS::RR::RRSIG;
-
-use Test::More tests=>93;
 use strict;
 
 
 BEGIN {
-  use_ok('Net::DNS'); 
+	use Test::More tests => 87;
+
+	use_ok('Net::DNS::SEC'); 
 }                                 
 
 
@@ -346,11 +345,8 @@ ok( $rsasigrr512, 'RSA/SHA-512 signature with bind generated key');
 
 ok( $dsasigrr->verify($nldatarrset,$dsakeyrr),'DSA sig (test 2) verifies');       
 
-is( $dsasigrr->vrfyerrstr, "No Error", "vrfyerrstr eq No Error");    
-
 ok( $rsasigrr->verify($nldatarrset,$rsakeyrr),'RSA sig (test 2) verifies');       
 
-is( $rsasigrr->vrfyerrstr, "No Error", "vrfyerrstr eq No Error");    
 
 ########
 ####   Couple of SIG0 tests
@@ -544,8 +540,6 @@ ok ( $sigrsasha1, 'RSA SHA1 signature created');
 ok ($sigrsasha1->verify($datarrset,$rsasha1keyrr),'RSA SHA1 sig verifies');        
 ok ($sigrsasha1->verify($datarrset,[$rsasha1keyrr]),'RSA SHA1 sig verifies for 1 element keyrr array');        
 
-is($sigrsasha1->vrfyerrstr,"No Error","Correct Errorstring for keyrr array (0)");
-
 
 
 
@@ -575,8 +569,6 @@ wZBaards8JcMEcT8nHyKHNZlq9fAhQ36guqGdZuRPqxgYfwz71VJb2t8
 ok ($sigrsasha1->verify($datarrset,
 			[$rsasha1keyrr3,$rsasha1keyrr2,$rsasha1keyrr]),
     'RSA SHA1 sig verifies for 3 element keyrr array ');        
-
-is($sigrsasha1->vrfyerrstr,"No Error","Correct Errorstring for keyrr array (1)");
 
 ok (! $sigrsasha1->verify($datarrset,
 			[$rsasha1keyrr3,$rsasha1keyrr2,$rsasha1keyrr4]),
@@ -615,15 +607,7 @@ ok( $rsasigrr_p, 'RSA signature with bind generated key');
 
 ok( $dsasigrr_p->verify($nldatarrset,$dsakeyrr),'DSA sig (test 2) verifies');       
 
-is( $dsasigrr_p->vrfyerrstr, "No Error", "vrfyerrstr eq No Error");    
-
 ok( $rsasigrr_p->verify($nldatarrset,$rsakeyrr),'RSA sig (test 2) verifies');                                                                         
-
-is( $rsasigrr_p->vrfyerrstr, "No Error", "vrfyerrstr eq No Error");    
-
-
-
-
 
 
 

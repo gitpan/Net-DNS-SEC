@@ -1,5 +1,5 @@
 #
-# $Id: Makefile.PL 1275 2014-10-14 20:37:29Z willem $
+# $Id: Makefile.PL 1289 2015-01-05 10:08:59Z willem $
 #
 
 
@@ -28,14 +28,14 @@ WriteMakefile(
 	MIN_PERL_VERSION => 5.006,
 	PREREQ_PM	 => {
 		Net::DNS	       => 0.69,
-		Crypt::OpenSSL::Bignum => 0.03,
-		Crypt::OpenSSL::Random => 0.0,
+		Crypt::OpenSSL::Bignum => 0.04,
 		Crypt::OpenSSL::RSA    => 0.19,
 		Crypt::OpenSSL::DSA    => 0.10,
-		Digest::BubbleBabble   => 0.01,
+	#	Crypt::OpenSSL::ECDSA  => 0.0,			# optional
+	#	Digest::BubbleBabble   => 0.01,			# optional
+	#	Digest::GOST	       => 0.06,			# optional
 		Digest::SHA	       => 5.23,
-		File::Basename	       => 0.0,
-		Math::BigInt	       => 0.0,
+		File::Spec	       => 0.0,
 		MIME::Base32	       => 0.0,
 		MIME::Base64	       => 0.0,
 		Time::Local	       => 0.0,
@@ -45,15 +45,17 @@ WriteMakefile(
 	PM => { 'Keyset.pm'	   => '$(INST_LIBDIR)/Keyset.pm',
 		'SEC.pm'	   => '$(INST_LIBDIR)/SEC.pm',
 		'SEC/Private.pm'   => '$(INST_LIBDIR)/SEC/Private.pm',
-		'RR/DS.pm'	   => '$(INST_LIBDIR)/RR/DS.pm',
+		'RR/CDNSKEY.pm'	   => '$(INST_LIBDIR)/RR/CDNSKEY.pm',
+		'RR/CDS.pm'	   => '$(INST_LIBDIR)/RR/CDS.pm',
 		'RR/DLV.pm'	   => '$(INST_LIBDIR)/RR/DLV.pm',
-		'RR/KEY.pm'	   => '$(INST_LIBDIR)/RR/KEY.pm',
-		'RR/SIG.pm'	   => '$(INST_LIBDIR)/RR/SIG.pm',
-		'RR/RRSIG.pm'	   => '$(INST_LIBDIR)/RR/RRSIG.pm',
 		'RR/DNSKEY.pm'	   => '$(INST_LIBDIR)/RR/DNSKEY.pm',
+		'RR/DS.pm'	   => '$(INST_LIBDIR)/RR/DS.pm',
+		'RR/KEY.pm'	   => '$(INST_LIBDIR)/RR/KEY.pm',
 		'RR/NSEC.pm'	   => '$(INST_LIBDIR)/RR/NSEC.pm',
 		'RR/NSEC3.pm'	   => '$(INST_LIBDIR)/RR/NSEC3.pm',
 		'RR/NSEC3PARAM.pm' => '$(INST_LIBDIR)/RR/NSEC3PARAM.pm',
+		'RR/RRSIG.pm'	   => '$(INST_LIBDIR)/RR/RRSIG.pm',
+		'RR/SIG.pm'	   => '$(INST_LIBDIR)/RR/SIG.pm',
 		},
 
 	clean => {FILES => "*~ t/keyset-*"}

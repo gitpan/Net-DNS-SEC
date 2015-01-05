@@ -1,6 +1,6 @@
 #!/usr/bin/perl  -sw 
 # Test script for dnssec functionalty
-# $Id: 11-sigstress.t 1171 2014-02-26 08:56:52Z willem $
+# $Id: 11-sigstress.t 1287 2014-12-19 08:18:17Z willem $
 # 
 # Called in a fashion simmilar to:
 # /usr/bin/perl -Iblib/arch -Iblib/lib -I/usr/lib/perl5/5.6.1/i386-freebsd \
@@ -8,17 +8,22 @@
 # $verbose=0; runtests @ARGV;' t/09-dnssec.t 
 
 
-use constant LOOPS=>50;
-use Test::More tests=> (LOOPS * 9 + 3 ); # 3 tests befor the loop, 9 inside.
 use strict;
 
-use Net::DNS::SEC;
+BEGIN {
+	use constant LOOPS => 50;
+
+	use Test::More tests => ( LOOPS * 6 + 3 );	# 3 tests before the loop, 6 inside.
+
+	use Net::DNS::SEC;
+}
+
 
 ########
 ####   Couple of SIG0 and RRSIG tests
 
 
-diag("This may take a while, do not worry.");
+####	This may take a while, do not worry
 
 
 #
@@ -142,14 +147,11 @@ for (my $i=0;$i<LOOPS;$i++){
 
     my $sigrrdsa=$update_dsa->pop("additional");
     ok ($sigrrsa->verify($update_rsa, $rsakeyrr),'RSA SIG0 verification of packet data');
-    is( $sigrrsa->vrfyerrstr, "No Error", "vrfyerrstr eq No Error");
 
     ok ($sigrrsasha1->verify($update_rsasha1, $rsasha1keyrr),'RSASHA1 SIG0 verification of packet data');
-    is( $sigrrsasha1->vrfyerrstr, "No Error", "vrfyerrstr eq No Error");
 
 
     ok ($sigrrdsa->verify($update_dsa, $dsakeyrr),'DSA SIG0 verification of packet data');
-    is( $sigrrdsa->vrfyerrstr, "No Error", "vrfyerrstr eq No Error");
     
 
     my $sigdsa= create Net::DNS::RR::RRSIG($datarrset,$keypathdsa, 
@@ -167,7 +169,7 @@ for (my $i=0;$i<LOOPS;$i++){
 #				     sigval => 100,
 				     ));
     # Verify the just created signatures
-    ok ($sigrsa->verify($datarrset,$rsakeyrr), 'DSA sig verifies');       
+    ok ($sigrsa->verify($datarrset,$rsakeyrr), 'RSA sig verifies');       
 
     my $sigrsasha1= create Net::DNS::RR::RRSIG($datarrset,$keypathrsasha1, 
 				    (
@@ -175,7 +177,7 @@ for (my $i=0;$i<LOOPS;$i++){
 #				     sigval => 100,
 				     ));
     # Verify the just created signatures
-    ok ($sigrsasha1->verify($datarrset,$rsasha1keyrr), 'DSA sig verifies');       
+    ok ($sigrsasha1->verify($datarrset,$rsasha1keyrr), 'RSA sig verifies');       
 
 
 

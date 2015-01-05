@@ -31,7 +31,6 @@ t/05-NSEC3.t
 t/05-NSEC3PARAM.t
 t/05-RRSIG.t
 t/05-SIG.t
-t/07-sec.t
 t/09-dnssec.t
 t/10-keyset.t
 t/10-typeroll.t
@@ -43,6 +42,16 @@ t/51-DS-SHA1.t
 t/52-DS-SHA256.t
 t/53-DS-GOST.t
 t/54-DS-SHA384.t
+t/61-SIG0-RSAMD5.t
+t/63-RRSIG-DSA.t
+t/65-RRSIG-RSASHA1.t
+t/66-RRSIG-NSEC3DSA.t
+t/67-RRSIG-NSEC3RSASHA1.t
+t/68-RRSIG-RSASHA256.t
+t/70-RRSIG-RSASHA512.t
+t/72-RRSIG-ECC-GOST.t
+t/73-RRSIG-ECDSAP256SHA256.t
+t/74-RRSIG-ECDSAP384SHA384.t
 t/getpacket.pl
 t/Kexample.com.+001+28551.private
 t/Kexample.com.+001+28551.key

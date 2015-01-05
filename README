@@ -104,7 +104,7 @@ through: http://search.cpan.org/src/OLAF/Net-DNS-SEC/Changes
 5. Staying up to date.
 
   Announcements about Net::DNS::SEC will be done on 
-  http://www.net-dns.net/blog/. An RSS feed is available.
+  http://www.net-dns.org/blog/. An RSS feed is available.
 
 
 6. Demos
@@ -183,4 +183,4 @@ Based on, and contains, code by Copyright (c) 1997-2001 Michael Fuhr.
 
 
 ------------------------------------------------------------------------------
-$Id: README 1167 2014-02-03 09:55:08Z willem $
+$Id: README 1289 2015-01-05 10:08:59Z willem $

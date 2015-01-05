@@ -1,7 +1,19 @@
 Revision history for Perl extension Net::DNS::SEC.
 
 
-***0.21 Oktober 24, 2014
+**** 0.22 [unreleased]
+
+   Fix: rt.cpan.org #101184
+   make siginception and sigexpiration available as time() values
+
+   Fix: rt.cpan.org #101183
+   wrong URL for blog in README
+
+   Fix: rt.cpan.org #83031
+   [RRSIG] lack of ECDSA support
+
+
+***0.21 October 24, 2014
 
    Fix: rt.cpan.org #99250
    [RRSIG] validation fails when Signer's Name is upper case
@@ -70,9 +82,9 @@ Revision history for Perl extension Net::DNS::SEC.
 
    Fix: rt.cpan.org #75892
    Do not canonicalize the "Next Domain Name" rdata field of a NSEC RR
-   for draft-ietf-dnsext-dnssec-bis-updates-17 compliency.
+   for draft-ietf-dnsext-dnssec-bis-updates-17 compliance.
 
-   BUG FIX/FEATURE: validation of wildcard RRs now available. Duanne
+   BUG FIX/FEATURE: validation of wildcard RRs now available. Duane
    Wessels is acknowledged for submitting the initial code on which
    this fix is based.
 
@@ -479,7 +491,7 @@ Net::DNS. The history of those is documented below.
 
 0.19-DNSSEC-0.3: 
   Solved patch problems that where due to the 
-  $Id: Changes 1281 2014-10-24 08:16:24Z willem $ in headers not 
+  $Id: Changes 1289 2015-01-05 10:08:59Z willem $ in headers not 
   being from the original distribution.
 
   Added DSA signature creation
@@ -511,4 +523,4 @@ Net::DNS. The history of those is documented below.
 
 
 ---------------------------------------------------------------------------
-$Id: Changes 1281 2014-10-24 08:16:24Z willem $
+$Id: Changes 1289 2015-01-05 10:08:59Z willem $

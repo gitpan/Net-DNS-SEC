@@ -1,8 +1,8 @@
 #!/usr/bin/perl  -sw 
 # Test script for loading parser and zonemodules
-# $Id: 00-load.t 1171 2014-02-26 08:56:52Z willem $
+# $Id: 00-load.t 1289 2015-01-05 10:08:59Z willem $
 # 
-# Called in a fashion simmilar to:
+# Called in a fashion similar to:
 # /usr/bin/perl -Iblib/arch -Iblib/lib -I/usr/lib/perl5/5.6.1/i386-freebsd \
 # -I/usr/lib/perl5/5.6.1 -e 'use Test::Harness qw(&runtests $verbose); \
 # $verbose=0; runtests @ARGV;' t/<foo>
@@ -16,19 +16,17 @@ use strict;
 BEGIN {
 	use Test::More tests => 2;
 
-	use_ok( 'Net::DNS::SEC', qw(key_difference) );		# test 1
+	use_ok('Net::DNS::SEC');				# test 1
 
 	require_ok('Net::DNS::SEC');				# test 2
 }
 
 
-diag("\nThese tests were run with:\n");
-diag("	Net::DNS::SEC			$Net::DNS::SEC::VERSION");
-diag("	Net::DNS::SEC	(SVN)		$Net::DNS::SEC::SVNVERSION");
-diag("	Net::DNS			$Net::DNS::VERSION");
-diag("	Net::DNS	(SVN)		$Net::DNS::SVNVERSION");
-
 my @module = qw(
+	Net::DNS::SEC
+	Net::DNS
+	Net::DNS::RR::CDNSKEY
+	Net::DNS::RR::CDS
 	Net::DNS::RR::DNSKEY
 	Net::DNS::RR::DS
 	Net::DNS::RR::DLV
@@ -39,19 +37,24 @@ my @module = qw(
 	Net::DNS::RR::RRSIG
 	Net::DNS::RR::SIG
 	Net::DNS::SEC::Private
-	Crypt::OpenSSL::DSA
-	Crypt::OpenSSL::RSA
 	Crypt::OpenSSL::Bignum
+	Crypt::OpenSSL::DSA
+	Crypt::OpenSSL::EC
+	Crypt::OpenSSL::ECDSA
+	Crypt::OpenSSL::RSA
+	Digest::BubbleBabble
+	Digest::GOST
 	Digest::SHA
-	File::Basename
-	Math::BigInt
+	File::Spec
 	MIME::Base64
 	MIME::Base32
 	Time::Local
 	);
 
+
+diag("\nThese tests were run with:\n");
 foreach my $module (@module) {
-	eval("require $module");
-	diag sprintf "\t%-30s\t%s", $module, ${module}->VERSION;
+	my $loaded = eval("require $module");
+	diag sprintf "\t%-25s\t%s", $module, $loaded ? ${module}->VERSION || '?' : '';
 }
 

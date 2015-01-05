@@ -1,6 +1,6 @@
 #!/usr/bin/perl  -sw 
 # Test script for dnssec functionalty
-# $Id: 10-typeroll.t 1192 2014-04-11 08:43:54Z willem $
+# $Id: 10-typeroll.t 1287 2014-12-19 08:18:17Z willem $
 # 
 # Called in a fashion simmilar to:
 # /usr/bin/perl -Iblib/arch -Iblib/lib -I/usr/lib/perl5/5.6.1/i386-freebsd \
@@ -8,11 +8,13 @@
 # $verbose=0; runtests @ARGV;' t/10-typeroll.t
 
 
-use Test::More tests=>38;
 use strict;
 
-BEGIN { use_ok('Net::DNS::SEC'); }				# test 1
+BEGIN {
+	use Test::More tests => 34;
 
+	use_ok('Net::DNS::SEC');				# test 1
+}
 
 
 my $datarrset;
@@ -207,11 +209,7 @@ ok( $rsasigrr, 'RSA signature with bind generated key');            # test 20
 
 ok( $dsasigrr->verify($nldatarrset,$dsakeyrr),'DSA sig (test 2) verifies');       # test 21
 
-is( $dsasigrr->vrfyerrstr, "No Error", "vrfyerrstr eq No Error");    # test 22
-
 ok( $rsasigrr->verify($nldatarrset,$rsakeyrr),'RSA sig (test 2) verifies');       
-
-is( $rsasigrr->vrfyerrstr, "No Error", "vrfyerrstr eq No Error");    # test 24
 
 
 
@@ -230,10 +228,10 @@ $sigrsa= create Net::DNS::RR::RRSIG($datarrset,$keypathrsa,
 				     ));
 
 
-ok ( $sigrsa, 'RSA signature over SOA with escaped dot  created');                #test 25
+ok ( $sigrsa, 'RSA signature over SOA with escaped dot  created');	# test 23
 
 
-ok ($sigrsa->verify($datarrset,$rsakeyrr),'RSA sig over SOA  with escaped dot verifies');        #test 26
+ok ($sigrsa->verify($datarrset,$rsakeyrr),'RSA sig over SOA  with escaped dot verifies');	# test 24
 
 
 
@@ -274,7 +272,7 @@ my $nsecrr = Net::DNS::RR->new("example.com  7200    NSEC    bert.example.com. N
 
 
 
-ok ( $nsecrr, 'NSEC RR created from string');		#test 27
+ok ( $nsecrr, 'NSEC RR created from string');			# test 25
 
 my $nsecsig = Net::DNS::RR->new("example.com  7200    RRSIG   NSEC 5 2 7200 20310101000000 (
                                         20040126131948 37790 example.com.
@@ -299,8 +297,8 @@ my @nsecdata = ($nsecrr);
 
 SKIP: {
     skip "Test material not available yet, will be fixed in later release", 2 if 0;
-    ok( $bindsig->verify( $binddataset, $bindkey ), 'RSA sig generated with bind verifies');	#test 28
-    ok( $nsecsig->verify( \@nsecdata, $nseckey ), "RRSIG over NSEC verifies");	#test 29
+    ok( $bindsig->verify( $binddataset, $bindkey ), 'RSA sig generated with bind verifies');	# test 26
+    ok( $nsecsig->verify( \@nsecdata, $nseckey ), "RRSIG over NSEC verifies");	# test 27
 }
 
 
@@ -328,7 +326,7 @@ wZBaards8JcMEcT8nHyKHNZlq9fAhQ36guqGdZuRPqxgYfwz71VJb2t9
 6KX/5w==");
 
 
-ok( $rsasha1keyrr, 'RSA-SHA1 public key created');     #test 30
+ok( $rsasha1keyrr, 'RSA-SHA1 public key created');	# test 28
 
 
 open (RSA,">$keypathrsasha1") or die "Could not open $keypathrsasha1";
@@ -345,10 +343,10 @@ my $sigrsasha1= create Net::DNS::RR::RRSIG($datarrset,$keypathrsasha1,
 
 
 
-ok ( $sigrsasha1, 'RSA SHA1 signature created');                               #test 31
+ok ( $sigrsasha1, 'RSA SHA1 signature created');		# test 29
 
 
-ok ($sigrsasha1->verify($datarrset,$rsasha1keyrr),'RSA SHA1 sig verifies');        #test 32
+ok ($sigrsasha1->verify($datarrset,$rsasha1keyrr),'RSA SHA1 sig verifies');	# test 30
 
 
 ### Test usability of the private key object.. same set of test as above
@@ -359,41 +357,21 @@ my $dsaprivate=Net::DNS::SEC::Private->new($keypathdsa);
 my $dsasigrr_p=Net::DNS::RR::RRSIG->create($nldatarrset,
 				    $dsaprivate
 				    );
-ok( $dsasigrr_p, 'DSA signature with bind generated key ');             # test 33
+ok( $dsasigrr_p, 'DSA signature with bind generated key ');	# test 31
 
 my $rsaprivate=Net::DNS::SEC::Private->new($keypathrsa);
 my $rsasigrr_p=Net::DNS::RR::RRSIG->create($nldatarrset,
 				    $rsaprivate
 				    );
-ok( $rsasigrr_p, 'RSA signature with bind generated key');            # test 34
+ok( $rsasigrr_p, 'RSA signature with bind generated key');	# test 32
 
 
-ok( $dsasigrr_p->verify($nldatarrset,$dsakeyrr),'DSA sig (test 2) verifies');       # test 35
-
-is( $dsasigrr_p->vrfyerrstr, "No Error", "vrfyerrstr eq No Error");    # test 36
+ok( $dsasigrr_p->verify($nldatarrset,$dsakeyrr),'DSA sig (test 2) verifies');	# test 33
 
 ok( $rsasigrr_p->verify($nldatarrset,$rsakeyrr),'RSA sig (test 2) verifies');       
-
-is( $rsasigrr_p->vrfyerrstr, "No Error", "vrfyerrstr eq No Error");    # test 38
-
-
-
-
-
-
-
-
-
-
 
 
 unlink($keypathrsa);
 unlink($keypathdsa);
 unlink($keypathrsasha1);
-
-
-
-
-
-
 
