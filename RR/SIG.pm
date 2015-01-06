@@ -14,10 +14,10 @@ sub UNITCHECK {				## restore %SIG after compilation
 package Net::DNS::RR::SIG;
 
 #
-# $Id: SIG.pm 1289 2015-01-05 10:08:59Z willem $
+# $Id: SIG.pm 1291 2015-01-06 07:44:34Z willem $
 #
 use vars qw($VERSION);
-$VERSION = (qw$LastChangedRevision: 1289 $)[1];
+$VERSION = (qw$LastChangedRevision: 1291 $)[1];
 
 
 use strict;
@@ -468,11 +468,12 @@ sub _CreateSigData {
 		local $message->{additional} = \@unsigned;	# remake header image
 		my @part = qw(question answer authority additional);
 		my @size = map scalar( @{$message->{$_}} ), @part;
-		my $data = $self->{rawref};
+		my $rref = $self->{rawref};
 		delete $self->{rawref};
-		my $id = $message->{id} || $message->header->id;
-		my $hbin = pack 'n6', $id, $message->{status}, @size;
-		$message = $hbin . substr $data ? $$data : $message->data, length $hbin;
+		my $data = $rref ? $$rref : $message->data;
+		my ( $id, $status ) = unpack 'n2', $data;
+		my $hbin = pack 'n6 a*', $id, $status, @size;
+		$message = $hbin . substr $data, length $hbin;
 	}
 
 	my @field = qw(typecovered algorithm labels orgttl sigexpiration siginception keytag);

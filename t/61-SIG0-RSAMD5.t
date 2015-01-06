@@ -1,4 +1,4 @@
-# $Id: 61-SIG0-RSAMD5.t 1287 2014-12-19 08:18:17Z willem $	-*-perl-*-
+# $Id: 61-SIG0-RSAMD5.t 1291 2015-01-06 07:44:34Z willem $	-*-perl-*-
 #
 
 use strict;
@@ -59,8 +59,9 @@ my $buffer = $update->data;		## SIG0 generation occurs here
 my $packet = new Net::DNS::Packet( \$buffer );
 
 
-my $verify = $packet->verify($key);
-ok( $verify, 'verify packet using public key' ) || diag $packet->verifyerr;
+my ($sig) = reverse $packet->additional;
+my $verify = $sig->verify( $packet, $key );
+ok( $verify, 'verify packet using public key' ) || diag $packet->vrfyerrstr;
 
 my $bad = new Net::DNS::RR <<'END';
 RSAMD5.example.	3600	IN	KEY	256 3 1 (
@@ -68,10 +69,10 @@ RSAMD5.example.	3600	IN	KEY	256 3 1 (
 	Ncxjx6o86HhrvFg5DsDMhEi5MIqlt1OcUYa0zUhFSkb+yzOSnPL7doSoaW8pxoX4uDemkfyOY9xN
 	tNCNBJcvmp1Uvdnttf7LUorD ) ; Key ID = 21130
 END
-ok( !$packet->verify($bad), 'verify fails using wrong key' );
+ok( !$sig->verify( $packet, $bad ), 'verify fails using wrong key' );
 
 $packet->push( update => $bad );
-ok( !$packet->verify($key), 'verify fails for modified packet' );
+ok( !$sig->verify( $packet, $key ), 'verify fails for modified packet' );
 
 
 exit;
