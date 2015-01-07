@@ -1,10 +1,10 @@
 package Net::DNS::RR::RRSIG;
 
 #
-# $Id: RRSIG.pm 1289 2015-01-05 10:08:59Z willem $
+# $Id: RRSIG.pm 1293 2015-01-07 07:42:26Z willem $
 #
 use vars qw($VERSION);
-$VERSION = (qw$LastChangedRevision: 1289 $)[1];
+$VERSION = (qw$LastChangedRevision: 1293 $)[1];
 
 
 use strict;
@@ -41,6 +41,8 @@ BEGIN {
 	use constant EC	 => eval { require Crypt::OpenSSL::EC }	 || 0;
 	use constant ECDSA => EC && eval { require Crypt::OpenSSL::ECDSA }   || 0;
 	use constant GOST  => EC && eval { require Digest::GOST::CryptoPro } || 0;
+
+	eval { require Crypt::OpenSSL::Random } if GOST;
 }
 
 
@@ -593,6 +595,7 @@ sub _CreateSig {
 	return $self->_CreateDSA(@_) if DSA && $DSA{$algorithm};
 
 	return $self->_CreateECDSA(@_) if ECDSA && $ECDSA{$algorithm};
+	return $self->_CreateGOST(@_)  if GOST	&& $GOST{$algorithm};
 
 	croak "Signature generation not supported for algorithm $algorithm";
 }
@@ -882,6 +885,61 @@ sub _VerifyECDSA {
 	croak 'Error in ECDSA_do_verify' unless $retval == 1;
 	print "\nECDSA verification successful\n" if $debug;
 	return 1;
+}
+
+
+sub _CreateGOST {
+	my ( $self, $sigdata, $private ) = @_;
+
+	eval {
+		my $algorithm = $self->algorithm;
+		my $group     = $ECcurve{$algorithm}->dup();	# precalculated curve
+
+		my $ctx = Crypt::OpenSSL::Bignum::CTX->new();
+		my $key = decode_base64( $private->PrivateKey );
+		my $d	= Crypt::OpenSSL::Bignum->new_from_bin($key);
+		my $P	= $group->get0_generator();
+
+		my ( $object, @param ) = @{$GOST{$algorithm}};	# step 1	(nomenclature per RFC5832)
+		croak 'private key not GOST' unless $object;
+		my $hash = $object->new(@param);
+		$hash->add($sigdata);
+		my $H = reverse $hash->digest;
+
+		my $q = Crypt::OpenSSL::Bignum->zero;		# step 2
+		$group->get_order( $q, $ctx );
+		my $alpha = Crypt::OpenSSL::Bignum->new_from_bin($H);
+		my $e = $alpha->mod( $q, $ctx );    # Note: alpha can exceed but is never longer than q
+		$e = Crypt::OpenSSL::Bignum->one if $e->is_zero;
+
+		my $zeta;
+		{						# step 3
+			$hash->add($key);
+			$hash->add( Crypt::OpenSSL::Random::random_bytes(10) );
+			$hash->add( $hash->digest );
+			my $m = Crypt::OpenSSL::Bignum->new_from_bin( $hash->digest );
+			my $k = $m->mod( $q, $ctx );
+			redo if $k->is_zero;
+
+			my $x = Crypt::OpenSSL::Bignum->zero;	# step 4
+			my $y = Crypt::OpenSSL::Bignum->zero;
+			my $C = Crypt::OpenSSL::EC::EC_POINT::new($group);
+			Crypt::OpenSSL::EC::EC_POINT::mul( $group, $C, $q, $P, $k, $ctx );
+			Crypt::OpenSSL::EC::EC_POINT::get_affine_coordinates_GFp( $group, $C, $x, $y, $ctx );
+			my $r = $x->mod( $q, $ctx );
+			redo if $r->is_zero;
+
+			my $v = $r->mul( $d, $ctx );		# step 5
+			my $w = $k->mul( $e, $ctx );
+			my $s = $v->add($w)->mod( $q, $ctx );
+			redo if $s->is_zero;
+
+			my $size = length $H;			# step 6
+			$zeta = pack "a$size a$size", reverse( $s->to_bin ), reverse( $r->to_bin );
+		}
+
+		$self->sigbin($zeta);
+	} || croak "GOST signature generation failed\n\t$@";
 }
 
 

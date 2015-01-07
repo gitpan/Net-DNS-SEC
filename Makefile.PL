@@ -1,5 +1,5 @@
 #
-# $Id: Makefile.PL 1289 2015-01-05 10:08:59Z willem $
+# $Id: Makefile.PL 1293 2015-01-07 07:42:26Z willem $
 #
 
 
@@ -31,7 +31,8 @@ WriteMakefile(
 		Crypt::OpenSSL::Bignum => 0.04,
 		Crypt::OpenSSL::RSA    => 0.19,
 		Crypt::OpenSSL::DSA    => 0.10,
-	#	Crypt::OpenSSL::ECDSA  => 0.0,			# optional
+	#	Crypt::OpenSSL::EC     => 0.6,			# optional
+	#	Crypt::OpenSSL::ECDSA  => 0.05,			# optional
 	#	Digest::BubbleBabble   => 0.01,			# optional
 	#	Digest::GOST	       => 0.06,			# optional
 		Digest::SHA	       => 5.23,
